@@ -25,3 +25,19 @@ func TestConvertVipRequiresCARPCredentials(t *testing.T) {
 		t.Fatal("expected CARP validation error")
 	}
 }
+
+func TestVipFallbackStateResolvesComputedUnknowns(t *testing.T) {
+	t.Parallel()
+
+	model := &vipResourceModel{
+		Address:  types.StringUnknown(),
+		VHIDText: types.StringUnknown(),
+	}
+	got := vipFallbackState(model, "vip-id")
+	if got.Id.ValueString() != "vip-id" {
+		t.Fatalf("id = %q, want vip-id", got.Id.ValueString())
+	}
+	if !got.Address.IsNull() || !got.VHIDText.IsNull() {
+		t.Fatalf("computed fields were not resolved: address=%#v vhid_text=%#v", got.Address, got.VHIDText)
+	}
+}

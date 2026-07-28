@@ -94,8 +94,12 @@ def main():
     if not key or not secret or "\n" in key or "\n" in secret:
         raise RuntimeError("opnsense-apikey returned invalid credentials")
 
-    # The workflow redirects stderr directly to GITHUB_OUTPUT. Do not write
-    # credentials to stdout, where they would become part of the action log.
+    # Register masks before the values become step outputs or environment
+    # variables. GitHub applies these masks to all later action log lines.
+    print(f"::add-mask::{key}")
+    print(f"::add-mask::{secret}")
+
+    # The workflow redirects stderr directly to GITHUB_OUTPUT.
     print(f"key={key}", file=sys.stderr)
     print(f"secret={secret}", file=sys.stderr)
     print(f"Created a temporary API key for {USERNAME}")

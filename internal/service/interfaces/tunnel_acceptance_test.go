@@ -152,9 +152,9 @@ func TestAccInterfacesDetailsDataSource(t *testing.T) {
 		PreCheck:                 func() { acctest.AccPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{{
-			Config: fmt.Sprintf(`data "opnsense_interfaces_details" "management" { interface = %q }`, managementInterface()),
+			Config: fmt.Sprintf(`data "opnsense_interfaces_details" "management" { interface = %q }`, managementDevice()),
 			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr("data.opnsense_interfaces_details.management", "interface", managementInterface()),
+				resource.TestCheckResourceAttr("data.opnsense_interfaces_details.management", "interface", managementDevice()),
 				resource.TestCheckResourceAttrSet("data.opnsense_interfaces_details.management", "details_json"),
 			),
 		}},

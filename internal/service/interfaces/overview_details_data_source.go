@@ -26,8 +26,8 @@ func (d *overviewDetailsDataSource) Metadata(_ context.Context, req datasource.M
 	resp.TypeName = req.ProviderTypeName + "_interfaces_details"
 }
 func (d *overviewDetailsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = schema.Schema{MarkdownDescription: "Reads the complete OPNsense detail payload for one logical interface.", Attributes: map[string]schema.Attribute{
-		"interface":    schema.StringAttribute{Required: true, MarkdownDescription: "Logical interface identifier or device accepted by the OPNsense overview API."},
+	resp.Schema = schema.Schema{MarkdownDescription: "Reads the complete OPNsense detail payload for one operating-system interface.", Attributes: map[string]schema.Attribute{
+		"interface":    schema.StringAttribute{Required: true, MarkdownDescription: "Operating-system interface device accepted by the OPNsense overview API, for example `vtnet0`."},
 		"details_json": schema.StringAttribute{Computed: true, MarkdownDescription: "Complete API detail payload encoded as JSON. The payload varies by interface type and OPNsense version."},
 	}}
 }
@@ -51,6 +51,13 @@ func (d *overviewDetailsDataSource) Read(ctx context.Context, req datasource.Rea
 	result, err := d.client.Interfaces().OverviewGetInterface(ctx, data.Interface.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Read Interface Details", err.Error())
+		return
+	}
+	if status, ok := result.Message.(string); ok && status == "failed" {
+		resp.Diagnostics.AddError(
+			"Unable to Read Interface Details",
+			fmt.Sprintf("OPNsense did not find operating-system interface %q.", data.Interface.ValueString()),
+		)
 		return
 	}
 	encoded, err := json.Marshal(result.Message)

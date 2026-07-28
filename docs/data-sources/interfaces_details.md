@@ -3,12 +3,12 @@
 page_title: "opnsense_interfaces_details Data Source - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Reads the complete OPNsense detail payload for one logical interface.
+  Reads the complete OPNsense detail payload for one operating-system interface.
 ---
 
 # opnsense_interfaces_details (Data Source)
 
-Reads the complete OPNsense detail payload for one logical interface.
+Reads the complete OPNsense detail payload for one operating-system interface.
 
 
 
@@ -17,7 +17,7 @@ Reads the complete OPNsense detail payload for one logical interface.
 
 ### Required
 
-- `interface` (String) Logical interface identifier or device accepted by the OPNsense overview API.
+- `interface` (String) Operating-system interface device accepted by the OPNsense overview API, for example `vtnet0`.
 
 ### Read-Only
 

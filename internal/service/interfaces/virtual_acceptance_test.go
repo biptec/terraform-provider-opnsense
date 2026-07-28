@@ -63,8 +63,8 @@ func TestAccInterfacesBridgeResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("opnsense_interfaces_bridge.test", "id"),
 					resource.TestCheckResourceAttrSet("opnsense_interfaces_bridge.test", "device"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_bridge.test", "members.#", "2"),
-					resource.TestCheckTypeSetElemAttr("opnsense_interfaces_bridge.test", "members.*", spareDevice1()),
-					resource.TestCheckTypeSetElemAttr("opnsense_interfaces_bridge.test", "members.*", spareDevice2()),
+					resource.TestCheckResourceAttr("opnsense_interfaces_assignment.bridge_member_1", "device", spareDevice1()),
+					resource.TestCheckResourceAttr("opnsense_interfaces_assignment.bridge_member_2", "device", spareDevice2()),
 				),
 			},
 			{
@@ -82,8 +82,29 @@ func TestAccInterfacesBridgeResource(t *testing.T) {
 
 func testAccBridgeConfig(description string) string {
 	return fmt.Sprintf(`
+resource "opnsense_interfaces_assignment" "bridge_member_1" {
+  device          = %[1]q
+  description     = "Bridge member 1"
+  enabled         = true
+  allow_readdress = true
+  ipv4 = { mode = "none" }
+  ipv6 = { mode = "none" }
+}
+
+resource "opnsense_interfaces_assignment" "bridge_member_2" {
+  device          = %[2]q
+  description     = "Bridge member 2"
+  enabled         = true
+  allow_readdress = true
+  ipv4 = { mode = "none" }
+  ipv6 = { mode = "none" }
+}
+
 resource "opnsense_interfaces_bridge" "test" {
-  members    = [%[1]q, %[2]q]
+  members = [
+    opnsense_interfaces_assignment.bridge_member_1.name,
+    opnsense_interfaces_assignment.bridge_member_2.name,
+  ]
   description = %[3]q
 }
 `, spareDevice1(), spareDevice2(), description)
