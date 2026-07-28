@@ -121,8 +121,8 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Firewall/Alias`                 | ✅        | ✅           |
 | `Firewall/Category`              | 🚧       | 🚧          |
 | `Firewall/Filter`                | ✅        | ✅           |
-| `Firewall/Group`                 | ❌        | ❌           |
-| `Firewall/NPTv6`                 | ❌        | ❌           |
+| `Firewall/Group`                 | ✅        | ✅           |
+| `Firewall/NPTv6`                 | ✅        | ✅           |
 | `Firewall/Source NAT`            | ✅        | ✅           |
 | `Firewall/One-to-One NAT`        | ✅        | ✅           |
 | `Interfaces/Assignment`          | ✅        | ✅           |
@@ -165,7 +165,9 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Openvpn/Instances/Static Key`   | ✅        | ✅           |
 | `Openvpn/Instances/Generate Key` | ✅ (ephemeral) |        |
 | `Routes/Route`                   | ✅        | ✅           |
-| `Routing/Gateway`                | ❌        | ❌           |
+| `Routing/Gateway`                | ✅        | ✅           |
+| `Routing/Gateway Group`          | ✅        | ✅           |
+| `Routing/Gateway Status`         |           | ✅           |
 | `Syslog/Settings`                | ❌        | ❌           |
 | `Syslog/Settings/Destination`    | ❌        | ❌           |
 | `Trafficshaper/Pipe`             | ❌        | ❌           |
