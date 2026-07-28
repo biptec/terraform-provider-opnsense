@@ -28,7 +28,10 @@ func routingMutationPreCheck(t *testing.T) string {
 	acctest.AccPreCheck(t)
 	iface := os.Getenv("OPNSENSE_TEST_ROUTING_INTERFACE")
 	if iface == "" {
-		t.Skip("OPNSENSE_TEST_ROUTING_INTERFACE must be set for routing mutation tests")
+		iface = os.Getenv("OPNSENSE_TEST_MANAGEMENT_INTERFACE")
+	}
+	if iface == "" {
+		t.Skip("OPNSENSE_TEST_ROUTING_INTERFACE or OPNSENSE_TEST_MANAGEMENT_INTERFACE must be set for routing mutation tests")
 	}
 	return iface
 }
