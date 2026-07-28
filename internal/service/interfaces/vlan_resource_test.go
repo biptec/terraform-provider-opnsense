@@ -9,71 +9,65 @@ import (
 )
 
 func TestAccInterfacesVlanResource(t *testing.T) {
+	requireInterfaceLab(t)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.AccPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
-				Config: testAccVlanResourceConfig(100, "High VLAN ID test", 4, "vtnet0", "vlan01"),
+				Config: testAccVlanResourceConfig(100, "VLAN 100 test", 4, "802.1q", spareDevice1(), "vlan01"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("opnsense_interfaces_vlan.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "tag", "100"),
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "description", "High VLAN ID test"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "description", "VLAN 100 test"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "priority", "4"),
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "parent", "vtnet0"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "protocol", "802.1q"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "parent", spareDevice1()),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "device", "vlan01"),
 				),
 			},
-			// ImportState testing
 			{
 				ResourceName:      "opnsense_interfaces_vlan.test",
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
-			// Update and Read testing
 			{
-				Config: testAccVlanResourceConfig(100, "Updated VLAN 100", 6, "vtnet0", "vlan01"),
+				Config: testAccVlanResourceConfig(100, "Updated VLAN 100", 6, "802.1ad", spareDevice1(), "vlan01"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "tag", "100"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "description", "Updated VLAN 100"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "priority", "6"),
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "parent", "vtnet0"),
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "device", "vlan01"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "protocol", "802.1ad"),
 				),
 			},
-			// Delete testing automatically occurs in TestCase
 		},
 	})
 }
 
 func TestAccInterfacesVlanResource_HighVlanId(t *testing.T) {
+	requireInterfaceLab(t)
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctest.AccPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccVlanResourceConfig(4093, "High VLAN ID test", 6, "vtnet0", "vlan01"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "tag", "4093"),
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "description", "High VLAN ID test"),
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "priority", "6"),
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "parent", "vtnet0"),
-					resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "device", "vlan01"),
-				),
-			},
-		},
+		Steps: []resource.TestStep{{
+			Config: testAccVlanResourceConfig(4093, "High VLAN ID test", 6, "802.1q", spareDevice1(), "vlan02"),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "tag", "4093"),
+				resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "priority", "6"),
+				resource.TestCheckResourceAttr("opnsense_interfaces_vlan.test", "protocol", "802.1q"),
+			),
+		}},
 	})
 }
 
-func testAccVlanResourceConfig(tag int, description string, priority int, parent string, device string) string {
+func testAccVlanResourceConfig(tag int, description string, priority int, protocol, parent, device string) string {
 	return fmt.Sprintf(`
 resource "opnsense_interfaces_vlan" "test" {
   tag         = %[1]d
   description = %[2]q
   priority    = %[3]d
-  parent      = %[4]q
-  device      = %[5]q
+  protocol    = %[4]q
+  parent      = %[5]q
+  device      = %[6]q
 }
-`, tag, description, priority, parent, device)
+`, tag, description, priority, protocol, parent, device)
 }
