@@ -15,6 +15,7 @@ import (
 	"github.com/biptec/terraform-provider-opnsense/internal/service/openvpn"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/quagga"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/routes"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/routing"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/trust"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/unbound"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/wireguard"
@@ -298,6 +299,7 @@ func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Reso
 		openvpn.Resources(ctx),
 		quagga.Resources(ctx),
 		routes.Resources(ctx),
+		routing.Resources(ctx),
 		trust.Resources(ctx),
 		unbound.Resources(ctx),
 		wireguard.Resources(ctx),
@@ -321,6 +323,7 @@ func (p *opnsenseProvider) DataSources(ctx context.Context) []func() datasource.
 		openvpn.DataSources(ctx),
 		quagga.DataSources(ctx),
 		routes.DataSources(ctx),
+		routing.DataSources(ctx),
 		trust.DataSources(ctx),
 		unbound.DataSources(ctx),
 		wireguard.DataSources(ctx),
