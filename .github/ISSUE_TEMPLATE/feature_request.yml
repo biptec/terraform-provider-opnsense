@@ -104,4 +104,4 @@ body:
         ---
 
         **Note**: Feature requests for **Core API** resources will be prioritized over Plugin API resources.
-        See the [Current API Coverage](https://github.com/browningluke/terraform-provider-opnsense#current-api-coverage) section in the README.
+        See the [Current API Coverage](https://github.com/biptec/terraform-provider-opnsense#current-api-coverage) section in the README.

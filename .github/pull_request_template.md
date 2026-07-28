@@ -40,5 +40,5 @@ Describe how you tested your changes:
 - [ ] Code follows project style guidelines
 - [ ] Documentation has been generated (`make docs`)
 - [ ] Code has been formatted (`make fmt`)
-- [ ] Supporting code has been merged and _released_ in [browningluke/opnsense-go](https://github.com/browningluke/opnsense-go)
+- [ ] Supporting code has been merged and _released_ in [biptec/opnsense-go](https://github.com/biptec/opnsense-go)
 - [ ] Tests pass locally & in test workflow

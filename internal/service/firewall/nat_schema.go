@@ -3,9 +3,9 @@ package firewall
 import (
 	"regexp"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/firewall"
-	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/firewall"
+	"github.com/biptec/terraform-provider-opnsense/internal/tools"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -116,7 +116,7 @@ func natResourceSchema() schema.Schema {
 						Computed:            true,
 						Default:             stringdefault.StaticString(""),
 						Validators: []validator.String{
-							stringvalidator.RegexMatches(regexp.MustCompile("^(\\d|-)+$|^([a-z])+$"),
+							stringvalidator.RegexMatches(regexp.MustCompile(`^(\d|-)+$|^([a-z])+$`),
 								"must be number (80), range (80-443) or well known name (http)"),
 						},
 					},
@@ -158,7 +158,7 @@ func natResourceSchema() schema.Schema {
 						Computed:            true,
 						Default:             stringdefault.StaticString(""),
 						Validators: []validator.String{
-							stringvalidator.RegexMatches(regexp.MustCompile("^(\\d|-)+$|^(\\w){0,32}$"),
+							stringvalidator.RegexMatches(regexp.MustCompile(`^(\d|-)+$|^(\w){0,32}$`),
 								"must be number (80), range (80-443), well known name (http) or alias name"),
 						},
 					},
@@ -183,7 +183,7 @@ func natResourceSchema() schema.Schema {
 						Computed:            true,
 						Default:             stringdefault.StaticString(""),
 						Validators: []validator.String{
-							stringvalidator.RegexMatches(regexp.MustCompile("^(\\d|-)+$|^([a-z])+$"),
+							stringvalidator.RegexMatches(regexp.MustCompile(`^(\d|-)+$|^([a-z])+$`),
 								"must be number (80), range (80-443) or well known name (http)"),
 						},
 					},

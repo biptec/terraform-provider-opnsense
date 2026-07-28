@@ -3,7 +3,7 @@ package wireguard_test
 import (
 	"testing"
 
-	"github.com/browningluke/terraform-provider-opnsense/internal/acctest"
+	"github.com/biptec/terraform-provider-opnsense/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 

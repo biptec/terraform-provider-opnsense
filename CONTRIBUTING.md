@@ -52,7 +52,7 @@ You should also be familiar with:
 
 ### 1. Fork and Clone
 
-If you are adding a new feature, or modifying an existing resource, fork the `browningluke/opnsense-go` repo on Github, then clone that fork:
+If you are adding a new feature, or modifying an existing resource, fork the `biptec/opnsense-go` repo on Github, then clone that fork:
 ```bash
 $ git clone https://github.com/YOUR-USERNAME/opnsense-go.git
 ```
@@ -66,9 +66,9 @@ $ cd terraform-provider-opnsense
 
 ### 2. Local Dependencies
 
-This provider depends *heavily* on [`opnsense-go`](https://github.com/browningluke/opnsense-go) as its API client. Development will be made much easier if you add the following replace directive to your `go.mod` file:
+This provider depends *heavily* on [`opnsense-go`](https://github.com/biptec/opnsense-go) as its API client. Development will be made much easier if you add the following replace directive to your `go.mod` file:
 ```go
-replace github.com/browningluke/opnsense-go => ../opnsense-go
+replace github.com/biptec/opnsense-go => ../opnsense-go
 ```
 
 The provider will automatically use your local version. If you're only working on the provider, the published version will be used via Go modules.
@@ -88,7 +88,7 @@ Build the provider binary:
 $ make build
 
 # Or build and install to your local Terraform plugins directory
-# This makes the provider available at: dev.io/browningluke/opnsense v1.0.0
+# This makes the provider available at: dev.io/biptec/opnsense v1.0.0
 $ make build-local
 ```
 
@@ -98,7 +98,7 @@ After running `make build-local`, you can use the provider in your Terraform con
 terraform {
   required_providers {
     opnsense = {
-      source  = "dev.io/browningluke/opnsense"
+      source  = "dev.io/biptec/opnsense"
       version = "1.0.0"
     }
   }
@@ -207,7 +207,7 @@ If you're implementing an OPNsense API endpoint that doesn't fit into any existi
    ```go
    import (
        // ... existing imports ...
-       "github.com/browningluke/terraform-provider-opnsense/internal/service/newservice"
+       "github.com/biptec/terraform-provider-opnsense/internal/service/newservice"
    )
 
    func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Resource {
@@ -557,7 +557,7 @@ terraform-provider-opnsense/
 
 ## Getting Help
 
-- **Issues** - [GitHub Issues](https://github.com/browningluke/terraform-provider-opnsense/issues) for bug reports and feature requests
+- **Issues** - [GitHub Issues](https://github.com/biptec/terraform-provider-opnsense/issues) for bug reports and feature requests
 - **Documentation** - Check existing docs and examples first
 
 When asking for help, please provide:

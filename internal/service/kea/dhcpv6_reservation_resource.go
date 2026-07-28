@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/errs"
-	"github.com/browningluke/opnsense-go/pkg/opnsense"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/errs"
+	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -108,7 +108,7 @@ func (r *dhcpv6ReservationResource) Read(ctx context.Context, req resource.ReadR
 	if err != nil {
 		var notFoundError *errs.NotFoundError
 		if errors.As(err, &notFoundError) {
-			tflog.Warn(ctx, fmt.Sprintf("reservation not present in remote, removing from state"))
+			tflog.Warn(ctx, "reservation not present in remote, removing from state")
 			resp.State.RemoveResource(ctx)
 			return
 		}

@@ -2,7 +2,7 @@ terraform {
   required_providers {
     opnsense = {
       version = "~> x.0"
-      source  = "browningluke/opnsense"
+      source  = "biptec/opnsense"
     }
   }
 }

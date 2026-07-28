@@ -3,9 +3,9 @@ package wireguard
 import (
 	"context"
 
-	"github.com/browningluke/opnsense-go/pkg/wireguard"
-	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
-	"github.com/browningluke/terraform-provider-opnsense/internal/validators"
+	"github.com/biptec/opnsense-go/pkg/wireguard"
+	"github.com/biptec/terraform-provider-opnsense/internal/tools"
+	"github.com/biptec/terraform-provider-opnsense/internal/validators"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

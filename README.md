@@ -22,7 +22,7 @@ This Terraform provider enables management of various configs and resources with
 terraform {
   required_providers {
     opnsense = {
-      source  = "browningluke/opnsense"
+      source  = "biptec/opnsense"
       version = "~> 0.16"
     }
   }
@@ -77,7 +77,7 @@ v1 represents the first release where resource and data source schemas will be g
 
 ## Documentation
 
-- **[Terraform Registry Documentation](https://registry.terraform.io/providers/browningluke/opnsense/latest/docs)** - Full resource and data source reference
+- **[Terraform Registry Documentation](https://registry.terraform.io/providers/biptec/opnsense/latest/docs)** - Full resource and data source reference
 - **[Examples](./examples/)** - Working examples for all resources
 
 ## Contributing

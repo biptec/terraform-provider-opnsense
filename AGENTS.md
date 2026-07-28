@@ -3,10 +3,13 @@
 ## Build, Test, and Lint
 
 ```bash
+# Run the deterministic local quality gate
+make check
+
 # Build provider binary to current directory
 make build
 
-# Build and install to local Terraform plugins directory (dev.io/browningluke/opnsense v1.0.0)
+# Build and install to local Terraform plugins directory (dev.io/biptec/opnsense v1.0.0)
 make build-local
 
 # Run unit tests
@@ -37,7 +40,7 @@ export OPNSENSE_API_SECRET="your-api-secret"
 export OPNSENSE_ALLOW_INSECURE="true"  # for self-signed certs
 ```
 
-Always use `-p 1` when running `go test` directly for acceptance tests — the shared OPNsense instance cannot handle concurrent test runs.
+Ordinary `go test ./...` must pass without live credentials. Acceptance tests are enabled only with `TF_ACC=1`. Always use `-p 1` when running acceptance tests directly — the shared OPNsense instance cannot handle concurrent test runs.
 
 The CI OPNsense VM only has a single `wan` interface. Tests referencing interfaces must work with this minimal setup.
 
@@ -45,9 +48,9 @@ CI runs the acceptance suite as parallel shards — one runner + one OPNsense VM
 
 ## Architecture
 
-This is a Terraform Plugin Framework (v6) provider for OPNsense. The API client lives in the separate [`opnsense-go`](https://github.com/browningluke/opnsense-go) module (`github.com/browningluke/opnsense-go`). To develop against a local copy, add to `go.mod`:
+This is a Terraform Plugin Framework (v6) provider for OPNsense. The API client lives in the separate [`opnsense-go`](https://github.com/biptec/opnsense-go) module (`github.com/biptec/opnsense-go`). To develop against a local copy, add to `go.mod`:
 ```go
-replace github.com/browningluke/opnsense-go => ../opnsense-go
+replace github.com/biptec/opnsense-go => ../opnsense-go
 ```
 
 ### Service Module Pattern

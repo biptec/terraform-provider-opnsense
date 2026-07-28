@@ -3,7 +3,7 @@ package routes
 import (
 	"testing"
 
-	"github.com/browningluke/opnsense-go/pkg/routes"
+	"github.com/biptec/opnsense-go/pkg/routes"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 

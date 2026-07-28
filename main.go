@@ -5,14 +5,14 @@ import (
 	"flag"
 	"log"
 
-	"github.com/browningluke/terraform-provider-opnsense/internal/provider"
+	"github.com/biptec/terraform-provider-opnsense/internal/provider"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
 )
 
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name terraform-provider-opnsense
 
 var (
-	opnsenseProviderName        = "registry.terraform.io/browningluke/opnsense"
+	opnsenseProviderName        = "registry.terraform.io/biptec/opnsense"
 	version              string = "dev"
 )
 
@@ -22,7 +22,7 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	serverFactory, _, err := provider.ProtoV6ProviderServerFactory(context.Background())
+	serverFactory, _, err := provider.ProtoV6ProviderServerFactory(context.Background(), version)
 
 	if err != nil {
 		log.Fatal(err)
