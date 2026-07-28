@@ -18,14 +18,14 @@ func TestAccKeaDhcpv6SubnetResource(t *testing.T) {
 				Config: testAccDhcpv6SubnetResourceConfig(
 					"fd00:200::/64",
 					"fd00:200::100-fd00:200::200",
-					"wan",
+					testKeaDhcpv6Interface(),
 					"Test Kea DHCPv6 Subnet",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("opnsense_kea_dhcpv6_subnet.test", "subnet", "fd00:200::/64"),
 					resource.TestCheckResourceAttr("opnsense_kea_dhcpv6_subnet.test", "pools.#", "1"),
 					resource.TestCheckTypeSetElemAttr("opnsense_kea_dhcpv6_subnet.test", "pools.*", "fd00:200::100-fd00:200::200"),
-					resource.TestCheckResourceAttr("opnsense_kea_dhcpv6_subnet.test", "interface", "wan"),
+					resource.TestCheckResourceAttr("opnsense_kea_dhcpv6_subnet.test", "interface", testKeaDhcpv6Interface()),
 					resource.TestCheckResourceAttr("opnsense_kea_dhcpv6_subnet.test", "description", "Test Kea DHCPv6 Subnet"),
 					resource.TestCheckResourceAttrSet("opnsense_kea_dhcpv6_subnet.test", "id"),
 				),
@@ -41,7 +41,7 @@ func TestAccKeaDhcpv6SubnetResource(t *testing.T) {
 				Config: testAccDhcpv6SubnetResourceConfig(
 					"fd00:200::/64",
 					"fd00:200::100-fd00:200::150",
-					"wan",
+					testKeaDhcpv6Interface(),
 					"Test Kea DHCPv6 Subnet Updated",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
