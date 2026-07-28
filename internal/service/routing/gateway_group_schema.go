@@ -10,6 +10,7 @@ import (
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -39,10 +40,10 @@ func gatewayGroupResourceSchema() schema.Schema {
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"tier1": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 1. At least one gateway is required.", Required: true, ElementType: types.StringType},
-			"tier2": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 2.", Optional: true, ElementType: types.StringType},
-			"tier3": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 3.", Optional: true, ElementType: types.StringType},
-			"tier4": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 4.", Optional: true, ElementType: types.StringType},
-			"tier5": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 5.", Optional: true, ElementType: types.StringType},
+			"tier2": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 2.", Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType},
+			"tier3": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 3.", Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType},
+			"tier4": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 4.", Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType},
+			"tier5": schema.SetAttribute{MarkdownDescription: "Gateway names in tier 5.", Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType},
 			"trigger": schema.StringAttribute{
 				MarkdownDescription: "Failure trigger: `down`, `downloss`, `downlatency`, or `downlosslatency`.",
 				Optional:            true, Computed: true, Default: stringdefault.StaticString("down"),

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -39,5 +40,18 @@ func TestGatewayGroupSchemaRoundTrip(t *testing.T) {
 	state.Tier1.ElementsAs(t.Context(), &tier1, false)
 	if len(tier1) != 2 {
 		t.Fatalf("unexpected tier1 values: %#v", tier1)
+	}
+}
+
+func TestGatewayGroupOptionalTiersDefaultToEmptySets(t *testing.T) {
+	s := gatewayGroupResourceSchema()
+	for _, name := range []string{"tier2", "tier3", "tier4", "tier5"} {
+		attribute, ok := s.Attributes[name].(schema.SetAttribute)
+		if !ok {
+			t.Fatalf("%s is not a set attribute", name)
+		}
+		if !attribute.Optional || !attribute.Computed || attribute.Default == nil {
+			t.Fatalf("%s must be optional, computed, and default to an empty set", name)
+		}
 	}
 }
