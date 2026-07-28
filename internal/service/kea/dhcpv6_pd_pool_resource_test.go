@@ -57,10 +57,11 @@ func TestAccKeaDhcpv6PdPoolResource(t *testing.T) {
 }
 
 func testAccDhcpv6PdPoolResourceConfig(subnetCIDR, prefix, prefixLen, delegatedLen, description string) string {
+	iface := testKeaDhcpv6Interface()
 	return fmt.Sprintf(`
 resource "opnsense_kea_dhcpv6_subnet" "test" {
   subnet      = %[1]q
-  interface   = "wan"
+  interface   = %[6]q
   description = "Test subnet for DHCPv6 PD pool"
 }
 
@@ -71,5 +72,5 @@ resource "opnsense_kea_dhcpv6_pd_pool" "test" {
   delegated_len = %[4]q
   description   = %[5]q
 }
-`, subnetCIDR, prefix, prefixLen, delegatedLen, description)
+`, subnetCIDR, prefix, prefixLen, delegatedLen, description, iface)
 }
