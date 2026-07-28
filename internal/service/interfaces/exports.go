@@ -10,6 +10,9 @@ func Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		newAssignmentResource,
 		newInterfaceSettingsResource,
+		newVxlanResource,
+		newBridgeResource,
+		newLaggResource,
 		newVipResource,
 		newVlanResource,
 	}
@@ -19,6 +22,9 @@ func DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		newAssignmentDataSource,
 		newInterfaceSettingsDataSource,
+		newVxlanDataSource,
+		newBridgeDataSource,
+		newLaggDataSource,
 		newVipDataSource,
 		newVlanDataSource,
 		newOverviewInterfaceDataSource,
