@@ -1,7 +1,8 @@
-.PHONY: docs build-local build fmt fmt-check test testacc vet staticcheck check
+.PHONY: docs build-dev build-local build fmt fmt-check test testacc vet staticcheck check
 
 PKG ?=
 TEST ?=
+DEV_DIR ?= $(CURDIR)/build
 
 docs:
 	go generate ./...
@@ -30,6 +31,10 @@ staticcheck:
 	go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
 
 check: fmt-check test vet staticcheck
+
+build-dev:
+	mkdir -p "$(DEV_DIR)"
+	go build -o "$(DEV_DIR)/terraform-provider-opnsense" .
 
 build-local:
 	go build -o ~/.terraform.d/plugins/dev.io/biptec/opnsense/1.0.0/$$(go env GOOS)_$$(go env GOARCH)/terraform-provider-opnsense .

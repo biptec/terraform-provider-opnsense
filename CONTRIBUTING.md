@@ -37,7 +37,7 @@ Thank you for your considering contributing to this Terraform provider! This doc
 
 Before you begin, ensure you have the following installed:
 
-- **Go 1.24 or later** - [Download](https://golang.org/dl/)
+- **Go 1.25.8 or later** - [Download](https://golang.org/dl/)
 - **Terraform 1.10+** - [Download](https://developer.hashicorp.com/terraform/install)
 - **OPNsense instance** - Required for running acceptance tests (can be a VM, physical device, or test environment)
 - **Make** - For using the provided Makefile commands (optional but recommended)
@@ -84,26 +84,16 @@ $ go mod download
 Build the provider binary:
 
 ```bash
-# Build to current directory
-$ make build
+# Build to the current directory
+$ gmake build
 
-# Or build and install to your local Terraform plugins directory
-# This makes the provider available at: dev.io/biptec/opnsense v1.0.0
-$ make build-local
+# Build to ./build for use with a provider development override
+$ gmake build-dev
 ```
 
-After running `make build-local`, you can use the provider in your Terraform configurations with:
+Use the canonical source address `biptec/opnsense` with a Terraform or OpenTofu development override. See [Install from source](./docs/development-install.md) for the CLI configuration and credential setup.
 
-```hcl
-terraform {
-  required_providers {
-    opnsense = {
-      source  = "dev.io/biptec/opnsense"
-      version = "1.0.0"
-    }
-  }
-}
-```
+The legacy `gmake build-local` target remains available for configurations that intentionally use the local source address `dev.io/biptec/opnsense`.
 
 ## Making Changes
 
