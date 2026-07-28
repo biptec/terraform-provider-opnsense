@@ -72,7 +72,7 @@ func (r *vipResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	// Add VLAN to OPNsense interfaces
+	// Add VIP to OPNsense interfaces
 	id, err := r.client.Interfaces().AddVip(ctx, vip)
 	if err != nil {
 		if id != "" {
@@ -84,6 +84,9 @@ func (r *vipResource) Create(ctx context.Context, req resource.CreateRequest, re
 			if readStruct, readErr := r.client.Interfaces().GetVip(ctx, id); readErr == nil {
 				if readModel, convErr := convertVipStructToSchema(readStruct); convErr == nil {
 					readModel.Id = data.Id
+					if readModel.Password.IsNull() && !data.Password.IsNull() {
+						readModel.Password = data.Password
+					}
 					data = readModel
 				}
 			}
@@ -116,7 +119,7 @@ func (r *vipResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	// Get VLAN from OPNsense core API
+	// Get VIP from OPNsense core API
 	vip, err := r.client.Interfaces().GetVip(ctx, data.Id.ValueString())
 	if err != nil {
 		var notFoundError *errs.NotFoundError
@@ -141,6 +144,9 @@ func (r *vipResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	// ID cannot be added by convert... func, have to add here
 	vipModel.Id = data.Id
+	if vipModel.Password.IsNull() && !data.Password.IsNull() {
+		vipModel.Password = data.Password
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &vipModel)...)
@@ -164,11 +170,11 @@ func (r *vipResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	// Update VLAN in OPNsense core
+	// Update VIP in OPNsense core
 	err = r.client.Interfaces().UpdateVip(ctx, data.Id.ValueString(), vip)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to create vip, got error: %s", err))
+			fmt.Sprintf("Unable to update vip, got error: %s", err))
 		return
 	}
 

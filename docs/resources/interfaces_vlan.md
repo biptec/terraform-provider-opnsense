@@ -43,6 +43,7 @@ resource "opnsense_interfaces_vlan" "vlan04" {
 - `description` (String) Optional description here for your reference (not parsed).
 - `device` (String) Custom VLAN name. Custom names are possible, but only if the start of the name matches the required prefix and contains numeric characters or dots, e.g. `vlan0.1.2` or `qinq0.3.4`. Set to `""` to generate a device name. Defaults to `""`
 - `priority` (Number) 802.1Q VLAN PCP (priority code point). Defaults to `0`.
+- `protocol` (String) VLAN encapsulation protocol: automatic (empty), 802.1q, or 802.1ad.
 
 ### Read-Only
 

@@ -2,12 +2,12 @@
 page_title: "opnsense_interfaces_vip Resource - terraform-provider-opnsense"
 subcategory: Interfaces
 description: |-
-  Virtual IPs allow an OPNsense firewall to assign multiple IP addresses to the same network interface.
+  Manages an OPNsense virtual IP, including IP Alias, CARP, and Proxy ARP modes.
 ---
 
 # opnsense_interfaces_vip (Resource)
 
-Virtual IPs allow an OPNsense firewall to assign multiple IP addresses to the same network interface.
+Manages an OPNsense virtual IP, including IP Alias, CARP, and Proxy ARP modes.
 
 ## Example Usage
 
@@ -32,18 +32,29 @@ resource "opnsense_interfaces_vip" "ipalias_example_vip" {
 
 ### Required
 
-- `network` (String) Provide an address and subnet to use. (e.g 192.168.0.1/24)
+- `network` (String) Virtual IP address and prefix, for example `192.0.2.10/24`.
 
 ### Optional
 
-- `description` (String) Optional description here for your reference (not parsed).
-- `gateway` (String) For some interface types a gateway is required to configure an IP Alias (ppp/pppoe/tun), leave this field empty for all other interface types.
-- `interface` (String) Choose which interface this VIP applies to.
-- `mode` (String) Mode of the VIP. One of `ipalias` or `proxyarp`. `proxyarp` cannot be bound to by anything running on the firewall, such as IPsec, OpenVPN, etc. In most cases an `ipalias` should be used.
+- `advertisement_base` (Number) CARP advertisement base interval.
+- `advertisement_skew` (Number) CARP advertisement skew.
+- `description` (String) Optional description.
+- `gateway` (String) Gateway used by IP Alias on PPP, PPPoE, or tunnel interfaces.
+- `interface` (String) Logical interface to which the virtual IP applies.
+- `mode` (String) Virtual IP mode: `ipalias`, `carp`, or `proxyarp`.
+- `no_bind` (Boolean) Do not bind services to the virtual IP.
+- `no_expand` (Boolean) Do not expand the virtual IP into automatic firewall rules.
+- `no_sync` (Boolean) Exclude this virtual IP from XMLRPC synchronization.
+- `password` (String, Sensitive) CARP password.
+- `peer_ipv4` (String) Optional CARP IPv4 peer.
+- `peer_ipv6` (String) Optional CARP IPv6 peer.
+- `vhid` (Number) CARP VHID.
 
 ### Read-Only
 
-- `id` (String) UUID of the VIP.
+- `address` (String) Address rendered by OPNsense.
+- `id` (String) UUID of the virtual IP.
+- `vhid_text` (String) VHID label rendered by OPNsense.
 
 ## Import
 

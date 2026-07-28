@@ -176,7 +176,7 @@ func (r *vlanResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	err = r.client.Interfaces().UpdateVlan(ctx, data.Id.ValueString(), vlan)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to create vlan, got error: %s", err))
+			fmt.Sprintf("Unable to update vlan, got error: %s", err))
 		return
 	}
 
