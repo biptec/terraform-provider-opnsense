@@ -12,7 +12,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/browningluke/terraform-provider-opnsense/internal/provider"
+	"github.com/biptec/terraform-provider-opnsense/internal/provider"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
 
@@ -43,6 +43,10 @@ func protoV6ProviderFactoriesInit(ctx context.Context, providerNames ...string) 
 }
 
 func AccPreCheck(t *testing.T) {
+	t.Helper()
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("TF_ACC must be set for acceptance tests")
+	}
 	if v := os.Getenv("OPNSENSE_URI"); v == "" {
 		t.Fatal("OPNSENSE_URI must be set for acceptance tests")
 	}

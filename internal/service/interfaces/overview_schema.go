@@ -3,8 +3,8 @@ package interfaces
 import (
 	"context"
 
-	"github.com/browningluke/opnsense-go/pkg/interfaces"
-	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	"github.com/biptec/opnsense-go/pkg/interfaces"
+	"github.com/biptec/terraform-provider-opnsense/internal/tools"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -79,11 +79,13 @@ type overviewVLANModel struct {
 	Parent types.String `tfsdk:"parent"`
 }
 
+//lint:ignore U1000 Retained for planned LAGG overview mapping.
 type overviewLaggOptionsModel struct {
 	Flags       types.Set    `tfsdk:"flags"`
 	FlowIDShift types.String `tfsdk:"flowid_shift"`
 }
 
+//lint:ignore U1000 Retained for planned LAGG overview mapping.
 type overviewLaggStatisticsModel struct {
 	ActivePorts types.String `tfsdk:"active_ports"`
 	Flapping    types.String `tfsdk:"flapping"`

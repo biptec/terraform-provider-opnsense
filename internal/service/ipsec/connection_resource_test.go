@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/browningluke/terraform-provider-opnsense/internal/acctest"
+	"github.com/biptec/terraform-provider-opnsense/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -231,6 +231,7 @@ resource "opnsense_ipsec_connection" "test" {
 	return rval
 }
 
+//lint:ignore U1000 Retained for the currently disabled acceptance scenario.
 func testAccConnectionResourceConfigMinimal() string {
 	return `
 resource "opnsense_ipsec_connection" "test" {
@@ -258,6 +259,7 @@ resource "opnsense_ipsec_connection" "test" {
 `
 }
 
+//lint:ignore U1000 Retained for the currently disabled acceptance scenario.
 func testAccConnectionResourceConfigIKEv1() string {
 	return `
 resource "opnsense_ipsec_connection" "test" {
@@ -285,6 +287,7 @@ resource "opnsense_ipsec_connection" "test" {
 `
 }
 
+//lint:ignore U1000 Retained for the currently disabled acceptance scenario.
 func testAccConnectionResourceConfigMultipleAddresses() string {
 	return `
 resource "opnsense_ipsec_connection" "test" {

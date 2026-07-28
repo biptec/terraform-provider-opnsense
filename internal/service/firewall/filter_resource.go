@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/errs"
-	"github.com/browningluke/opnsense-go/pkg/opnsense"
-	"github.com/browningluke/terraform-provider-opnsense/internal/validators"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/errs"
+	"github.com/biptec/opnsense-go/pkg/opnsense"
+	"github.com/biptec/terraform-provider-opnsense/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -153,7 +153,7 @@ func (r *filterResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if err != nil {
 		var notFoundError *errs.NotFoundError
 		if errors.As(err, &notFoundError) {
-			tflog.Warn(ctx, fmt.Sprintf("firewall filter not present in remote, removing from state"))
+			tflog.Warn(ctx, "firewall filter not present in remote, removing from state")
 			resp.State.RemoveResource(ctx)
 			return
 		}

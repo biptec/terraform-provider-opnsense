@@ -2,8 +2,8 @@ package provider_test
 
 import (
 	"context"
-	"github.com/browningluke/terraform-provider-opnsense/internal/acctest"
-	"github.com/browningluke/terraform-provider-opnsense/internal/provider"
+	"github.com/biptec/terraform-provider-opnsense/internal/acctest"
+	"github.com/biptec/terraform-provider-opnsense/internal/provider"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"

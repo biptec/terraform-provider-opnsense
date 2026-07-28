@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/ipsec"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/ipsec"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -90,6 +90,7 @@ func authRemoteResourceSchema() schema.Schema {
 	}
 }
 
+//lint:ignore U1000 Retained for the planned IPsec data source.
 func authRemoteDataSourceSchema() dschema.Schema {
 	return dschema.Schema{
 		MarkdownDescription: "IPsec AuthRemote Resources are used for phase 1 authentication of IPsec VPN connections.",

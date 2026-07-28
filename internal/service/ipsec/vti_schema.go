@@ -1,7 +1,7 @@
 package ipsec
 
 import (
-	"github.com/browningluke/opnsense-go/pkg/ipsec"
+	"github.com/biptec/opnsense-go/pkg/ipsec"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"

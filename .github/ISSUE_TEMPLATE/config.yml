@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions & Discussions
-    url: https://github.com/browningluke/terraform-provider-opnsense/discussions
+    url: https://github.com/biptec/terraform-provider-opnsense/discussions
     about: Ask questions and discuss with the community
   - name: OPNsense Documentation
     url: https://docs.opnsense.org/

@@ -24,7 +24,7 @@ jobs:
         env:
           VERSION: ${{ github.event.client_payload.version }}
         run: |
-          go get "github.com/browningluke/opnsense-go@${VERSION}"
+          go get "github.com/biptec/opnsense-go@${VERSION}"
           go mod tidy
 
       - name: Open pull request
@@ -42,7 +42,7 @@ jobs:
           git push origin "bump/opnsense-go-${VERSION}"
 
           cat > /tmp/pr-body.md << EOF
-          Bumps \`github.com/browningluke/opnsense-go\` to \`${VERSION}\`.
+          Bumps \`github.com/biptec/opnsense-go\` to \`${VERSION}\`.
 
           This PR was opened automatically in response to a new release of [opnsense-go](${RELEASE_URL}).
 
