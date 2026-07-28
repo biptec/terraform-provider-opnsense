@@ -23,9 +23,9 @@ func firewallGroupPreCheck(t *testing.T) string {
 }
 
 func TestAccFirewallGroupResource(t *testing.T) {
-	var member string
+	member := firewallGroupPreCheck(t)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { member = firewallGroupPreCheck(t) },
+		PreCheck:                 func() { _ = firewallGroupPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -82,9 +82,9 @@ func nptPreCheck(t *testing.T) (string, string, string) {
 }
 
 func TestAccFirewallNptResource(t *testing.T) {
-	var iface, source, destination string
+	iface, source, destination := nptPreCheck(t)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { iface, source, destination = nptPreCheck(t) },
+		PreCheck:                 func() { _, _, _ = nptPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
