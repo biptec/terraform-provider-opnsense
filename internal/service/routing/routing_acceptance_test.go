@@ -37,9 +37,9 @@ func routingMutationPreCheck(t *testing.T) string {
 }
 
 func TestAccGatewayResource(t *testing.T) {
-	var iface string
+	iface := routingMutationPreCheck(t)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { iface = routingMutationPreCheck(t) },
+		PreCheck:                 func() { _ = routingMutationPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -81,9 +81,9 @@ resource "opnsense_routing_gateway" "test" {
 }
 
 func TestAccGatewayGroupResource(t *testing.T) {
-	var iface string
+	iface := routingMutationPreCheck(t)
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { iface = routingMutationPreCheck(t) },
+		PreCheck:                 func() { _ = routingMutationPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
