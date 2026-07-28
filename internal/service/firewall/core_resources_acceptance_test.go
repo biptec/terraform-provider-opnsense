@@ -14,7 +14,10 @@ func firewallGroupPreCheck(t *testing.T) string {
 	acctest.AccPreCheck(t)
 	member := os.Getenv("OPNSENSE_TEST_FIREWALL_GROUP_MEMBER")
 	if member == "" {
-		t.Skip("OPNSENSE_TEST_FIREWALL_GROUP_MEMBER must be set for firewall group tests")
+		member = os.Getenv("OPNSENSE_TEST_MANAGEMENT_INTERFACE")
+	}
+	if member == "" {
+		t.Skip("OPNSENSE_TEST_FIREWALL_GROUP_MEMBER or OPNSENSE_TEST_MANAGEMENT_INTERFACE must be set for firewall group tests")
 	}
 	return member
 }
@@ -61,10 +64,19 @@ func nptPreCheck(t *testing.T) (string, string, string) {
 	t.Helper()
 	acctest.AccPreCheck(t)
 	iface := os.Getenv("OPNSENSE_TEST_NPT_INTERFACE")
+	if iface == "" {
+		iface = os.Getenv("OPNSENSE_TEST_MANAGEMENT_INTERFACE")
+	}
 	source := os.Getenv("OPNSENSE_TEST_NPT_SOURCE")
+	if source == "" {
+		source = "fd00:3901::/48"
+	}
 	destination := os.Getenv("OPNSENSE_TEST_NPT_DESTINATION")
-	if iface == "" || source == "" || destination == "" {
-		t.Skip("OPNSENSE_TEST_NPT_INTERFACE, OPNSENSE_TEST_NPT_SOURCE and OPNSENSE_TEST_NPT_DESTINATION are required")
+	if destination == "" {
+		destination = "2001:db8:3901::/48"
+	}
+	if iface == "" {
+		t.Skip("OPNSENSE_TEST_NPT_INTERFACE or OPNSENSE_TEST_MANAGEMENT_INTERFACE must be set for NPT tests")
 	}
 	return iface, source, destination
 }
