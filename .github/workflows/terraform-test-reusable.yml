@@ -181,7 +181,10 @@ jobs:
       - name: Start opnsense VM
         id: start-vm
         run: |
-          qemu-system-x86_64 -m 6144 -smp 2 -hda opnsense-images/opnsense.qcow2 \
+          qemu-system-x86_64 -machine q35 -m 6144 -smp 2 \
+          -device virtio-scsi-pci,id=scsi0 \
+          -drive file=opnsense-images/opnsense.qcow2,if=none,id=disk0,format=qcow2 \
+          -device scsi-hd,drive=disk0,bus=scsi0.0 \
           -drive file=nocloud.iso,media=cdrom,readonly=on \
           -netdev user,id=user.0,net=10.0.2.0/24,hostfwd=tcp::${{ env.OPNSENSE_SSH_PORT }}-:22,hostfwd=tcp::${{ env.OPNSENSE_WEB_PORT }}-:443 \
           -device virtio-net-pci,netdev=user.0,mac=${OPNSENSE_MANAGEMENT_MAC} \
@@ -189,14 +192,12 @@ jobs:
           -device virtio-net-pci,netdev=user.1,mac=52:54:00:12:34:57 \
           -netdev user,id=user.2,net=10.0.4.0/24,restrict=on \
           -device virtio-net-pci,netdev=user.2,mac=52:54:00:12:34:58 \
-          -chardev socket,path=/tmp/qemu-isa-serial.sock,server=on,wait=off,id=qga0 \
-          -device isa-serial,chardev=qga0 \
-          -device virtio-serial \
+          -device virtio-serial-pci \
           -chardev socket,path=/tmp/qemu-virtconsole.sock,server=on,wait=off,id=qvt0 \
           -device virtconsole,chardev=qvt0 \
           -chardev socket,path=/tmp/qemu-virtserialport.sock,server=on,wait=off,id=qvsp0 \
           -device virtserialport,chardev=qvsp0,name=org.qemu.guest_agent.0 \
-          -nographic &
+          -display none -monitor none -serial file:qemu-console.log &
           QEMU_PID="$!"
           echo "qemu-pid=${QEMU_PID}" >> "$GITHUB_OUTPUT"
           sleep 5
@@ -206,7 +207,7 @@ jobs:
           python3 << 'EOF'
           import json, os, select, socket, sys, time
           SOCK = os.environ.get("QEMU_GA_SOCKET", "/tmp/qemu-virtserialport.sock")
-          deadline = time.monotonic() + 180
+          deadline = time.monotonic() + 600
           while time.monotonic() < deadline:
               try:
                   with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
@@ -220,7 +221,7 @@ jobs:
               except Exception:
                   pass
               time.sleep(3)
-          print("ERROR: Guest agent not ready after 180s", file=sys.stderr)
+          print("ERROR: Guest agent not ready after 600s", file=sys.stderr)
           sys.exit(1)
           EOF
       - name: Create API key

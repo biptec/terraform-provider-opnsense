@@ -12,7 +12,7 @@ import time
 
 QEMU_GA_SOCKET = os.environ.get("QEMU_GA_SOCKET", "/tmp/qemu-virtserialport.sock")
 USERNAME = os.environ.get("OPNSENSE_API_USERNAME", "terraform")
-TIMEOUT = int(os.environ.get("OPNSENSE_API_KEY_TIMEOUT", "180"))
+TIMEOUT = int(os.environ.get("OPNSENSE_API_KEY_TIMEOUT", "600"))
 
 
 def qga(command, timeout=10):
