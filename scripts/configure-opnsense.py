@@ -77,7 +77,8 @@ def main():
         desc = step["description"]
         try:
             result = api_post(base_url, key, secret, step["endpoint"], step["body"])
-            if result.get("result") not in ("saved", "ok"):
+            success = result.get("result") in ("saved", "ok") or result.get("status") == "ok"
+            if not success:
                 raise RuntimeError(f"unexpected result: {result}")
             print(f"  [OK] {desc}")
         except Exception as e:
