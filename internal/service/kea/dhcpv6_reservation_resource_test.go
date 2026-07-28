@@ -57,10 +57,11 @@ func TestAccKeaDhcpv6ReservationResource(t *testing.T) {
 }
 
 func testAccDhcpv6ReservationResourceConfig(subnetCIDR, ipAddress, duid, hostname, description string) string {
+	iface := testKeaDhcpv6Interface()
 	return fmt.Sprintf(`
 resource "opnsense_kea_dhcpv6_subnet" "test" {
   subnet      = %[1]q
-  interface   = "wan"
+  interface   = %[6]q
   description = "Test subnet for DHCPv6 reservation"
 }
 
@@ -71,5 +72,5 @@ resource "opnsense_kea_dhcpv6_reservation" "test" {
   hostname    = %[4]q
   description = %[5]q
 }
-`, subnetCIDR, ipAddress, duid, hostname, description)
+`, subnetCIDR, ipAddress, duid, hostname, description, iface)
 }

@@ -38,5 +38,30 @@
         }
       }
     }
+  },
+  // ── Routing ───────────────────────────────────────────────────────────────
+  {
+    "description": "Routing: create a deterministic IPv4 gateway for static-route tests",
+    "endpoint": "/api/routing/settings/addGateway",
+    "body": {
+      "gateway_item": {
+        "disabled": "0",
+        "name": "CI_GATEWAY",
+        "descr": "Acceptance-test gateway",
+        "interface": "lan",
+        "ipprotocol": "inet",
+        "gateway": "10.0.2.2",
+        "defaultgw": "0",
+        "fargw": "0",
+        "monitor_disable": "1",
+        "priority": "255",
+        "weight": "1"
+      }
+    }
+  },
+  {
+    "description": "Routing: apply gateway configuration",
+    "endpoint": "/api/routing/settings/reconfigure",
+    "body": {}
   }
 ]
