@@ -12,9 +12,11 @@ func Resources(ctx context.Context) []func() resource.Resource {
 		newAliasResource,
 		newCategoryResource,
 		newFilterResource,
+		newGroupResource,
 		newNATResource,
 		newNATOneToOneResource,
 		newNATPortForwardResource,
+		newNptResource,
 	}
 }
 
@@ -23,8 +25,10 @@ func DataSources(ctx context.Context) []func() datasource.DataSource {
 		newAliasDataSource,
 		newCategoryDataSource,
 		newFilterDataSource,
+		newGroupDataSource,
 		newNATDataSource,
 		newNATOneToOneDataSource,
 		newNATPortForwardDataSource,
+		newNptDataSource,
 	}
 }
