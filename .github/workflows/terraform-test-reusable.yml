@@ -15,7 +15,12 @@ env:
   OPNSENSE_SSH_PORT: 8022
   OPNSENSE_WEB_PORT: 8443
   TERRAFORM_PLUGIN_URI: "registry.terraform.io/biptec/opnsense"
-  OPNSENSE_KEA_DHCPV6_IFACE: wan
+  OPNSENSE_KEA_DHCPV6_IFACE: lan
+  OPNSENSE_MANAGEMENT_MAC: "52:54:00:12:34:56"
+  OPNSENSE_TEST_MANAGEMENT_DEVICE: "vtnet0"
+  OPNSENSE_TEST_SPARE_DEVICE_1: "vtnet2"
+  OPNSENSE_TEST_SPARE_DEVICE_2: "vtnet3"
+  OPNSENSE_TEST_MANAGEMENT_INTERFACE: "lan"
 
 jobs:
   build:
@@ -130,10 +135,10 @@ jobs:
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: opnsense-image
-      - name: Move OPNsense image
+      - name: Decompress OPNsense image
         run: |
           mkdir -p opnsense-images
-          mv opnsense.qcow2 opnsense-images/
+          bzip2 --decompress --stdout opnsense.qcow2.bz2 > opnsense-images/opnsense.qcow2
       - name: Disable triggers
         run: |
           mkdir -p /etc/dpkg/dpkg.cfg.d
@@ -142,34 +147,69 @@ jobs:
           path-exclude /usr/share/man/*
           path-exclude /usr/share/info/*
           EOF
-      - name: Install qemu
+      - name: Install qemu and NoCloud tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-system-x86
+          sudo apt-get install -y qemu-system-x86 genisoimage
+
+      - name: Create NoCloud seed
+        run: |
+          mkdir -p nocloud
+          PASSWORD_HASH=$(openssl passwd -6 -salt opnsense-ci 'temporary-ci-password')
+          cat > nocloud/user-data << EOF
+          #cloud-config
+          hostname: opnsense-ci
+          user: terraform
+          password: '${PASSWORD_HASH}'
+          EOF
+          cat > nocloud/meta-data << 'EOF'
+          instance-id: opnsense-provider-ci
+          local-hostname: opnsense-ci
+          EOF
+          cat > nocloud/network-config << EOF
+          version: 1
+          config:
+            - type: physical
+              name: management
+              mac_address: '${OPNSENSE_MANAGEMENT_MAC}'
+              subnets:
+                - type: dhcp4
+          EOF
+          genisoimage -quiet -output nocloud.iso -volid cidata -joliet -rock \
+            nocloud/user-data nocloud/meta-data nocloud/network-config
+
       - name: Start opnsense VM
         id: start-vm
         run: |
-          qemu-system-x86_64 -m 6144 -smp 2 -hda opnsense-images/opnsense.qcow2 \
-          -netdev user,id=user.0,hostfwd=tcp::${{ env.OPNSENSE_SSH_PORT }}-:22,hostfwd=tcp::${{ env.OPNSENSE_WEB_PORT }}-:443 \
-          -device virtio-net,netdev=user.0 \
-          -chardev socket,path=/tmp/qemu-isa-serial.sock,server=on,wait=off,id=qga0 \
-          -device isa-serial,chardev=qga0 \
-          -device virtio-serial \
+          qemu-system-x86_64 -machine q35 -m 6144 -smp 2 \
+          -device virtio-scsi-pci,id=scsi0 \
+          -drive file=opnsense-images/opnsense.qcow2,if=none,id=disk0,format=qcow2 \
+          -device scsi-hd,drive=disk0,bus=scsi0.0 \
+          -drive file=nocloud.iso,media=cdrom,readonly=on \
+          -netdev user,id=user.0,net=10.0.2.0/24,hostfwd=tcp::${{ env.OPNSENSE_SSH_PORT }}-:22,hostfwd=tcp::${{ env.OPNSENSE_WEB_PORT }}-:443 \
+          -device virtio-net-pci,netdev=user.0,mac=${OPNSENSE_MANAGEMENT_MAC} \
+          -netdev user,id=user.1,net=10.0.3.0/24,restrict=on \
+          -device virtio-net-pci,netdev=user.1,mac=52:54:00:12:34:57 \
+          -netdev user,id=user.2,net=10.0.4.0/24,restrict=on \
+          -device virtio-net-pci,netdev=user.2,mac=52:54:00:12:34:58 \
+          -netdev user,id=user.3,net=10.0.5.0/24,restrict=on \
+          -device virtio-net-pci,netdev=user.3,mac=52:54:00:12:34:59 \
+          -device virtio-serial-pci \
           -chardev socket,path=/tmp/qemu-virtconsole.sock,server=on,wait=off,id=qvt0 \
           -device virtconsole,chardev=qvt0 \
           -chardev socket,path=/tmp/qemu-virtserialport.sock,server=on,wait=off,id=qvsp0 \
           -device virtserialport,chardev=qvsp0,name=org.qemu.guest_agent.0 \
-          -nographic &
+          -display none -monitor none -serial file:qemu-console.log &
           QEMU_PID="$!"
           echo "qemu-pid=${QEMU_PID}" >> "$GITHUB_OUTPUT"
-          sleep 180 # Wait for the VM to boot
+          sleep 5
           [ -d "/proc/${QEMU_PID}" ] || (echo "QEMU process not found" && exit 1)
       - name: Wait for QEMU guest agent
         run: |
           python3 << 'EOF'
           import json, os, select, socket, sys, time
           SOCK = os.environ.get("QEMU_GA_SOCKET", "/tmp/qemu-virtserialport.sock")
-          deadline = time.monotonic() + 180
+          deadline = time.monotonic() + 600
           while time.monotonic() < deadline:
               try:
                   with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
@@ -183,7 +223,7 @@ jobs:
               except Exception:
                   pass
               time.sleep(3)
-          print("ERROR: Guest agent not ready after 180s", file=sys.stderr)
+          print("ERROR: Guest agent not ready after 600s", file=sys.stderr)
           sys.exit(1)
           EOF
       - name: Create API key

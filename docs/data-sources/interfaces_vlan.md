@@ -22,5 +22,6 @@ VLANs (Virtual LANs) can be used to segment a single physical network into multi
 - `device` (String) Custom VLAN name. Custom names are possible, but only if the start of the name matches the required prefix and contains numeric characters or dots, e.g. `vlan0.1.2` or `qinq0.3.4`.
 - `parent` (String) VLAN capable interface to attach the VLAN to, e.g. `vtnet0`.
 - `priority` (Number) 802.1Q VLAN PCP (priority code point).
+- `protocol` (String) VLAN encapsulation protocol.
 - `tag` (Number) 802.1Q VLAN tag.
 

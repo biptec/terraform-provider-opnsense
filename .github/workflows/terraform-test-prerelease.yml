@@ -10,6 +10,11 @@ on:
         description: 'Reason for manually triggering this workflow'
         required: false
         type: string
+      packages:
+        description: 'Go packages to test'
+        required: false
+        default: './...'
+        type: string
 
 permissions:
   contents: read
@@ -18,4 +23,4 @@ jobs:
   test:
     uses: ./.github/workflows/terraform-test-reusable.yml
     with:
-      packages: './...'
+      packages: ${{ inputs.packages || './...' }}

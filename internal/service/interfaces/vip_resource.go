@@ -54,70 +54,77 @@ func (r *vipResource) Configure(ctx context.Context, req resource.ConfigureReque
 	r.client = opnsense.NewClient(apiClient)
 }
 
+func (r *vipResource) readState(ctx context.Context, id string, prior *vipResourceModel) (*vipResourceModel, error) {
+	vip, err := r.client.Interfaces().GetVip(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	state, err := convertVipStructToSchema(vip)
+	if err != nil {
+		return nil, err
+	}
+	state.Id = types.StringValue(id)
+	if prior != nil && state.Password.IsNull() && !prior.Password.IsNull() && !prior.Password.IsUnknown() {
+		state.Password = prior.Password
+	}
+	return state, nil
+}
+
+func vipFallbackState(data *vipResourceModel, id string) *vipResourceModel {
+	data.Id = types.StringValue(id)
+	if data.Address.IsUnknown() {
+		data.Address = types.StringNull()
+	}
+	if data.VHIDText.IsUnknown() {
+		data.VHIDText = types.StringNull()
+	}
+	return data
+}
+
 func (r *vipResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data *vipResourceModel
-
-	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Convert TF schema OPNsense struct
 	vip, err := convertVipSchemaToStruct(data)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to parse vip, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse vip, got error: %s", err))
 		return
 	}
 
-	// Add VLAN to OPNsense interfaces
-	id, err := r.client.Interfaces().AddVip(ctx, vip)
-	if err != nil {
-		if id != "" {
-			data.Id = types.StringValue(id)
-
-			// Read back so state captures API-normalised values (defaults,
-			// sorting, trimming); fall back to plan-only state if the
-			// read-back fails so the upstream resource isn't orphaned.
-			if readStruct, readErr := r.client.Interfaces().GetVip(ctx, id); readErr == nil {
-				if readModel, convErr := convertVipStructToSchema(readStruct); convErr == nil {
-					readModel.Id = data.Id
-					data = readModel
-				}
-			}
-
-			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	id, addErr := r.client.Interfaces().AddVip(ctx, vip)
+	if id != "" {
+		state, readErr := r.readState(ctx, id, data)
+		if readErr != nil {
+			state = vipFallbackState(data, id)
 		}
-
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to create vip, got error: %s", err))
+		resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+		if addErr == nil && readErr != nil {
+			resp.Diagnostics.AddError("VIP Created but Read Failed", readErr.Error())
+			return
+		}
+	}
+	if addErr != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create vip, got error: %s", addErr))
 		return
 	}
-
-	// Tag new resource with ID from OPNsense
-	data.Id = types.StringValue(id)
-
-	// Write logs using the tflog package
-	tflog.Trace(ctx, "created a resource")
-
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if id == "" {
+		resp.Diagnostics.AddError("Client Error", "Unable to create vip: API returned an empty identifier")
+		return
+	}
+	tflog.Trace(ctx, "created a resource", map[string]any{"id": id})
 }
 
 func (r *vipResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data *vipResourceModel
-
-	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Get VLAN from OPNsense core API
-	vip, err := r.client.Interfaces().GetVip(ctx, data.Id.ValueString())
+	state, err := r.readState(ctx, data.Id.ValueString(), data)
 	if err != nil {
 		var notFoundError *errs.NotFoundError
 		if errors.As(err, &notFoundError) {
@@ -125,55 +132,36 @@ func (r *vipResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to read vip, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read vip, got error: %s", err))
 		return
 	}
-
-	// Convert OPNsense struct to TF schema
-	vipModel, err := convertVipStructToSchema(vip)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to read vip, got error: %s", err))
-		return
-	}
-
-	// ID cannot be added by convert... func, have to add here
-	vipModel.Id = data.Id
-
-	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &vipModel)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *vipResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data *vipResourceModel
-
-	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Convert TF schema OPNsense struct
 	vip, err := convertVipSchemaToStruct(data)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to parse vip, got error: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse vip, got error: %s", err))
 		return
 	}
-
-	// Update VLAN in OPNsense core
-	err = r.client.Interfaces().UpdateVip(ctx, data.Id.ValueString(), vip)
+	id := data.Id.ValueString()
+	if err := r.client.Interfaces().UpdateVip(ctx, id, vip); err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update vip, got error: %s", err))
+		return
+	}
+	state, err := r.readState(ctx, id, data)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to create vip, got error: %s", err))
+		resp.Diagnostics.Append(resp.State.Set(ctx, vipFallbackState(data, id))...)
+		resp.Diagnostics.AddError("VIP Updated but Read Failed", err.Error())
 		return
 	}
-
-	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *vipResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

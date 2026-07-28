@@ -8,6 +8,15 @@ import (
 
 func Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		newAssignmentResource,
+		newInterfaceSettingsResource,
+		newVxlanResource,
+		newBridgeResource,
+		newLaggResource,
+		newGreResource,
+		newGifResource,
+		newLoopbackResource,
+		newNeighborResource,
 		newVipResource,
 		newVlanResource,
 	}
@@ -15,6 +24,16 @@ func Resources(ctx context.Context) []func() resource.Resource {
 
 func DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		newAssignmentDataSource,
+		newInterfaceSettingsDataSource,
+		newVxlanDataSource,
+		newBridgeDataSource,
+		newLaggDataSource,
+		newGreDataSource,
+		newGifDataSource,
+		newLoopbackDataSource,
+		newNeighborDataSource,
+		newOverviewDetailsDataSource,
 		newVipDataSource,
 		newVlanDataSource,
 		newOverviewInterfaceDataSource,
