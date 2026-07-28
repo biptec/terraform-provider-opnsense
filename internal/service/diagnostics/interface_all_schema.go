@@ -3,7 +3,7 @@ package diagnostics
 import (
 	"context"
 
-	"github.com/browningluke/opnsense-go/pkg/diagnostics"
+	"github.com/biptec/opnsense-go/pkg/diagnostics"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"

@@ -1,8 +1,8 @@
 package kea
 
 import (
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/kea"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/kea"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/opnsense"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
 

@@ -1,10 +1,11 @@
 package interfaces
 
 import (
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/interfaces"
-	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/interfaces"
+	"github.com/biptec/terraform-provider-opnsense/internal/tools"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
@@ -20,6 +21,7 @@ type vlanResourceModel struct {
 	Description types.String `tfsdk:"description"`
 	Tag         types.Int64  `tfsdk:"tag"`
 	Priority    types.Int64  `tfsdk:"priority"`
+	Protocol    types.String `tfsdk:"protocol"`
 	Parent      types.String `tfsdk:"parent"`
 	Device      types.String `tfsdk:"device"`
 
@@ -49,6 +51,15 @@ func vlanResourceSchema() schema.Schema {
 				Default:             int64default.StaticInt64(0),
 				Validators: []validator.Int64{
 					int64validator.Between(0, 7),
+				},
+			},
+			"protocol": schema.StringAttribute{
+				MarkdownDescription: "VLAN encapsulation protocol: automatic (empty), 802.1q, or 802.1ad.",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString(""),
+				Validators: []validator.String{
+					stringvalidator.OneOf("", "802.1q", "802.1ad"),
 				},
 			},
 			"parent": schema.StringAttribute{
@@ -96,6 +107,10 @@ func vlanDataSourceSchema() dschema.Schema {
 				MarkdownDescription: "802.1Q VLAN PCP (priority code point).",
 				Computed:            true,
 			},
+			"protocol": dschema.StringAttribute{
+				MarkdownDescription: "VLAN encapsulation protocol.",
+				Computed:            true,
+			},
 			"parent": dschema.StringAttribute{
 				MarkdownDescription: "VLAN capable interface to attach the VLAN to, e.g. `vtnet0`.",
 				Computed:            true,
@@ -113,6 +128,7 @@ func convertVlanSchemaToStruct(d *vlanResourceModel) (*interfaces.Vlan, error) {
 		Description: d.Description.ValueString(),
 		Tag:         tools.Int64ToString(d.Tag.ValueInt64()),
 		Priority:    api.SelectedMap(tools.Int64ToString(d.Priority.ValueInt64())),
+		Protocol:    api.SelectedMap(d.Protocol.ValueString()),
 		Parent:      api.SelectedMap(d.Parent.ValueString()),
 		Device:      d.Device.ValueString(),
 	}, nil
@@ -131,6 +147,7 @@ func convertVlanStructToSchema(d *interfaces.Vlan) (*vlanResourceModel, error) {
 		Description: tools.StringOrNull(d.Description),
 		Tag:         tools.StringToInt64Null(d.Tag),
 		Priority:    types.Int64Value(priority),
+		Protocol:    types.StringValue(d.Protocol.String()),
 		Parent:      types.StringValue(d.Parent.String()),
 		Device:      types.StringValue(d.Device),
 	}, nil

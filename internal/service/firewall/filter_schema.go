@@ -5,10 +5,10 @@ import (
 	"regexp"
 	"sort"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/firewall"
-	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
-	"github.com/browningluke/terraform-provider-opnsense/internal/validators"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/firewall"
+	"github.com/biptec/terraform-provider-opnsense/internal/tools"
+	"github.com/biptec/terraform-provider-opnsense/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -437,7 +437,7 @@ func filterResourceSchema() schema.Schema {
 								Computed:            true,
 								Default:             stringdefault.StaticString(""),
 								Validators: []validator.String{
-									stringvalidator.RegexMatches(regexp.MustCompile("^(\\d|-)+$|^(\\w){0,32}$"),
+									stringvalidator.RegexMatches(regexp.MustCompile(`^(\d|-)+$|^(\w){0,32}$`),
 										"must be number (80), range (80-443), well known name (http) or alias name"),
 								},
 							},
@@ -478,7 +478,7 @@ func filterResourceSchema() schema.Schema {
 								Computed:            true,
 								Default:             stringdefault.StaticString(""),
 								Validators: []validator.String{
-									stringvalidator.RegexMatches(regexp.MustCompile("^(\\d|-)+$|^(\\w){0,32}$"),
+									stringvalidator.RegexMatches(regexp.MustCompile(`^(\d|-)+$|^(\w){0,32}$`),
 										"must be number (80), range (80-443), well known name (http) or alias name"),
 								},
 							},
@@ -1536,7 +1536,7 @@ func filterResourceSchemaV0() schema.Schema {
 						Computed:            true,
 						Default:             stringdefault.StaticString(""),
 						Validators: []validator.String{
-							stringvalidator.RegexMatches(regexp.MustCompile("^(\\d|-)+$|^(\\w){0,32}$"),
+							stringvalidator.RegexMatches(regexp.MustCompile(`^(\d|-)+$|^(\w){0,32}$`),
 								"must be number (80), range (80-443), well known name (http) or alias name"),
 						},
 					},
@@ -1578,7 +1578,7 @@ func filterResourceSchemaV0() schema.Schema {
 						Computed:            true,
 						Default:             stringdefault.StaticString(""),
 						Validators: []validator.String{
-							stringvalidator.RegexMatches(regexp.MustCompile("^(\\d|-)+$|^(\\w){0,32}$"),
+							stringvalidator.RegexMatches(regexp.MustCompile(`^(\d|-)+$|^(\w){0,32}$`),
 								"must be number (80), range (80-443), well known name (http) or alias name"),
 						},
 					},

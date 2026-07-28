@@ -4,9 +4,9 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/firewall"
-	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/firewall"
+	"github.com/biptec/terraform-provider-opnsense/internal/tools"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"

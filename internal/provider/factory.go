@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
 
-func ProtoV6ProviderServerFactory(ctx context.Context) (func() tfprotov6.ProviderServer, provider.Provider, error) {
-	opnsense, err := NewProvider(ctx)
+func ProtoV6ProviderServerFactory(ctx context.Context, versions ...string) (func() tfprotov6.ProviderServer, provider.Provider, error) {
+	opnsense, err := NewProvider(ctx, versions...)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -5,19 +5,19 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/diagnostics"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/dnsmasq"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/firewall"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/interfaces"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/ipsec"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/kea"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/openvpn"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/quagga"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/routes"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/trust"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/unbound"
-	"github.com/browningluke/terraform-provider-opnsense/internal/service/wireguard"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/diagnostics"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/dnsmasq"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/firewall"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/interfaces"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/ipsec"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/kea"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/openvpn"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/quagga"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/routes"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/trust"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/unbound"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/wireguard"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -345,6 +345,10 @@ func (p *opnsenseProvider) EphemeralResources(ctx context.Context) []func() ephe
 	return ephemerals
 }
 
-func NewProvider(ctx context.Context) (provider.Provider, error) {
-	return &opnsenseProvider{}, nil
+func NewProvider(ctx context.Context, versions ...string) (provider.Provider, error) {
+	providerVersion := "dev"
+	if len(versions) > 0 && versions[0] != "" {
+		providerVersion = versions[0]
+	}
+	return &opnsenseProvider{version: providerVersion}, nil
 }

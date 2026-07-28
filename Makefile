@@ -1,26 +1,21 @@
-.PHONY: mkdocs build-local build fmt test testacc
+.PHONY: docs build-local build fmt fmt-check test testacc vet staticcheck check
 
-# Variables for testacc
 PKG ?=
 TEST ?=
 
-# Generate documentation from code
 docs:
 	go generate ./...
 
-# Format Go code
 fmt:
-	gofmt -w .
+	gofmt -w $$(find . -name '*.go' -not -path './vendor/*')
 
-# Run unit tests
+fmt-check:
+	@test -z "$$(gofmt -l $$(find . -name '*.go' -not -path './vendor/*'))" || \
+		(echo "Go files need formatting:"; gofmt -l $$(find . -name '*.go' -not -path './vendor/*'); exit 1)
+
 test:
 	go test ./...
 
-# Run acceptance tests
-# Usage:
-#   make testacc                                    - Run all tests
-#   make testacc PKG=firewall                       - Run tests for firewall package
-#   make testacc PKG=firewall TEST=TestAccFirewall  - Run specific test in firewall package
 testacc:
 ifdef PKG
 	TF_ACC=1 go test -v -p 1 -timeout 120m $(if $(TEST),-run $(TEST)) ./internal/service/$(PKG)/...
@@ -28,12 +23,16 @@ else
 	TF_ACC=1 go test -v -p 1 -timeout 120m $(if $(TEST),-run $(TEST)) ./...
 endif
 
-# Build provider binary to local Terraform plugins directory
-# This installs the provider at: dev.io/browningluke/opnsense v1.0.0
-# Detects OS and architecture automatically
-build-local:
-	go build -o ~/.terraform.d/plugins/dev.io/browningluke/opnsense/1.0.0/$$(go env GOOS)_$$(go env GOARCH)/terraform-provider-opnsense .
+vet:
+	go vet ./...
 
-# Build provider binary to current directory
+staticcheck:
+	go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+
+check: fmt-check test vet staticcheck
+
+build-local:
+	go build -o ~/.terraform.d/plugins/dev.io/biptec/opnsense/1.0.0/$$(go env GOOS)_$$(go env GOARCH)/terraform-provider-opnsense .
+
 build:
 	go build -o terraform-provider-opnsense .

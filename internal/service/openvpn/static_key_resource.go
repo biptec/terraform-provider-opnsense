@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/errs"
-	"github.com/browningluke/opnsense-go/pkg/opnsense"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/errs"
+	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"

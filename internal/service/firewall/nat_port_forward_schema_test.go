@@ -3,9 +3,9 @@ package firewall
 import (
 	"testing"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	opnfirewall "github.com/browningluke/opnsense-go/pkg/firewall"
-	"github.com/browningluke/terraform-provider-opnsense/internal/tools"
+	"github.com/biptec/opnsense-go/pkg/api"
+	opnfirewall "github.com/biptec/opnsense-go/pkg/firewall"
+	"github.com/biptec/terraform-provider-opnsense/internal/tools"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/require"

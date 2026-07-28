@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/browningluke/opnsense-go/pkg/api"
-	"github.com/browningluke/opnsense-go/pkg/opnsense"
+	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 )
 
@@ -59,7 +59,7 @@ func (d *overviewInterfaceDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	// Get all interfaces from OPNsense API
-	result, err := d.client.Interfaces().OverviewGet(ctx)
+	result, err := d.client.Interfaces().OverviewGetDetailed(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error",
 			fmt.Sprintf("Unable to read interfaces overview, got error: %s", err))
