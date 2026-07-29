@@ -6,6 +6,7 @@ This Terraform provider enables management of various configs and resources with
 > This provider is under active development and makes no guarantee of stability. Breaking changes to resource and data source schemas will occur as needed until v1.0. **It is not recommended to use this provider in production environments.**
 
 
+- [Install from Source](#install-from-source)
 - [Example Usage](#example-usage)
 - [Long Road to v1](#long-road-to-v1)
 - [Documentation](#documentation)
@@ -15,6 +16,10 @@ This Terraform provider enables management of various configs and resources with
   - [Plugin API](#plugin-api)
 - [License](#license)
 
+## Install from Source
+
+Public Registry releases are not enabled yet. Build the provider locally and use a development override as described in [Install from source](./docs/development-install.md).
+
 ## Example Usage
 
 ```hcl
@@ -22,24 +27,17 @@ This Terraform provider enables management of various configs and resources with
 terraform {
   required_providers {
     opnsense = {
-      source  = "biptec/opnsense"
-      version = "~> 0.16"
+      source = "biptec/opnsense"
     }
   }
 }
 
-# 2. Configure the OPNsense provider with API credentials
-provider "opnsense" {
-  uri        = "https://opnsense.example.com"
-
-  # Either reference the API credentials literally
-  api_key    = "<api key>"
-  api_secret = "<api password>"
-
-  # Or specify them with environment variables
-  # export OPNSENSE_API_KEY="<api key>"
-  # export OPNSENSE_API_SECRET="<api key>"
-}
+# 2. Keep API credentials outside configuration and state:
+# export OPNSENSE_URI="https://opnsense.example.com"
+# export OPNSENSE_API_KEY="<api key>"
+# export OPNSENSE_API_SECRET="<api secret>"
+# export OPNSENSE_ALLOW_INSECURE=true # isolated test systems only
+provider "opnsense" {}
 
 # 3. Create resources - example: firewall rule
 resource "opnsense_firewall_filter" "allow_https" {
@@ -71,14 +69,15 @@ resource "opnsense_firewall_filter" "allow_https" {
 
 ## Long Road to v1
 
-Version 1.0 will be released once the provider achieves feature-parity with the **Core** OPNsense API and all resources have comprehensive acceptance tests (see [Current API Coverage](#current-api-coverage)). Plugin resources will be added as requested (at a lower priority than requests for Core resources). There is no Plugin API converage requirement for v1.
+Version 1.0 will be released once the provider achieves feature-parity with the **Core** OPNsense API and all resources have comprehensive acceptance tests (see [Current API Coverage](#current-api-coverage)). Plugin resources will be added as requested (at a lower priority than requests for Core resources). There is no Plugin API coverage requirement for v1.
 
-v1 represents the first release where resource and data source schemas will be guaranteed to be stable, and breaking changes to these schemas will be forbidden. Any updates to these schemas will following appropriate SemVer conventions. Until v1.0 is reached, **schemas are subject to change as needed** to improve usability and align with best practices. Users should always check the release notes when upgrading between pre-v1.0 versions to understand any breaking changes that may affect their configurations.
+v1 represents the first release where resource and data source schemas will be guaranteed to be stable, and breaking changes to these schemas will be forbidden. Any updates to these schemas will follow appropriate SemVer conventions. Until v1.0 is reached, **schemas are subject to change as needed** to improve usability and align with best practices. Users should always check the release notes when upgrading between pre-v1.0 versions to understand any breaking changes that may affect their configurations.
 
 ## Documentation
 
-- **[Terraform Registry Documentation](https://registry.terraform.io/providers/biptec/opnsense/latest/docs)** - Full resource and data source reference
-- **[Examples](./examples/)** - Working examples for all resources
+- **[Generated reference](./docs/)** - Resource and data source documentation generated from the provider schema
+- **[Install from source](./docs/development-install.md)** - Local build and development override instructions
+- **[Examples](./examples/)** - Provider and resource examples
 
 ## Contributing
 
@@ -122,20 +121,23 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Firewall/Alias`                 | ✅        | ✅           |
 | `Firewall/Category`              | 🚧       | 🚧          |
 | `Firewall/Filter`                | ✅        | ✅           |
-| `Firewall/Group`                 | ❌        | ❌           |
-| `Firewall/NPTv6`                 | ❌        | ❌           |
+| `Firewall/Group`                 | ✅        | ✅           |
+| `Firewall/NPTv6`                 | ✅        | ✅           |
 | `Firewall/Source NAT`            | ✅        | ✅           |
 | `Firewall/One-to-One NAT`        | ✅        | ✅           |
-| `Interfaces/Bridge`              | ❌        | ❌           |
-| `Interfaces/Gif`                 | ❌        | ❌           |
-| `Interfaces/Gre`                 | ❌        | ❌           |
-| `Interfaces/Lagg`                | ❌        | ❌           |
-| `Interfaces/Loopback`            | ❌        | ❌           |
-| `Interfaces/Neighbor`            | ❌        | ❌           |
-| `Interfaces/Overview`            |          | ✅           |
+| `Interfaces/Assignment`          | ✅        | ✅           |
+| `Interfaces/Bridge`              | ✅        | ✅           |
+| `Interfaces/Details`             |           | ✅           |
+| `Interfaces/Gif`                 | ✅        | ✅           |
+| `Interfaces/Gre`                 | ✅        | ✅           |
+| `Interfaces/Lagg`                | ✅        | ✅           |
+| `Interfaces/Loopback`            | ✅        | ✅           |
+| `Interfaces/Neighbor`            | ✅        | ✅           |
+| `Interfaces/Overview`            |           | ✅           |
+| `Interfaces/Settings`            | ✅        | ✅           |
 | `Interfaces/Vip`                 | ✅        | ✅           |
 | `Interfaces/Vlan`                | ✅        | ✅           |
-| `Interfaces/Vxlan`               | ❌        | ❌           |
+| `Interfaces/Vxlan`               | ✅        | ✅           |
 | `Ipsec/Settings`                 | ❌        | ❌           |
 | `Ipsec/Connections/Local`        | ✅        | ❌           |
 | `Ipsec/Connections/Remote`       | ✅        | ❌           |
@@ -163,7 +165,9 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Openvpn/Instances/Static Key`   | ✅        | ✅           |
 | `Openvpn/Instances/Generate Key` | ✅ (ephemeral) |        |
 | `Routes/Route`                   | ✅        | ✅           |
-| `Routing/Gateway`                | ❌        | ❌           |
+| `Routing/Gateway`                | ✅        | ✅           |
+| `Routing/Gateway Group`          | ✅        | ✅           |
+| `Routing/Gateway Status`         |           | ✅           |
 | `Syslog/Settings`                | ❌        | ❌           |
 | `Syslog/Settings/Destination`    | ❌        | ❌           |
 | `Trafficshaper/Pipe`             | ❌        | ❌           |

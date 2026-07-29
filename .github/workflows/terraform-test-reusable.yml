@@ -21,6 +21,7 @@ env:
   OPNSENSE_TEST_SPARE_DEVICE_1: "vtnet2"
   OPNSENSE_TEST_SPARE_DEVICE_2: "vtnet3"
   OPNSENSE_TEST_MANAGEMENT_INTERFACE: "lan"
+  OPNSENSE_TEST_ROUTE_GATEWAY: "CI_GATEWAY"
 
 jobs:
   build:
@@ -69,7 +70,7 @@ jobs:
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
               "other": ["diagnostics", "dnsmasq", "interfaces", "kea",
-                        "openvpn", "quagga", "routes", "trust", "wireguard"],
+                        "openvpn", "quagga", "routes", "routing", "trust", "wireguard"],
           }
           # Non-service packages, tested with "other" on full-suite runs.
           EXTRA_OTHER = ["./internal/provider/...", "./internal/tools/...",
