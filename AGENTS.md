@@ -90,6 +90,13 @@ internal/service/<service>/
 
 Resources are named `opnsense_<service>_<resource>` (e.g., `opnsense_firewall_alias`).
 
+### Singleton and Compound Resource Lifecycles
+
+- Existing singleton settings objects are import-only. Their `Create` method must explain the required import ID, and `Delete` removes only Terraform state without resetting the OPNsense configuration.
+- A resource that creates a child object must store the child UUID in state and delete only children it owns. Existing referenced objects must never be deleted.
+- When replacing a managed child, create the replacement first, switch the parent to it, and only then delete the old child.
+- Certificate resources may reference an existing CA by UUID or `ref_id`, but must never read or persist the CA private key in Terraform state. `internal/service/caddy/domain_resource.go` is the reference implementation.
+
 ### Schema Versioning
 
 **Always include `Version: 1` in new resource schemas.** When a schema changes:
