@@ -1,41 +1,86 @@
 # Terraform Provider release workflow.
 name: Release
 
-# This GitHub action creates a release when a tag that matches the pattern
-# "v*" (e.g. v0.1.0) is created.
+# Run this workflow from the main branch with a version tag such as v0.27.0.
+# The tag is intentionally created only in the local checkout. GoReleaser creates
+# the remote tag together with a draft release, uploads and signs every artifact,
+# and publishes the release only after all uploads have completed.
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag in vMAJOR.MINOR.PATCH form
+        required: true
+        type: string
 
-# Releases need permissions to read and write the repository contents.
-# GitHub considers creating releases and uploading assets as writing contents.
 permissions:
   contents: write
 
+concurrency:
+  group: provider-release
+  cancel-in-progress: false
+
 jobs:
   goreleaser:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Checkout main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          # Allow goreleaser to access older tag information.
+          ref: main
+          # Allow GoReleaser to access older tag information.
           fetch-depth: 0
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+
+      - name: Prepare local release tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must use vMAJOR.MINOR.PATCH form: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Remote tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          release_state=$(            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" |              jq -r --arg tag "$RELEASE_TAG"                 '[.[] | select(.tag_name == $tag) | if .draft then "draft" else "published" end][0] // "none"'          )
+          if [[ "$release_state" == "published" ]]; then
+            echo "Published GitHub release already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if [[ "$release_state" == "draft" ]]; then
+            echo "Reusing existing draft release: $RELEASE_TAG"
+          fi
+
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git tag --annotate "$RELEASE_TAG" --message "Release $RELEASE_TAG" HEAD
+          git describe --tags --exact-match HEAD
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version-file: 'go.mod'
+          go-version-file: go.mod
           cache: true
+
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6
         id: import_gpg
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
+          version: v2.17.1
           args: release --clean
         env:
-          # GitHub sets the GITHUB_TOKEN secret automatically.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
