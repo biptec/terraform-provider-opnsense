@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/caddy"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/diagnostics"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/dnsmasq"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/firewall"
@@ -290,6 +291,7 @@ func (p *opnsenseProvider) Configure(ctx context.Context, req provider.Configure
 
 func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Resource {
 	controllers := [][]func() resource.Resource{
+		caddy.Resources(ctx),
 		diagnostics.Resources(ctx),
 		dnsmasq.Resources(ctx),
 		firewall.Resources(ctx),
@@ -314,6 +316,7 @@ func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Reso
 
 func (p *opnsenseProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	controllers := [][]func() datasource.DataSource{
+		caddy.DataSources(ctx),
 		diagnostics.DataSources(ctx),
 		dnsmasq.DataSources(ctx),
 		firewall.DataSources(ctx),

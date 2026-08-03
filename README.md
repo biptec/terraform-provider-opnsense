@@ -199,6 +199,11 @@ The following is a non-exhaustive list of the plugin APIs OPNsense supports. The
 | `Acmeclient/Validation`        | ❌        | ❌           |
 | `Acmeclient/Certificates`      | ❌        | ❌           |
 | `Acmeclient/Action`            | ❌        | ❌           |
+| `Caddy/Settings`                | ✅        | ✅           |
+| `Caddy/Reverse Proxy/Domain`    | ✅        | ✅           |
+| `Caddy/Reverse Proxy/Handler`   | ✅        | ✅           |
+| `Caddy/Reverse Proxy/Access List` | ✅      | ✅           |
+| `Caddy/Service Status`          |           | ✅           |
 | `Haproxy/Maintenance`          | ❌        | ❌           |
 | `Haproxy/Settings`             | ❌        | ❌           |
 | `Haproxy/Settings/Acl`         | ❌        | ❌           |
