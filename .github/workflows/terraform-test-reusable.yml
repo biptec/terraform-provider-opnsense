@@ -179,32 +179,35 @@ jobs:
           genisoimage -quiet -output nocloud.iso -volid cidata -joliet -rock \
             nocloud/user-data nocloud/meta-data nocloud/network-config
 
-      - name: Start opnsense VM
+      - name: Start OPNsense VM
         id: start-vm
         run: |
           qemu-system-x86_64 -machine q35 -m 6144 -smp 2 \
-          -device virtio-scsi-pci,id=scsi0 \
-          -drive file=opnsense-images/opnsense.qcow2,if=none,id=disk0,format=qcow2 \
-          -device scsi-hd,drive=disk0,bus=scsi0.0 \
-          -drive file=nocloud.iso,media=cdrom,readonly=on \
-          -netdev user,id=user.0,net=10.0.2.0/24,hostfwd=tcp::${{ env.OPNSENSE_SSH_PORT }}-:22,hostfwd=tcp::${{ env.OPNSENSE_WEB_PORT }}-:443 \
-          -device virtio-net-pci,netdev=user.0,mac=${OPNSENSE_MANAGEMENT_MAC} \
-          -netdev user,id=user.1,net=10.0.3.0/24,restrict=on \
-          -device virtio-net-pci,netdev=user.1,mac=52:54:00:12:34:57 \
-          -netdev user,id=user.2,net=10.0.4.0/24,restrict=on \
-          -device virtio-net-pci,netdev=user.2,mac=52:54:00:12:34:58 \
-          -netdev user,id=user.3,net=10.0.5.0/24,restrict=on \
-          -device virtio-net-pci,netdev=user.3,mac=52:54:00:12:34:59 \
-          -device virtio-serial-pci \
-          -chardev socket,path=/tmp/qemu-virtconsole.sock,server=on,wait=off,id=qvt0 \
-          -device virtconsole,chardev=qvt0 \
-          -chardev socket,path=/tmp/qemu-virtserialport.sock,server=on,wait=off,id=qvsp0 \
-          -device virtserialport,chardev=qvsp0,name=org.qemu.guest_agent.0 \
-          -display none -monitor none -serial file:qemu-console.log &
+            -device virtio-scsi-pci,id=scsi0 \
+            -drive file=opnsense-images/opnsense.qcow2,if=none,id=disk0,format=qcow2 \
+            -device scsi-hd,drive=disk0,bus=scsi0.0 \
+            -drive file=nocloud.iso,media=cdrom,readonly=on \
+            -netdev user,id=user.0,net=10.0.2.0/24,hostfwd=tcp::${{ env.OPNSENSE_SSH_PORT }}-:22,hostfwd=tcp::${{ env.OPNSENSE_WEB_PORT }}-:443 \
+            -device virtio-net-pci,netdev=user.0,mac=${OPNSENSE_MANAGEMENT_MAC} \
+            -netdev user,id=user.1,net=10.0.3.0/24,restrict=on \
+            -device virtio-net-pci,netdev=user.1,mac=52:54:00:12:34:57 \
+            -netdev user,id=user.2,net=10.0.4.0/24,restrict=on \
+            -device virtio-net-pci,netdev=user.2,mac=52:54:00:12:34:58 \
+            -netdev user,id=user.3,net=10.0.5.0/24,restrict=on \
+            -device virtio-net-pci,netdev=user.3,mac=52:54:00:12:34:59 \
+            -device virtio-serial-pci \
+            -chardev socket,path=/tmp/qemu-virtconsole.sock,server=on,wait=off,id=qvt0 \
+            -device virtconsole,chardev=qvt0 \
+            -chardev socket,path=/tmp/qemu-virtserialport.sock,server=on,wait=off,id=qvsp0 \
+            -device virtserialport,chardev=qvsp0,name=org.qemu.guest_agent.0 \
+            -display none -monitor none -serial file:qemu-console.log &
           QEMU_PID="$!"
           echo "qemu-pid=${QEMU_PID}" >> "$GITHUB_OUTPUT"
           sleep 5
-          [ -d "/proc/${QEMU_PID}" ] || (echo "QEMU process not found" && exit 1)
+          if ! kill -0 "$QEMU_PID" 2>/dev/null; then
+            echo "QEMU process not found"
+            exit 1
+          fi
       - name: Wait for QEMU guest agent
         run: |
           python3 << 'EOF'
