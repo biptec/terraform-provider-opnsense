@@ -188,7 +188,7 @@ jobs:
             -device scsi-hd,drive=disk0,bus=scsi0.0 \
             -drive file=nocloud.iso,media=cdrom,readonly=on \
             -netdev user,id=user.0,net=10.0.2.0/24,hostfwd=tcp::${{ env.OPNSENSE_SSH_PORT }}-:22,hostfwd=tcp::${{ env.OPNSENSE_WEB_PORT }}-:443 \
-            -device virtio-net-pci,netdev=user.0,mac=${OPNSENSE_MANAGEMENT_MAC} \
+            -device "virtio-net-pci,netdev=user.0,mac=${OPNSENSE_MANAGEMENT_MAC}" \
             -netdev user,id=user.1,net=10.0.3.0/24,restrict=on \
             -device virtio-net-pci,netdev=user.1,mac=52:54:00:12:34:57 \
             -netdev user,id=user.2,net=10.0.4.0/24,restrict=on \
