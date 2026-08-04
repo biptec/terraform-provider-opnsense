@@ -13,6 +13,7 @@ func Resources(context.Context) []func() resource.Resource {
 		newDomainResource,
 		newHandlerResource,
 		newAccessListResource,
+		newHeaderResource,
 	}
 }
 
@@ -22,6 +23,7 @@ func DataSources(context.Context) []func() datasource.DataSource {
 		newDomainDataSource,
 		newHandlerDataSource,
 		newAccessListDataSource,
+		newHeaderDataSource,
 		newStatusDataSource,
 	}
 }
