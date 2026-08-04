@@ -26,7 +26,10 @@ func (r *gatewayGroupResource) operations() routingCRUDOperations[gatewayGroupRe
 	controller := r.client.Routing()
 	return routingCRUDOperations[gatewayGroupResourceModel, apirouting.GatewayGroup]{
 		Name: "Routing Gateway Group", Convert: convertGatewayGroupSchemaToStruct, Expand: convertGatewayGroupStructToSchema,
-		Add: controller.AddGatewayGroup, Get: controller.GetGatewayGroup, Update: controller.UpdateGatewayGroup, Delete: controller.DeleteGatewayGroup,
+		Add: func(ctx context.Context, group *apirouting.GatewayGroup) (string, error) {
+			return retryGatewayGroupAdd(ctx, controller.AddGatewayGroup, group)
+		},
+		Get: controller.GetGatewayGroup, Update: controller.UpdateGatewayGroup, Delete: controller.DeleteGatewayGroup,
 		GetID: func(d *gatewayGroupResourceModel) string { return d.Id.ValueString() },
 		SetID: func(d *gatewayGroupResourceModel, id string) { d.Id = types.StringValue(id) },
 	}
