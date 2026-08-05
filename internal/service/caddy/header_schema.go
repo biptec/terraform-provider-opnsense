@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var headerTextPattern = regexp.MustCompile(`^[^"]*$`)
+var headerTextPattern = regexp.MustCompile(`^[^"\r\n]*$`)
 
 type headerResourceModel struct {
 	ID          types.String `tfsdk:"id"`
@@ -49,30 +49,30 @@ func headerResourceSchema() schema.Schema {
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "HTTP header name or Caddy header operation expression.",
+				MarkdownDescription: "HTTP header name or Caddy header operation expression. Quotation marks and line breaks are rejected.",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 1024),
-					stringvalidator.RegexMatches(headerTextPattern, "must not contain quotation marks"),
+					stringvalidator.RegexMatches(headerTextPattern, "must not contain quotation marks or line breaks"),
 				},
 			},
 			"value": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(""),
-				MarkdownDescription: "Header value. Caddy placeholders such as `{host}` are accepted.",
+				MarkdownDescription: "Header value. Caddy placeholders such as `{host}` are accepted; quotation marks and line breaks are rejected.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(1024),
-					stringvalidator.RegexMatches(headerTextPattern, "must not contain quotation marks"),
+					stringvalidator.RegexMatches(headerTextPattern, "must not contain quotation marks or line breaks"),
 				},
 			},
 			"replace": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(""),
-				MarkdownDescription: "Optional replacement expression.",
+				MarkdownDescription: "Optional replacement expression. Quotation marks and line breaks are rejected.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(1024),
-					stringvalidator.RegexMatches(headerTextPattern, "must not contain quotation marks"),
+					stringvalidator.RegexMatches(headerTextPattern, "must not contain quotation marks or line breaks"),
 				},
 			},
 			"description": schema.StringAttribute{

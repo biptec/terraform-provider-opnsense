@@ -47,6 +47,21 @@ func TestAccessListRoundTrip(t *testing.T) {
 	}
 }
 
+func TestHeaderTextPatternRejectsCaddyfileInjection(t *testing.T) {
+	tests := map[string]bool{
+		"Host":                          true,
+		"{http.request.host}":           true,
+		`value"quoted`:                  false,
+		"value\nheader_down X injected": false,
+		"value\rheader_down X injected": false,
+	}
+	for value, want := range tests {
+		if got := headerTextPattern.MatchString(value); got != want {
+			t.Errorf("headerTextPattern.MatchString(%q) = %t, want %t", value, got, want)
+		}
+	}
+}
+
 func TestHeaderRoundTrip(t *testing.T) {
 	model := &headerResourceModel{
 		Direction:   types.StringValue("header_up"),

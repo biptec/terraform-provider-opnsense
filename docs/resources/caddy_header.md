@@ -26,14 +26,14 @@ resource "opnsense_caddy_header" "preserve_host" {
 
 ### Required
 
-- `name` (String) HTTP header name or Caddy header operation expression.
+- `name` (String) HTTP header name or Caddy header operation expression. Quotation marks and line breaks are rejected.
 
 ### Optional
 
 - `description` (String) Optional description. Defaults to `""`.
 - `direction` (String) Apply the operation to an upstream request (`header_up`) or downstream response (`header_down`).
-- `replace` (String) Optional replacement expression.
-- `value` (String) Header value. Caddy placeholders such as `{host}` are accepted.
+- `replace` (String) Optional replacement expression. Quotation marks and line breaks are rejected.
+- `value` (String) Header value. Caddy placeholders such as `{host}` are accepted; quotation marks and line breaks are rejected.
 
 ### Read-Only
 
