@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/biptec/opnsense-go/pkg/api"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -50,7 +51,12 @@ func (r *settingsResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 	applySettingsModel(&remote.General, &plan)
-	if _, err = r.client.Bind().SettingsSet(ctx, &remote.General); err != nil {
+	result, err := r.client.Bind().SettingsSet(ctx, &remote.General)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Update BIND Settings", err.Error())
+		return
+	}
+	if err := validateSettingsSetResult(result); err != nil {
 		resp.Diagnostics.AddError("Unable to Update BIND Settings", err.Error())
 		return
 	}
@@ -70,6 +76,17 @@ func (r *settingsResource) Update(ctx context.Context, req resource.UpdateReques
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
+
+func validateSettingsSetResult(result *api.ActionResult) error {
+	if result == nil {
+		return fmt.Errorf("BIND settings API returned an empty response")
+	}
+	if result.Result != "saved" {
+		return fmt.Errorf("BIND settings API returned result %q instead of %q", result.Result, "saved")
+	}
+	return nil
+}
+
 func (r *settingsResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.Diagnostics.AddWarning("Singleton Resource Removed From State Only", "BIND settings remain unchanged in OPNsense. Re-import with ID `bind_settings` to manage them again.")
 }

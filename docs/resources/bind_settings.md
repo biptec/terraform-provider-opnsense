@@ -3,12 +3,12 @@
 page_title: "opnsense_bind_settings Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages BIND global settings. This singleton must be imported with bind_settings before use.
+  Manages BIND global settings. This singleton must be imported with bind_settings before use. Attributes omitted from configuration retain their imported upstream values.
 ---
 
 # opnsense_bind_settings (Resource)
 
-Manages BIND global settings. This singleton must be imported with `bind_settings` before use.
+Manages BIND global settings. This singleton must be imported with `bind_settings` before use. Attributes omitted from configuration retain their imported upstream values.
 
 ## Example Usage
 

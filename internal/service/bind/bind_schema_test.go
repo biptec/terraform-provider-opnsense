@@ -6,6 +6,7 @@ import (
 	"github.com/biptec/opnsense-go/pkg/api"
 	apibind "github.com/biptec/opnsense-go/pkg/bind"
 	"github.com/biptec/terraform-provider-opnsense/internal/tools"
+	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -90,5 +91,64 @@ func TestBindSecretsAreSensitive(t *testing.T) {
 	secondary := secondaryDomainResourceSchema().Attributes["transfer_key"]
 	if !secondary.IsSensitive() {
 		t.Fatal("secondary transfer key must be sensitive")
+	}
+}
+
+func TestBindSettingsPartialUpdatePreservesRemoteValues(t *testing.T) {
+	remote := apibind.GeneralSettings{
+		Enabled: "0", DisableIPv6: "0", EnableRPZ: "1",
+		ListenIPv4: api.SelectedMapList{"0.0.0.0"}, ListenIPv6: api.SelectedMapList{"::"},
+		Port: "53530", MaxCacheSize: "80", DNSSECValidation: api.SelectedMap("no"),
+		RateLimitExcept: api.SelectedMapList{"0.0.0.0", "::"},
+	}
+	plan := &settingsResourceModel{
+		Enabled:    types.BoolValue(true),
+		ListenIPv4: tools.StringSliceToSet([]string{"127.0.0.1"}),
+		Port:       types.Int64Value(53530),
+	}
+
+	applySettingsModel(&remote, plan)
+
+	if remote.Enabled != "1" || remote.ListenIPv4.String() != "127.0.0.1" || remote.Port != "53530" {
+		t.Fatalf("explicit settings not applied: %+v", remote)
+	}
+	if remote.EnableRPZ != "1" || remote.ListenIPv6.String() != "::" || remote.MaxCacheSize != "80" || remote.DNSSECValidation.String() != "no" || remote.RateLimitExcept.String() != "0.0.0.0,::" {
+		t.Fatalf("omitted settings were not preserved: %+v", remote)
+	}
+}
+
+func TestBindSettingsSchemaDoesNotForceDefaults(t *testing.T) {
+	for name, attribute := range settingsResourceSchema().Attributes {
+		if name == "id" {
+			continue
+		}
+		var hasDefault bool
+		switch typed := attribute.(type) {
+		case rschema.BoolAttribute:
+			hasDefault = typed.Default != nil
+		case rschema.Int64Attribute:
+			hasDefault = typed.Default != nil
+		case rschema.StringAttribute:
+			hasDefault = typed.Default != nil
+		case rschema.SetAttribute:
+			hasDefault = typed.Default != nil
+		default:
+			t.Fatalf("unexpected settings attribute type %T for %s", attribute, name)
+		}
+		if hasDefault {
+			t.Errorf("settings attribute %s must preserve imported state, not force a Terraform default", name)
+		}
+	}
+}
+
+func TestValidateBindSettingsSetResult(t *testing.T) {
+	if err := validateSettingsSetResult(&api.ActionResult{Result: "saved"}); err != nil {
+		t.Fatalf("saved result rejected: %v", err)
+	}
+	if err := validateSettingsSetResult(&api.ActionResult{Result: "failed"}); err == nil {
+		t.Fatal("failed result must return an error")
+	}
+	if err := validateSettingsSetResult(nil); err == nil {
+		t.Fatal("nil result must return an error")
 	}
 }

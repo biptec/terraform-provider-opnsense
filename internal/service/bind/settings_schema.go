@@ -10,11 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -56,38 +52,38 @@ func settingsAttributesResource() map[string]schema.Attribute {
 	ipSet := []validator.Set{setvalidator.ValueStringsAre(validators.IPAddress())}
 	return map[string]schema.Attribute{
 		"id":                            schema.StringAttribute{Computed: true, MarkdownDescription: "Always `bind_settings`.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
-		"enabled":                       schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether BIND is enabled."},
-		"disable_ipv6":                  schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Disable IPv6 support in BIND."},
-		"enable_rpz":                    schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Enable response policy zones."},
-		"listen_ipv4":                   schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(emptyStringSet()), ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "IPv4 addresses on which BIND listens."},
-		"listen_ipv6":                   schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(emptyStringSet()), ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "IPv6 addresses on which BIND listens."},
-		"query_source":                  schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv4 source address for recursive queries."},
-		"query_source_ipv6":             schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv6 source address for recursive queries."},
-		"transfer_source":               schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv4 source address for zone transfers."},
-		"transfer_source_ipv6":          schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv6 source address for zone transfers."},
-		"port":                          schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(53), Validators: []validator.Int64{int64validator.Between(1, 65535)}, MarkdownDescription: "DNS listen port."},
-		"forwarders":                    schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(emptyStringSet()), ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "Legacy global forwarding servers. Per-view forwarders take precedence when views are enabled."},
-		"filter_aaaa_ipv4":              schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
-		"filter_aaaa_ipv6":              schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
-		"filter_aaaa_acl":               schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(emptyStringSet()), ElementType: types.StringType, MarkdownDescription: "Addresses or networks subject to AAAA filtering."},
-		"log_size_mb":                   schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(5), Validators: []validator.Int64{int64validator.AtLeast(1)}, MarkdownDescription: "Maximum size of each BIND log file in MiB."},
-		"log_level":                     schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("info"), Validators: []validator.String{stringvalidator.OneOf("critical", "error", "warning", "notice", "info", "debug", "dynamic")}},
-		"max_cache_size_percent":        schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(20), Validators: []validator.Int64{int64validator.Between(1, 90)}, MarkdownDescription: "Maximum BIND cache size as a percentage of memory."},
-		"legacy_recursion_acl_ids":      schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(emptyStringSet()), ElementType: types.StringType, Validators: uuidSet, MarkdownDescription: "Legacy global recursion ACLs used only when no views are enabled."},
-		"legacy_allow_transfer_acl_ids": schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(emptyStringSet()), ElementType: types.StringType, Validators: uuidSet, MarkdownDescription: "Legacy global transfer ACLs used only when no views are enabled."},
-		"legacy_allow_query_acl_ids":    schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(emptyStringSet()), ElementType: types.StringType, Validators: uuidSet, MarkdownDescription: "Legacy global query ACLs used only when no views are enabled."},
-		"dnssec_validation":             schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("auto"), Validators: []validator.String{stringvalidator.OneOf("auto", "no")}, MarkdownDescription: "Legacy global DNSSEC validation mode used only when no views are enabled."},
-		"hide_hostname":                 schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true)},
-		"hide_version":                  schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true)},
-		"disable_prefetch":              schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
-		"enable_rate_limiting":          schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true), MarkdownDescription: "Enable BIND response rate limiting."},
-		"rate_limit_count":              schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(10), Validators: []validator.Int64{int64validator.AtLeast(1)}, MarkdownDescription: "Responses per second allowed before rate limiting."},
-		"rate_limit_exceptions":         schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(emptyStringSet()), ElementType: types.StringType, MarkdownDescription: "Addresses or networks exempt from response rate limiting."},
+		"enabled":                       schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether BIND is enabled."},
+		"disable_ipv6":                  schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Disable IPv6 support in BIND."},
+		"enable_rpz":                    schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Enable response policy zones."},
+		"listen_ipv4":                   schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "IPv4 addresses on which BIND listens."},
+		"listen_ipv6":                   schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "IPv6 addresses on which BIND listens."},
+		"query_source":                  schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv4 source address for recursive queries."},
+		"query_source_ipv6":             schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv6 source address for recursive queries."},
+		"transfer_source":               schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv4 source address for zone transfers."},
+		"transfer_source_ipv6":          schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv6 source address for zone transfers."},
+		"port":                          schema.Int64Attribute{Optional: true, Computed: true, Validators: []validator.Int64{int64validator.Between(1, 65535)}, MarkdownDescription: "DNS listen port."},
+		"forwarders":                    schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "Legacy global forwarding servers. Per-view forwarders take precedence when views are enabled."},
+		"filter_aaaa_ipv4":              schema.BoolAttribute{Optional: true, Computed: true},
+		"filter_aaaa_ipv6":              schema.BoolAttribute{Optional: true, Computed: true},
+		"filter_aaaa_acl":               schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Addresses or networks subject to AAAA filtering."},
+		"log_size_mb":                   schema.Int64Attribute{Optional: true, Computed: true, Validators: []validator.Int64{int64validator.AtLeast(1)}, MarkdownDescription: "Maximum size of each BIND log file in MiB."},
+		"log_level":                     schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{stringvalidator.OneOf("critical", "error", "warning", "notice", "info", "debug", "dynamic")}},
+		"max_cache_size_percent":        schema.Int64Attribute{Optional: true, Computed: true, Validators: []validator.Int64{int64validator.Between(1, 90)}, MarkdownDescription: "Maximum BIND cache size as a percentage of memory."},
+		"legacy_recursion_acl_ids":      schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: uuidSet, MarkdownDescription: "Legacy global recursion ACLs used only when no views are enabled."},
+		"legacy_allow_transfer_acl_ids": schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: uuidSet, MarkdownDescription: "Legacy global transfer ACLs used only when no views are enabled."},
+		"legacy_allow_query_acl_ids":    schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: uuidSet, MarkdownDescription: "Legacy global query ACLs used only when no views are enabled."},
+		"dnssec_validation":             schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{stringvalidator.OneOf("auto", "no")}, MarkdownDescription: "Legacy global DNSSEC validation mode used only when no views are enabled."},
+		"hide_hostname":                 schema.BoolAttribute{Optional: true, Computed: true},
+		"hide_version":                  schema.BoolAttribute{Optional: true, Computed: true},
+		"disable_prefetch":              schema.BoolAttribute{Optional: true, Computed: true},
+		"enable_rate_limiting":          schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Enable BIND response rate limiting."},
+		"rate_limit_count":              schema.Int64Attribute{Optional: true, Computed: true, Validators: []validator.Int64{int64validator.AtLeast(1)}, MarkdownDescription: "Responses per second allowed before rate limiting."},
+		"rate_limit_exceptions":         schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, MarkdownDescription: "Addresses or networks exempt from response rate limiting."},
 	}
 }
 
 func settingsResourceSchema() schema.Schema {
-	return schema.Schema{MarkdownDescription: "Manages BIND global settings. This singleton must be imported with `bind_settings` before use.", Version: 1, Attributes: settingsAttributesResource()}
+	return schema.Schema{MarkdownDescription: "Manages BIND global settings. This singleton must be imported with `bind_settings` before use. Attributes omitted from configuration retain their imported upstream values.", Version: 1, Attributes: settingsAttributesResource()}
 }
 
 func settingsDataSourceSchema() dschema.Schema {
@@ -117,31 +113,85 @@ func settingsAPIToModel(d *apibind.SettingsResponse) (*settingsResourceModel, er
 }
 
 func applySettingsModel(g *apibind.GeneralSettings, d *settingsResourceModel) {
-	g.Enabled = tools.BoolToString(d.Enabled.ValueBool())
-	g.DisableIPv6 = tools.BoolToString(d.DisableIPv6.ValueBool())
-	g.EnableRPZ = tools.BoolToString(d.EnableRPZ.ValueBool())
-	g.ListenIPv4 = api.SelectedMapList(tools.SetToStringSlice(d.ListenIPv4))
-	g.ListenIPv6 = api.SelectedMapList(tools.SetToStringSlice(d.ListenIPv6))
-	g.QuerySource = d.QuerySource.ValueString()
-	g.QuerySourceIPv6 = d.QuerySourceIPv6.ValueString()
-	g.TransferSource = d.TransferSource.ValueString()
-	g.TransferSourceIPv6 = d.TransferSourceIPv6.ValueString()
-	g.Port = tools.Int64ToString(d.Port.ValueInt64())
-	g.Forwarders = api.SelectedMapList(tools.SetToStringSlice(d.Forwarders))
-	g.FilterAAAAIPv4 = tools.BoolToString(d.FilterAAAAIPv4.ValueBool())
-	g.FilterAAAAIPv6 = tools.BoolToString(d.FilterAAAAIPv6.ValueBool())
-	g.FilterAAAAACL = api.SelectedMapList(tools.SetToStringSlice(d.FilterAAAAACL))
-	g.LogSize = tools.Int64ToString(d.LogSize.ValueInt64())
-	g.LogLevel = api.SelectedMap(d.LogLevel.ValueString())
-	g.MaxCacheSize = tools.Int64ToString(d.MaxCacheSize.ValueInt64())
-	g.Recursion = api.SelectedMapList(tools.SetToStringSlice(d.RecursionACLIDs))
-	g.AllowTransfer = api.SelectedMapList(tools.SetToStringSlice(d.AllowTransferACLs))
-	g.AllowQuery = api.SelectedMapList(tools.SetToStringSlice(d.AllowQueryACLs))
-	g.DNSSECValidation = api.SelectedMap(d.DNSSECValidation.ValueString())
-	g.HideHostname = tools.BoolToString(d.HideHostname.ValueBool())
-	g.HideVersion = tools.BoolToString(d.HideVersion.ValueBool())
-	g.DisablePrefetch = tools.BoolToString(d.DisablePrefetch.ValueBool())
-	g.EnableRateLimiting = tools.BoolToString(d.EnableRateLimiting.ValueBool())
-	g.RateLimitCount = tools.Int64ToString(d.RateLimitCount.ValueInt64())
-	g.RateLimitExcept = api.SelectedMapList(tools.SetToStringSlice(d.RateLimitExcept))
+	if !d.Enabled.IsNull() && !d.Enabled.IsUnknown() {
+		g.Enabled = tools.BoolToString(d.Enabled.ValueBool())
+	}
+	if !d.DisableIPv6.IsNull() && !d.DisableIPv6.IsUnknown() {
+		g.DisableIPv6 = tools.BoolToString(d.DisableIPv6.ValueBool())
+	}
+	if !d.EnableRPZ.IsNull() && !d.EnableRPZ.IsUnknown() {
+		g.EnableRPZ = tools.BoolToString(d.EnableRPZ.ValueBool())
+	}
+	if !d.ListenIPv4.IsNull() && !d.ListenIPv4.IsUnknown() {
+		g.ListenIPv4 = api.SelectedMapList(tools.SetToStringSlice(d.ListenIPv4))
+	}
+	if !d.ListenIPv6.IsNull() && !d.ListenIPv6.IsUnknown() {
+		g.ListenIPv6 = api.SelectedMapList(tools.SetToStringSlice(d.ListenIPv6))
+	}
+	if !d.QuerySource.IsNull() && !d.QuerySource.IsUnknown() {
+		g.QuerySource = d.QuerySource.ValueString()
+	}
+	if !d.QuerySourceIPv6.IsNull() && !d.QuerySourceIPv6.IsUnknown() {
+		g.QuerySourceIPv6 = d.QuerySourceIPv6.ValueString()
+	}
+	if !d.TransferSource.IsNull() && !d.TransferSource.IsUnknown() {
+		g.TransferSource = d.TransferSource.ValueString()
+	}
+	if !d.TransferSourceIPv6.IsNull() && !d.TransferSourceIPv6.IsUnknown() {
+		g.TransferSourceIPv6 = d.TransferSourceIPv6.ValueString()
+	}
+	if !d.Port.IsNull() && !d.Port.IsUnknown() {
+		g.Port = tools.Int64ToString(d.Port.ValueInt64())
+	}
+	if !d.Forwarders.IsNull() && !d.Forwarders.IsUnknown() {
+		g.Forwarders = api.SelectedMapList(tools.SetToStringSlice(d.Forwarders))
+	}
+	if !d.FilterAAAAIPv4.IsNull() && !d.FilterAAAAIPv4.IsUnknown() {
+		g.FilterAAAAIPv4 = tools.BoolToString(d.FilterAAAAIPv4.ValueBool())
+	}
+	if !d.FilterAAAAIPv6.IsNull() && !d.FilterAAAAIPv6.IsUnknown() {
+		g.FilterAAAAIPv6 = tools.BoolToString(d.FilterAAAAIPv6.ValueBool())
+	}
+	if !d.FilterAAAAACL.IsNull() && !d.FilterAAAAACL.IsUnknown() {
+		g.FilterAAAAACL = api.SelectedMapList(tools.SetToStringSlice(d.FilterAAAAACL))
+	}
+	if !d.LogSize.IsNull() && !d.LogSize.IsUnknown() {
+		g.LogSize = tools.Int64ToString(d.LogSize.ValueInt64())
+	}
+	if !d.LogLevel.IsNull() && !d.LogLevel.IsUnknown() {
+		g.LogLevel = api.SelectedMap(d.LogLevel.ValueString())
+	}
+	if !d.MaxCacheSize.IsNull() && !d.MaxCacheSize.IsUnknown() {
+		g.MaxCacheSize = tools.Int64ToString(d.MaxCacheSize.ValueInt64())
+	}
+	if !d.RecursionACLIDs.IsNull() && !d.RecursionACLIDs.IsUnknown() {
+		g.Recursion = api.SelectedMapList(tools.SetToStringSlice(d.RecursionACLIDs))
+	}
+	if !d.AllowTransferACLs.IsNull() && !d.AllowTransferACLs.IsUnknown() {
+		g.AllowTransfer = api.SelectedMapList(tools.SetToStringSlice(d.AllowTransferACLs))
+	}
+	if !d.AllowQueryACLs.IsNull() && !d.AllowQueryACLs.IsUnknown() {
+		g.AllowQuery = api.SelectedMapList(tools.SetToStringSlice(d.AllowQueryACLs))
+	}
+	if !d.DNSSECValidation.IsNull() && !d.DNSSECValidation.IsUnknown() {
+		g.DNSSECValidation = api.SelectedMap(d.DNSSECValidation.ValueString())
+	}
+	if !d.HideHostname.IsNull() && !d.HideHostname.IsUnknown() {
+		g.HideHostname = tools.BoolToString(d.HideHostname.ValueBool())
+	}
+	if !d.HideVersion.IsNull() && !d.HideVersion.IsUnknown() {
+		g.HideVersion = tools.BoolToString(d.HideVersion.ValueBool())
+	}
+	if !d.DisablePrefetch.IsNull() && !d.DisablePrefetch.IsUnknown() {
+		g.DisablePrefetch = tools.BoolToString(d.DisablePrefetch.ValueBool())
+	}
+	if !d.EnableRateLimiting.IsNull() && !d.EnableRateLimiting.IsUnknown() {
+		g.EnableRateLimiting = tools.BoolToString(d.EnableRateLimiting.ValueBool())
+	}
+	if !d.RateLimitCount.IsNull() && !d.RateLimitCount.IsUnknown() {
+		g.RateLimitCount = tools.Int64ToString(d.RateLimitCount.ValueInt64())
+	}
+	if !d.RateLimitExcept.IsNull() && !d.RateLimitExcept.IsUnknown() {
+		g.RateLimitExcept = api.SelectedMapList(tools.SetToStringSlice(d.RateLimitExcept))
+	}
 }
