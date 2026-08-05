@@ -47,17 +47,34 @@ func TestAccessListRoundTrip(t *testing.T) {
 	}
 }
 
-func TestHeaderTextPatternRejectsCaddyfileInjection(t *testing.T) {
-	tests := map[string]bool{
-		"Host":                          true,
+func TestHeaderPatternsRejectCaddyfileInjection(t *testing.T) {
+	nameTests := map[string]bool{
+		"Host":       true,
+		"+X-Trace":   true,
+		"-Server-*":  true,
+		"Host Other": false,
+		`Host"Other`: false,
+		"Host\nX":    false,
+	}
+	for value, want := range nameTests {
+		if got := headerNamePattern.MatchString(value); got != want {
+			t.Errorf("headerNamePattern.MatchString(%q) = %t, want %t", value, got, want)
+		}
+	}
+
+	valueTests := map[string]bool{
 		"{http.request.host}":           true,
+		"value with spaces\tand tab":    true,
 		`value"quoted`:                  false,
 		"value\nheader_down X injected": false,
 		"value\rheader_down X injected": false,
+		"value\x00injected":             false,
+		"value\x0binjected":             false,
+		"value\x0cinjected":             false,
 	}
-	for value, want := range tests {
-		if got := headerTextPattern.MatchString(value); got != want {
-			t.Errorf("headerTextPattern.MatchString(%q) = %t, want %t", value, got, want)
+	for value, want := range valueTests {
+		if got := headerValuePattern.MatchString(value); got != want {
+			t.Errorf("headerValuePattern.MatchString(%q) = %t, want %t", value, got, want)
 		}
 	}
 }
