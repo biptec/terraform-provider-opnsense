@@ -62,6 +62,7 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 					resource.TestCheckResourceAttr("opnsense_bind_acl.test", "networks.#", "1"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_view.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_bind_view.test", "sequence", "20"),
+					resource.TestCheckResourceAttr("opnsense_bind_view.test", "match_destination_acl_ids.#", "1"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_tsig_key.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_bind_tsig_key.test", "algorithm", "hmac-sha256"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_primary_domain.test", "id"),
@@ -111,14 +112,15 @@ resource "opnsense_bind_acl" "test" {
 resource "opnsense_bind_view" "test" {
   sequence             = 20
   name                 = "tfacc_bind_internal"
-  match_client_acl_ids = [opnsense_bind_acl.test.id]
-  allow_query_acl_ids  = [opnsense_bind_acl.test.id]
+  match_client_acl_ids      = [opnsense_bind_acl.test.id]
+  match_destination_acl_ids = [opnsense_bind_acl.test.id]
+  allow_query_acl_ids       = [opnsense_bind_acl.test.id]
   recursion            = false
   dnssec_validation    = "auto"
 }
 
 resource "opnsense_bind_tsig_key" "test" {
-  name      = "tfacc-bind-acme"
+  name      = "_acme-challenge.tfacc-bind.invalid"
   algorithm = "hmac-sha256"
   secret    = "dGVycmFmb3JtLWFjY2VwdGFuY2UtdGVzdC1zZWNyZXQ="
 }
@@ -127,7 +129,7 @@ resource "opnsense_bind_primary_domain" "test" {
   view_id          = opnsense_bind_view.test.id
   domain_name      = "tfacc-bind.invalid"
   update_key_ids   = [opnsense_bind_tsig_key.test.id]
-  update_policy    = "zonesub_txt"
+  update_policy    = "self_txt"
   dnssec           = true
   ttl              = 60
   refresh          = 300

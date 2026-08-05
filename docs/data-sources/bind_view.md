@@ -33,6 +33,7 @@ data "opnsense_bind_view" "public" {
 - `id` (String) The ID of this resource.
 - `match_any` (Boolean)
 - `match_client_acl_ids` (Set of String)
+- `match_destination_acl_ids` (Set of String)
 - `name` (String)
 - `recursion` (Boolean)
 - `sequence` (Number)

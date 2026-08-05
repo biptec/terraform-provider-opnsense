@@ -54,7 +54,7 @@ resource "opnsense_bind_primary_domain" "public" {
 - `retry` (Number)
 - `ttl` (Number) Default zone TTL in seconds.
 - `update_key_ids` (Set of String) TSIG key UUIDs allowed to perform RFC2136 updates.
-- `update_policy` (String) RFC2136 update policy. `zonesub_txt` restricts keys to TXT records and is recommended for ACME DNS-01.
+- `update_policy` (String) RFC2136 update policy. `self_txt` allows each TSIG key to update only the TXT owner matching the key name and is recommended for ACME DNS-01. The `zonesub_*` policies grant broader zone-wide access.
 
 ### Read-Only
 

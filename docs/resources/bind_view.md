@@ -51,6 +51,7 @@ resource "opnsense_bind_view" "public" {
 - `forwarders` (Set of String) Optional upstream resolvers used by recursive queries.
 - `match_any` (Boolean) Match every client. Only the final catch-all view should enable this.
 - `match_client_acl_ids` (Set of String) ACL UUIDs used by match-clients.
+- `match_destination_acl_ids` (Set of String) ACL UUIDs used by match-destinations. Use separate LAN and WAN destination ACLs for split DNS.
 - `recursion` (Boolean) Enable recursive resolution in this view.
 - `sequence` (Number) Evaluation order from 1 to 9999.
 

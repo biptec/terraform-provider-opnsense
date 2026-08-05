@@ -13,7 +13,8 @@ func TestBindViewRoundTrip(t *testing.T) {
 	model := &viewResourceModel{
 		Enabled: types.BoolValue(true), Sequence: types.Int64Value(10), Name: types.StringValue("internal"),
 		MatchAny: types.BoolValue(false), MatchClientACLs: tools.StringSliceToSet([]string{"acl-a"}),
-		Recursion: types.BoolValue(true), AllowRecursion: tools.StringSliceToSet([]string{"acl-a"}),
+		MatchDestinationACLs: tools.StringSliceToSet([]string{"acl-destination"}),
+		Recursion:            types.BoolValue(true), AllowRecursion: tools.StringSliceToSet([]string{"acl-a"}),
 		AllowQueryAny: types.BoolValue(false), AllowQuery: tools.StringSliceToSet([]string{"acl-a"}),
 		AllowTransfer: tools.StringSliceToSet([]string{"acl-secondary"}), Forwarders: tools.StringSliceToSet([]string{"1.1.1.1"}),
 		DNSSECValidation: types.StringValue("auto"),
@@ -22,7 +23,7 @@ func TestBindViewRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("viewModelToAPI() error = %v", err)
 	}
-	if remote.Sequence != "10" || remote.MatchClients.String() != "acl-a" || remote.DNSSECValidation.String() != "auto" {
+	if remote.Sequence != "10" || remote.MatchClients.String() != "acl-a" || remote.MatchDestinations.String() != "acl-destination" || remote.DNSSECValidation.String() != "auto" {
 		t.Fatalf("unexpected API view: %+v", remote)
 	}
 	state, err := viewAPIToModel(remote)
@@ -39,7 +40,7 @@ func TestBindPrimaryDomainRoundTrip(t *testing.T) {
 		ViewID: types.StringValue("view-id"), DomainName: types.StringValue("example.test"), Enabled: types.BoolValue(true),
 		AllowTransferACLs: tools.StringSliceToSet([]string{"secondary-acl"}), AllowRndcTransfer: types.BoolValue(false),
 		AllowQueryACLs: tools.StringSliceToSet([]string{"public-acl"}), AllowRndcUpdate: types.BoolValue(false),
-		UpdateKeyIDs: tools.StringSliceToSet([]string{"key-id"}), UpdatePolicy: types.StringValue("zonesub_txt"), DNSSEC: types.BoolValue(true),
+		UpdateKeyIDs: tools.StringSliceToSet([]string{"key-id"}), UpdatePolicy: types.StringValue("self_txt"), DNSSEC: types.BoolValue(true),
 		Serial: types.StringUnknown(), TTL: types.Int64Value(300), Refresh: types.Int64Value(600), Retry: types.Int64Value(300),
 		Expire: types.Int64Value(86400), NegativeTTL: types.Int64Value(300), MailAdmin: types.StringValue("hostmaster@example.test"), DNSServer: types.StringValue("ns1.example.test"),
 	}
@@ -47,7 +48,7 @@ func TestBindPrimaryDomainRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("primaryDomainModelToAPI() error = %v", err)
 	}
-	if remote.View.String() != "view-id" || remote.UpdateKeys.String() != "key-id" || remote.UpdatePolicy.String() != "zonesub_txt" || remote.DNSSEC != "1" || remote.Serial != "" {
+	if remote.View.String() != "view-id" || remote.UpdateKeys.String() != "key-id" || remote.UpdatePolicy.String() != "self_txt" || remote.DNSSEC != "1" || remote.Serial != "" {
 		t.Fatalf("unexpected API primary domain: %+v", remote)
 	}
 	remote.Serial = "2026080501"
