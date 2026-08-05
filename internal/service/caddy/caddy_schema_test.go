@@ -47,6 +47,62 @@ func TestAccessListRoundTrip(t *testing.T) {
 	}
 }
 
+func TestHeaderPatternsRejectCaddyfileInjection(t *testing.T) {
+	nameTests := map[string]bool{
+		"Host":       true,
+		"+X-Trace":   true,
+		"-Server-*":  true,
+		"Host Other": false,
+		`Host"Other`: false,
+		"Host\nX":    false,
+	}
+	for value, want := range nameTests {
+		if got := headerNamePattern.MatchString(value); got != want {
+			t.Errorf("headerNamePattern.MatchString(%q) = %t, want %t", value, got, want)
+		}
+	}
+
+	valueTests := map[string]bool{
+		"{http.request.host}":           true,
+		"value with spaces\tand tab":    true,
+		`value"quoted`:                  false,
+		"value\nheader_down X injected": false,
+		"value\rheader_down X injected": false,
+		"value\x00injected":             false,
+		"value\x0binjected":             false,
+		"value\x0cinjected":             false,
+	}
+	for value, want := range valueTests {
+		if got := headerValuePattern.MatchString(value); got != want {
+			t.Errorf("headerValuePattern.MatchString(%q) = %t, want %t", value, got, want)
+		}
+	}
+}
+
+func TestHeaderRoundTrip(t *testing.T) {
+	model := &headerResourceModel{
+		Direction:   types.StringValue("header_up"),
+		Name:        types.StringValue("Host"),
+		Value:       types.StringValue("{host}"),
+		Replace:     types.StringValue(""),
+		Description: types.StringValue("preserve frontend host"),
+	}
+	remote, err := convertHeaderSchemaToStruct(model)
+	if err != nil {
+		t.Fatalf("convertHeaderSchemaToStruct() error = %v", err)
+	}
+	if remote.Direction.String() != "header_up" || remote.Name != "Host" || remote.Value != "{host}" {
+		t.Fatalf("unexpected API model: %+v", remote)
+	}
+	state, err := convertHeaderStructToSchema(remote)
+	if err != nil {
+		t.Fatalf("convertHeaderStructToSchema() error = %v", err)
+	}
+	if state.Direction.ValueString() != "header_up" || state.Name.ValueString() != "Host" || state.Value.ValueString() != "{host}" {
+		t.Fatalf("unexpected state model: %+v", state)
+	}
+}
+
 func TestHandlerProtocolRoundTrip(t *testing.T) {
 	model := &handlerResourceModel{
 		Enabled: types.BoolValue(true), DomainID: types.StringValue("domain-id"), SubdomainID: types.StringValue(""),

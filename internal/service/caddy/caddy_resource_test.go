@@ -60,21 +60,27 @@ func TestAccCaddyReverseProxyResources(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("opnsense_caddy_access_list.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_caddy_access_list.test", "client_ips.#", "2"),
+					resource.TestCheckResourceAttrSet("opnsense_caddy_header.preserve_host", "id"),
+					resource.TestCheckResourceAttr("opnsense_caddy_header.preserve_host", "value", "{host}"),
 					resource.TestCheckResourceAttrSet("opnsense_caddy_domain.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_caddy_domain.test", "protocol", "http"),
 					resource.TestCheckResourceAttr("opnsense_caddy_domain.test", "certificate_mode", "none"),
 					resource.TestCheckResourceAttrSet("opnsense_caddy_handler.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_caddy_handler.test", "upstream_port", "8080"),
+					resource.TestCheckResourceAttr("opnsense_caddy_handler.test", "header_ids.#", "1"),
 					resource.TestCheckResourceAttr("data.opnsense_caddy_domain.test", "domain", "tfacc-http.invalid"),
+					resource.TestCheckResourceAttr("data.opnsense_caddy_header.preserve_host", "name", "Host"),
 				),
 			},
 			{ResourceName: "opnsense_caddy_access_list.test", ImportState: true, ImportStateVerify: true},
+			{ResourceName: "opnsense_caddy_header.preserve_host", ImportState: true, ImportStateVerify: true},
 			{ResourceName: "opnsense_caddy_domain.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"generated_certificate_id"}},
 			{ResourceName: "opnsense_caddy_handler.test", ImportState: true, ImportStateVerify: true},
 			{
 				Config: testAccCaddyReverseProxyConfig("updated", 8081),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("opnsense_caddy_access_list.test", "description", "updated"),
+					resource.TestCheckResourceAttr("opnsense_caddy_header.preserve_host", "description", "updated"),
 					resource.TestCheckResourceAttr("opnsense_caddy_domain.test", "description", "updated"),
 					resource.TestCheckResourceAttr("opnsense_caddy_handler.test", "description", "updated"),
 					resource.TestCheckResourceAttr("opnsense_caddy_handler.test", "upstream_port", "8081"),
@@ -93,6 +99,13 @@ resource "opnsense_caddy_access_list" "test" {
   description     = %[1]q
 }
 
+resource "opnsense_caddy_header" "preserve_host" {
+  direction   = "header_up"
+  name        = "Host"
+  value       = "{host}"
+  description = %[1]q
+}
+
 resource "opnsense_caddy_domain" "test" {
   domain           = "tfacc-http.invalid"
   protocol         = "http"
@@ -106,11 +119,16 @@ resource "opnsense_caddy_handler" "test" {
   upstream_domains = ["127.0.0.1"]
   upstream_port     = %[2]d
   upstream_protocol = "http"
+  header_ids        = [opnsense_caddy_header.preserve_host.id]
   description       = %[1]q
 }
 
 data "opnsense_caddy_domain" "test" {
   id = opnsense_caddy_domain.test.id
+}
+
+data "opnsense_caddy_header" "preserve_host" {
+  id = opnsense_caddy_header.preserve_host.id
 }
 `, description, port)
 }
