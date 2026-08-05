@@ -11,7 +11,7 @@ import socket
 import sys
 import time
 
-QEMU_GA_SOCKET = os.environ.get("QEMU_GA_SOCKET", "/tmp/qga.sock")
+QEMU_GA_SOCKET = os.environ.get("QEMU_GA_SOCKET", "/tmp/qemu-virtserialport.sock")
 COMMIT = os.environ.get("OPNSENSE_BIND_PLUGIN_COMMIT", "")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 
