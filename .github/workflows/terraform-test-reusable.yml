@@ -13,6 +13,7 @@ permissions:
 
 env:
   OPNSENSE_SSH_PORT: 8022
+  OPNSENSE_BIND_PLUGIN_COMMIT: fc897dbb8fbcc1d33fcb87239297d2960a893893
   OPNSENSE_WEB_PORT: 8443
   TERRAFORM_PLUGIN_URI: "registry.terraform.io/biptec/opnsense"
   OPNSENSE_KEA_DHCPV6_IFACE: lan
@@ -69,7 +70,7 @@ jobs:
               "firewall": ["firewall"],
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
-              "other": ["caddy", "diagnostics", "dnsmasq", "interfaces", "kea",
+              "other": ["bind", "caddy", "diagnostics", "dnsmasq", "interfaces", "kea",
                         "openvpn", "quagga", "routes", "routing", "trust", "wireguard"],
           }
           # Non-service packages, tested with "other" on full-suite runs.
@@ -230,6 +231,10 @@ jobs:
           print("ERROR: Guest agent not ready after 600s", file=sys.stderr)
           sys.exit(1)
           EOF
+      - name: Install os-bind candidate
+        if: contains(matrix.packages, './internal/service/bind/')
+        run: python3 scripts/install-bind-plugin.py
+
       - name: Create API key
         id: apikey
         run: |

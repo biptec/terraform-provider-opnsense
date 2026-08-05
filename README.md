@@ -199,6 +199,16 @@ The following is a non-exhaustive list of the plugin APIs OPNsense supports. The
 | `Acmeclient/Validation`        | ❌        | ❌           |
 | `Acmeclient/Certificates`      | ❌        | ❌           |
 | `Acmeclient/Action`            | ❌        | ❌           |
+| `Bind/Settings`                 | ✅        | ✅           |
+| `Bind/ACL`                      | ✅        | ✅           |
+| `Bind/View`                     | ✅        | ✅           |
+| `Bind/TSIG Key`                 | ✅        | ✅           |
+| `Bind/Primary Domain`           | ✅        | ✅           |
+| `Bind/Secondary Domain`         | ✅        | ✅           |
+| `Bind/Forward Domain`           | ✅        | ✅           |
+| `Bind/Record`                   | ✅        | ✅           |
+| `Bind/DNSSEC Status`            |           | ✅           |
+| `Bind/Service Status`           |           | ✅           |
 | `Caddy/Settings`                | ✅        | ✅           |
 | `Caddy/Reverse Proxy/Domain`    | ✅        | ✅           |
 | `Caddy/Reverse Proxy/Handler`   | ✅        | ✅           |

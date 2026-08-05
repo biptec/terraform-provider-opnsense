@@ -1,4 +1,4 @@
-.PHONY: docs build-dev build-local build fmt fmt-check test testacc vet staticcheck check
+.PHONY: docs build-dev build-local build fmt fmt-check test python-test testacc vet staticcheck check
 
 PKG ?=
 TEST ?=
@@ -17,6 +17,9 @@ fmt-check:
 test:
 	go test ./...
 
+python-test:
+	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p 'test_*.py'
+
 testacc:
 ifdef PKG
 	TF_ACC=1 go test -v -p 1 -timeout 120m $(if $(TEST),-run $(TEST)) ./internal/service/$(PKG)/...
@@ -30,7 +33,7 @@ vet:
 staticcheck:
 	go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
 
-check: fmt-check test vet staticcheck
+check: fmt-check test python-test vet staticcheck
 
 build-dev:
 	mkdir -p "$(DEV_DIR)"
