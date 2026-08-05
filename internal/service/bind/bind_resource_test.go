@@ -1,15 +1,20 @@
 package bind_test
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/biptec/opnsense-go/pkg/api"
+	apibind "github.com/biptec/opnsense-go/pkg/bind"
 	"github.com/biptec/terraform-provider-opnsense/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func bindPreCheck(t *testing.T) {
@@ -56,8 +61,17 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
+				Config:             testAccBindSettingsConfig(),
+				ResourceName:       "opnsense_bind_settings.test",
+				ImportState:        true,
+				ImportStateId:      "bind_settings",
+				ImportStatePersist: true,
+			},
+			{
 				Config: testAccBindAuthoritativeConfig(false),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "enabled", "true"),
+					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "port", "53530"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_acl.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_bind_acl.test", "networks.#", "1"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_view.test", "id"),
@@ -78,19 +92,113 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 			{ResourceName: "opnsense_bind_primary_domain.test", ImportState: true, ImportStateVerify: true},
 			{ResourceName: "opnsense_bind_record.ns_address", ImportState: true, ImportStateVerify: true},
 			{
-				PreConfig: func() { time.Sleep(7 * time.Second) },
+				PreConfig: func() { waitForBindDNSSEC(t) },
 				Config:    testAccBindAuthoritativeConfig(true),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.opnsense_bind_dnssec_status.test", "zone", "tfacc-bind.invalid"),
 					resource.TestCheckResourceAttr("data.opnsense_bind_dnssec_status.test", "secure", "true"),
 					resource.TestCheckResourceAttr("data.opnsense_bind_dnssec_status.test", "inline_signing", "true"),
 					resource.TestCheckResourceAttrSet("data.opnsense_bind_dnssec_status.test", "ds_records.0"),
-					resource.TestCheckResourceAttrSet("data.opnsense_bind_dnssec_status.test", "keys.0.key_tag"),
-					resource.TestCheckResourceAttr("data.opnsense_bind_dnssec_status.test", "keys.0.role", "ksk"),
+					checkBindDNSSECKSK("data.opnsense_bind_dnssec_status.test"),
 				),
 			},
 		},
 	})
+}
+
+type bindDomainSearchRow struct {
+	UUID       string `json:"uuid"`
+	DomainName string `json:"domainname"`
+}
+
+func waitForBindDNSSEC(t *testing.T) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	client := api.NewClient(api.Options{
+		Uri:           os.Getenv("OPNSENSE_URI"),
+		APIKey:        os.Getenv("OPNSENSE_API_KEY"),
+		APISecret:     os.Getenv("OPNSENSE_API_SECRET"),
+		AllowInsecure: os.Getenv("OPNSENSE_ALLOW_INSECURE") == "true",
+	})
+	controller := &apibind.Controller{Api: client}
+	var domainID string
+	var lastStatus string
+
+	for {
+		if domainID == "" {
+			result, err := api.Search[bindDomainSearchRow](client, ctx, apibind.PrimaryDomainOpts.Search)
+			if err == nil {
+				for _, domain := range result.Rows {
+					if domain.DomainName == "tfacc-bind.invalid" {
+						domainID = domain.UUID
+						break
+					}
+				}
+			} else {
+				lastStatus = "search primary domain: " + err.Error()
+			}
+		}
+
+		if domainID != "" {
+			status, err := controller.DNSSECStatus(ctx, "tfacc-bind.invalid", domainID)
+			if err == nil {
+				kskReady := false
+				for _, key := range status.Keys {
+					if key.Role == "ksk" && key.KeyTag != "" {
+						kskReady = true
+						break
+					}
+				}
+				if status.Secure && status.InlineSigning && len(status.DSRecords) > 0 && kskReady {
+					return
+				}
+				lastStatus = fmt.Sprintf(
+					"secure=%t inline_signing=%t ds_records=%d keys=%d backend_error=%q",
+					status.Secure, status.InlineSigning, len(status.DSRecords), len(status.Keys), status.Error,
+				)
+			} else {
+				lastStatus = "read DNSSEC status: " + err.Error()
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			t.Fatalf("BIND DNSSEC did not become ready: %s", lastStatus)
+		case <-time.After(time.Second):
+		}
+	}
+}
+
+func checkBindDNSSECKSK(resourceName string) resource.TestCheckFunc {
+	return func(state *terraform.State) error {
+		resourceState, ok := state.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource %s not found", resourceName)
+		}
+		count, err := strconv.Atoi(resourceState.Primary.Attributes["keys.#"])
+		if err != nil {
+			return fmt.Errorf("invalid DNSSEC key count: %w", err)
+		}
+		for index := 0; index < count; index++ {
+			prefix := fmt.Sprintf("keys.%d.", index)
+			if resourceState.Primary.Attributes[prefix+"role"] == "ksk" && resourceState.Primary.Attributes[prefix+"key_tag"] != "" {
+				return nil
+			}
+		}
+		return fmt.Errorf("no DNSSEC KSK with key_tag found in %s", resourceName)
+	}
+}
+
+func testAccBindSettingsConfig() string {
+	return `
+resource "opnsense_bind_settings" "test" {
+  enabled     = true
+  listen_ipv4 = ["127.0.0.1"]
+  port        = 53530
+}
+`
 }
 
 func testAccBindAuthoritativeConfig(withDNSSECDataSource bool) string {
@@ -104,6 +212,12 @@ data "opnsense_bind_dnssec_status" "test" {
 `
 	}
 	return fmt.Sprintf(`
+resource "opnsense_bind_settings" "test" {
+  enabled     = true
+  listen_ipv4 = ["127.0.0.1"]
+  port        = 53530
+}
+
 resource "opnsense_bind_acl" "test" {
   name     = "tfacc-bind-internal"
   networks = ["198.51.100.0/24"]
@@ -117,6 +231,8 @@ resource "opnsense_bind_view" "test" {
   allow_query_acl_ids       = [opnsense_bind_acl.test.id]
   recursion            = false
   dnssec_validation    = "auto"
+
+  depends_on = [opnsense_bind_settings.test]
 }
 
 resource "opnsense_bind_tsig_key" "test" {
