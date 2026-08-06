@@ -27,6 +27,18 @@ func TestFirmwareHelpers(t *testing.T) {
 	}
 }
 
+func TestValidateFirmwareActionResult(t *testing.T) {
+	if err := validateFirmwareActionResult("install", nil); err == nil {
+		t.Fatal("nil firmware action result was accepted")
+	}
+	if err := validateFirmwareActionResult("remove", &apicore.FirmwareActionResult{Status: "failed"}); err == nil {
+		t.Fatal("failed firmware action result was accepted")
+	}
+	if err := validateFirmwareActionResult("lock", &apicore.FirmwareActionResult{Status: "OK"}); err != nil {
+		t.Fatalf("successful firmware action result rejected: %v", err)
+	}
+}
+
 func TestFirmwareStatusDescription(t *testing.T) {
 	if got := firmwareStatusDescription(nil, errors.New("status endpoint failed")); got != "unavailable (status endpoint failed)" {
 		t.Fatalf("unexpected error status description: %q", got)

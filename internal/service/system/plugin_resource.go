@@ -62,8 +62,8 @@ func (r *pluginResource) Create(ctx context.Context, req resource.CreateRequest,
 			resp.Diagnostics.AddError("Unable to Install OPNsense Plugin", installErr.Error())
 			return
 		}
-		if result.Status != "ok" {
-			resp.Diagnostics.AddError("Unable to Install OPNsense Plugin", fmt.Sprintf("unexpected firmware status %q", result.Status))
+		if validationErr := validateFirmwareActionResult("install", result); validationErr != nil {
+			resp.Diagnostics.AddError("Unable to Install OPNsense Plugin", validationErr.Error())
 			return
 		}
 		if _, err = r.waitForPlugin(ctx, name, true, nil); err != nil {
@@ -155,8 +155,8 @@ func (r *pluginResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		resp.Diagnostics.AddError("Unable to Uninstall OPNsense Plugin", err.Error())
 		return
 	}
-	if result.Status != "ok" {
-		resp.Diagnostics.AddError("Unable to Uninstall OPNsense Plugin", fmt.Sprintf("unexpected firmware status %q", result.Status))
+	if validationErr := validateFirmwareActionResult("remove", result); validationErr != nil {
+		resp.Diagnostics.AddError("Unable to Uninstall OPNsense Plugin", validationErr.Error())
 		return
 	}
 	if _, err = r.waitForPlugin(ctx, name, false, nil); err != nil {
@@ -196,7 +196,7 @@ func (r *pluginResource) waitForPlugin(ctx context.Context, name string, install
 			lockMatches := locked == nil || (plugin != nil && firmwareFlag(plugin.Locked) == *locked)
 			if actualInstalled == installed && lockMatches {
 				running, runningErr := r.client.Core().FirmwareRunning(operationCtx)
-				if runningErr == nil && strings.EqualFold(running.Status, "ready") {
+				if runningErr == nil && running != nil && strings.EqualFold(running.Status, "ready") {
 					return plugin, nil
 				}
 			}
@@ -237,8 +237,12 @@ func (r *pluginResource) setLock(ctx context.Context, name string, desired bool)
 	if err != nil {
 		return err
 	}
-	if result.Status != "ok" {
-		return fmt.Errorf("unexpected firmware status %q", result.Status)
+	action := "unlock"
+	if desired {
+		action = "lock"
+	}
+	if err = validateFirmwareActionResult(action, result); err != nil {
+		return err
 	}
 	_, err = r.waitForPlugin(ctx, name, true, &desired)
 	return err
@@ -269,6 +273,16 @@ func (r *pluginResource) pluginState(ctx context.Context, name string, uninstall
 	state.Locked = types.BoolValue(firmwareFlag(plugin.Locked))
 	tflog.Trace(ctx, "read OPNsense plugin", map[string]any{"name": name, "installed": state.Installed.ValueBool()})
 	return state, nil
+}
+
+func validateFirmwareActionResult(action string, result *apicore.FirmwareActionResult) error {
+	if result == nil {
+		return fmt.Errorf("firmware %s API returned an empty response", action)
+	}
+	if !strings.EqualFold(strings.TrimSpace(result.Status), "ok") {
+		return fmt.Errorf("firmware %s API returned status %q instead of %q", action, result.Status, "ok")
+	}
+	return nil
 }
 
 func firmwareFlag(value string) bool {
