@@ -2,8 +2,6 @@ name: PR Tests (Tier 1)
 
 on:
   pull_request:
-    branches:
-      - main
     paths:
       - '**'
       - '!docs/**'
