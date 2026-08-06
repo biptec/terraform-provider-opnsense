@@ -18,6 +18,7 @@ import (
 var _ resource.Resource = &natResource{}
 var _ resource.ResourceWithConfigure = &natResource{}
 var _ resource.ResourceWithImportState = &natResource{}
+var _ resource.ResourceWithConfigValidators = &natResource{}
 
 func newNATResource() resource.Resource {
 	return &natResource{}
@@ -34,6 +35,31 @@ func (r *natResource) Metadata(ctx context.Context, req resource.MetadataRequest
 
 func (r *natResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = natResourceSchema()
+}
+
+type natTargetConfigValidator struct{}
+
+func (natTargetConfigValidator) Description(_ context.Context) string {
+	return "Outbound NAT targets must be omitted for NO-NAT rules and target ports require a target IP"
+}
+
+func (v natTargetConfigValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (natTargetConfigValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data natResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if err := validateNATTargetConfiguration(&data); err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("target"), "Invalid Outbound NAT Target", err.Error())
+	}
+}
+
+func (r *natResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{natTargetConfigValidator{}}
 }
 
 func (r *natResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -113,13 +114,12 @@ func StringSliceToSet(s []string) basetypes.SetValue {
 }
 
 func SetToString(set types.Set, delim string) string {
-	var strList []string
-	set.ElementsAs(context.Background(), &strList, false)
-	return strings.Join(strList, delim)
+	return strings.Join(SetToStringSlice(set), delim)
 }
 
 func SetToStringSlice(set types.Set) []string {
 	var list []string
 	set.ElementsAs(context.Background(), &list, false)
+	sort.Strings(list)
 	return list
 }

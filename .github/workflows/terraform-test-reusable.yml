@@ -21,10 +21,12 @@ env:
   OPNSENSE_KEA_DHCPV6_IFACE: lan
   OPNSENSE_MANAGEMENT_MAC: "52:54:00:12:34:56"
   OPNSENSE_TEST_MANAGEMENT_DEVICE: "vtnet0"
+  OPNSENSE_TEST_WAN_DEVICE: "vtnet1"
   OPNSENSE_TEST_SPARE_DEVICE_1: "vtnet2"
   OPNSENSE_TEST_SPARE_DEVICE_2: "vtnet3"
   OPNSENSE_TEST_MANAGEMENT_INTERFACE: "lan"
   OPNSENSE_TEST_ROUTE_GATEWAY: "CI_GATEWAY"
+  OPNSENSE_TEST_ROUTE_GATEWAY_IP: "10.0.2.2"
   OPNSENSE_CADDY_PLUGIN_COMMIT: 31f701ca97ecce69771e46f37e6561430a8e4254
 
 jobs:
@@ -262,6 +264,8 @@ jobs:
       - name: Configure OPNsense for tests
         run: python3 scripts/configure-opnsense.py
       - name: Run terraform tests
+        env:
+          QEMU_GA_SOCKET: /tmp/qemu-virtserialport.sock
         run: |
           env TF_ACC=1 go test -v -p 1 -timeout 120m ${{ matrix.packages }}
       - name: Stop opnsense VM
