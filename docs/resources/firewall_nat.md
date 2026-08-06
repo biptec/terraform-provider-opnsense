@@ -14,16 +14,56 @@ Network Address Translation (abbreviated to NAT) is a way to separate external a
 ```terraform
 resource "opnsense_firewall_nat" "example_one" {
   disable_nat = true
+  sequence    = 10
+  interface   = "wan"
+  protocol  = "any"
 
-  interface = "wan"
-  protocol  = "TCP"
-
-  target = {
-    ip = "wanip"
+  source = {
+    net = "198.51.100.112/29"
   }
 
   log         = true
-  description = "Example"
+  description = "Do not NAT routed public subnet"
+  depends_on  = [opnsense_firewall_nat_settings.outbound]
+}
+
+// Send internal networks through a dedicated public WAN IP alias.
+resource "opnsense_firewall_nat_settings" "outbound" {
+  mode = "hybrid"
+}
+
+resource "opnsense_firewall_alias" "internal_networks" {
+  name = "INTERNAL_NETWORKS"
+  type = "network"
+  content = [
+    "10.20.0.0/16",
+    "10.30.0.0/16",
+  ]
+  description = "Networks using the dedicated egress IP"
+}
+
+resource "opnsense_interfaces_vip" "egress" {
+  mode        = "ipalias"
+  interface   = "wan"
+  network     = "203.0.113.10/32"
+  description = "Dedicated outbound NAT address"
+}
+
+resource "opnsense_firewall_nat" "dedicated_egress" {
+  sequence  = 100
+  interface = "wan"
+  protocol  = "any"
+
+  source = {
+    net = opnsense_firewall_alias.internal_networks.name
+  }
+
+  target = {
+    ip = trimsuffix(opnsense_interfaces_vip.egress.network, "/32")
+  }
+
+  description = "Internal networks through dedicated egress IP"
+  depends_on  = [opnsense_firewall_nat_settings.outbound]
 }
 
 resource "opnsense_firewall_nat" "example_two" {
@@ -42,7 +82,7 @@ resource "opnsense_firewall_nat" "example_two" {
   }
 
   target = {
-    ip = "wanip"
+    ip   = "wanip"
     port = "http"
   }
 
@@ -55,7 +95,7 @@ resource "opnsense_firewall_nat" "example_three" {
   protocol  = "TCP"
 
   source = {
-    net = "192.168.0.0/16" # This is equiv. to WAN Net
+    net    = "192.168.0.0/16" # This is equiv. to WAN Net
     invert = true
   }
 
@@ -65,7 +105,7 @@ resource "opnsense_firewall_nat" "example_three" {
   }
 
   target = {
-    ip = "wanip"
+    ip   = "wanip"
     port = "443"
   }
 
@@ -80,7 +120,6 @@ resource "opnsense_firewall_nat" "example_three" {
 
 - `interface` (String) Choose on which interface(s) packets must come in to match this rule.
 - `protocol` (String) Choose which IP protocol this rule should match.
-- `target` (Attributes) (see [below for nested schema](#nestedatt--target))
 
 ### Optional
 
@@ -92,22 +131,11 @@ resource "opnsense_firewall_nat" "example_three" {
 - `log` (Boolean) Log packets that are handled by this rule. Defaults to `false`.
 - `sequence` (Number) Specify the order of this NAT rule. Defaults to `1`.
 - `source` (Attributes) (see [below for nested schema](#nestedatt--source))
+- `target` (Attributes) Optional translation target. Omit it for NO-NAT rules or to use the selected interface address automatically. (see [below for nested schema](#nestedatt--target))
 
 ### Read-Only
 
 - `id` (String) UUID of the resource.
-
-<a id="nestedatt--target"></a>
-### Nested Schema for `target`
-
-Required:
-
-- `ip` (String) Specify the IP address or alias for the packets to be mapped to. For `<INT> address`, enter `<int>ip` (e.g. `lanip`).
-
-Optional:
-
-- `port` (String) Destination port number or well known name (imap, imaps, http, https, ...), for ranges use a dash. Defaults to `""`.
-
 
 <a id="nestedatt--destination"></a>
 ### Nested Schema for `destination`
@@ -127,6 +155,15 @@ Optional:
 - `invert` (Boolean) Use this option to invert the sense of the match. Defaults to `false`.
 - `net` (String) Specify the IP address, CIDR or alias for the source of the packet for this mapping. For `<INT> net`, enter `<int>` (e.g. `lan`). For `<INT> address`, enter `<int>ip` (e.g. `lanip`). Defaults to `any`.
 - `port` (String) Specify the source port for this rule. This is usually random and almost never equal to the destination port range (and should usually be `""`). Defaults to `""`.
+
+
+<a id="nestedatt--target"></a>
+### Nested Schema for `target`
+
+Optional:
+
+- `ip` (String) Specify the IP address or alias for the packets to be mapped to. For `<INT> address`, enter `<int>ip` (e.g. `lanip`).
+- `port` (String) Destination port number or well known name (imap, imaps, http, https, ...), for ranges use a dash. Defaults to `""`.
 
 ## Import
 
