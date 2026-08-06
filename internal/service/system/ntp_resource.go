@@ -99,6 +99,9 @@ func (r *ntpSettingsResource) apply(ctx context.Context, data *ntpSettingsResour
 	if err != nil {
 		return err
 	}
+	if currentResponse == nil {
+		return fmt.Errorf("NTP get API returned an empty response")
+	}
 	if ntpEqual(&currentResponse.NTP, desired) {
 		return nil
 	}
@@ -107,15 +110,15 @@ func (r *ntpSettingsResource) apply(ctx context.Context, data *ntpSettingsResour
 	if err != nil {
 		return err
 	}
-	if result.Status != "ok" {
-		return fmt.Errorf("settings update returned status %q: %s", result.Status, validationMessage(result.Validations))
+	if err = validateNTPAction("settings update", result); err != nil {
+		return err
 	}
 	reconfigured, err := r.client.ApiExtensions().NtpReconfigure(ctx)
 	if err != nil {
 		return err
 	}
-	if reconfigured.Status != "ok" {
-		return fmt.Errorf("reconfigure returned status %q", reconfigured.Status)
+	if err = validateNTPAction("reconfigure", reconfigured); err != nil {
+		return err
 	}
 	tflog.Trace(ctx, "configured NTP settings")
 	return nil
