@@ -27,6 +27,7 @@ env:
   OPNSENSE_TEST_MANAGEMENT_INTERFACE: "lan"
   OPNSENSE_TEST_ROUTE_GATEWAY: "CI_GATEWAY"
   OPNSENSE_TEST_ROUTE_GATEWAY_IP: "10.0.2.2"
+  OPNSENSE_CADDY_PLUGIN_COMMIT: 31f701ca97ecce69771e46f37e6561430a8e4254
 
 jobs:
   build:
@@ -248,6 +249,10 @@ jobs:
         id: apikey
         run: |
           python3 scripts/create-apikey.py 2> "$GITHUB_OUTPUT"
+      - name: Install os-caddy candidate
+        if: contains(matrix.packages, './internal/service/caddy/')
+        run: python3 scripts/install-caddy-plugin.py
+
       - name: Setup env vars for tests
         run: |
           {
