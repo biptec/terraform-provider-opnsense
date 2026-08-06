@@ -25,6 +25,7 @@ data "opnsense_caddy_domain" "application" {
 - `access_list_id` (String)
 - `access_log` (Boolean)
 - `acme_passthrough` (Boolean)
+- `acme_passthrough_upstream` (String)
 - `basic_auth_ids` (Set of String)
 - `certificate_mode` (String)
 - `certificate_ref_id` (String)

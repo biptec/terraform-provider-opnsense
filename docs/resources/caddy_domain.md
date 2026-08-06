@@ -47,7 +47,8 @@ resource "opnsense_caddy_domain" "http" {
 
 - `access_list_id` (String) Optional Caddy access-list UUID. Defaults to `""`.
 - `access_log` (Boolean) Whether to enable HTTP access logging for this domain. Defaults to `false`.
-- `acme_passthrough` (Boolean) Whether to pass ACME HTTP-01 challenges to the upstream. Defaults to `false`.
+- `acme_passthrough` (Boolean, Deprecated) Deprecated compatibility flag. It could not identify the HTTP-01 upstream and must remain `false`; use `acme_passthrough_upstream`.
+- `acme_passthrough_upstream` (String) Optional hostname or IP address that receives ACME HTTP-01 challenge requests. Empty disables passthrough.
 - `basic_auth_ids` (Set of String) Caddy basic-auth entry UUIDs. Defaults to an empty set.
 - `certificate_mode` (String) Certificate mode: `acme` for automatic public ACME, `internal` for a dynamically issued certificate from an existing OPNsense CA, `custom` for an existing certificate reference, or `none` for HTTP. Defaults to `acme`.
 - `certificate_ref_id` (String) OPNsense certificate reference ID. Required for `custom`; computed for `internal`; empty for `acme` and `none`.

@@ -238,6 +238,7 @@ func TestAccCaddySettingsResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("opnsense_caddy_settings.test", "http_port", "8080"),
 					resource.TestCheckResourceAttr("opnsense_caddy_settings.test", "https_port", "8443"),
+					resource.TestCheckResourceAttr("opnsense_caddy_settings.test", "listen_addresses.#", "1"),
 					resource.TestCheckResourceAttr("opnsense_caddy_settings.test", "run_as_user", "www"),
 				),
 			},
@@ -260,6 +261,7 @@ resource "opnsense_caddy_settings" "test" {
   enable_layer4         = false
   http_port              = %d
   https_port             = %d
+  listen_addresses       = ["127.0.0.1"]
   acme_email             = ""
   auto_https             = ""
   run_as_user            = %q

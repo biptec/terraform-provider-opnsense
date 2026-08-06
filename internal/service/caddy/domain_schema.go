@@ -40,6 +40,7 @@ type domainResourceModel struct {
 	AccessLog                       types.Bool   `tfsdk:"access_log"`
 	DynamicDNS                      types.Bool   `tfsdk:"dynamic_dns"`
 	ACMEPassthrough                 types.Bool   `tfsdk:"acme_passthrough"`
+	ACMEPassthroughUpstream         types.String `tfsdk:"acme_passthrough_upstream"`
 	ClientAuthMode                  types.String `tfsdk:"client_auth_mode"`
 	ClientAuthCARefIDs              types.Set    `tfsdk:"client_auth_ca_ref_ids"`
 }
@@ -65,15 +66,20 @@ func domainResourceSchema() schema.Schema {
 		"dns_challenge_override_domain":      schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), MarkdownDescription: "Optional delegated DNS-01 challenge domain. Defaults to `\"\"`."},
 		"access_log":                         schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether to enable HTTP access logging for this domain. Defaults to `false`."},
 		"dynamic_dns":                        schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether Caddy updates DNS for this domain. Defaults to `false`."},
-		"acme_passthrough":                   schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether to pass ACME HTTP-01 challenges to the upstream. Defaults to `false`."},
-		"client_auth_mode":                   schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), MarkdownDescription: "Optional mTLS client-auth mode: empty for `require_and_verify`, or `request`, `require`, or `verify_if_given`.", Validators: []validator.String{stringvalidator.OneOf("", "request", "require", "verify_if_given")}},
-		"client_auth_ca_ref_ids":             schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), MarkdownDescription: "OPNsense CA reference IDs trusted for client certificate authentication. Defaults to an empty set."},
+		"acme_passthrough": schema.BoolAttribute{
+			Optional: true, Computed: true, Default: booldefault.StaticBool(false),
+			MarkdownDescription: "Deprecated compatibility flag. It could not identify the HTTP-01 upstream and must remain `false`; use `acme_passthrough_upstream`.",
+			DeprecationMessage:  "Configure acme_passthrough_upstream instead. The legacy boolean could not identify an upstream and will be removed in the next major version.",
+		},
+		"acme_passthrough_upstream": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), MarkdownDescription: "Optional hostname or IP address that receives ACME HTTP-01 challenge requests. Empty disables passthrough."},
+		"client_auth_mode":          schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), MarkdownDescription: "Optional mTLS client-auth mode: empty for `require_and_verify`, or `request`, `require`, or `verify_if_given`.", Validators: []validator.String{stringvalidator.OneOf("", "request", "require", "verify_if_given")}},
+		"client_auth_ca_ref_ids":    schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), MarkdownDescription: "OPNsense CA reference IDs trusted for client certificate authentication. Defaults to an empty set."},
 	}}
 }
 
 func domainDataSourceSchema() dschema.Schema {
 	return dschema.Schema{MarkdownDescription: "Reads a Caddy domain by UUID. Dynamically generated certificate ownership cannot be inferred for imported or data-source-only domains.", Attributes: map[string]dschema.Attribute{
-		"id": dschema.StringAttribute{Required: true}, "enabled": dschema.BoolAttribute{Computed: true}, "domain": dschema.StringAttribute{Computed: true}, "port": dschema.Int64Attribute{Computed: true}, "protocol": dschema.StringAttribute{Computed: true}, "certificate_mode": dschema.StringAttribute{Computed: true}, "certificate_ref_id": dschema.StringAttribute{Computed: true}, "internal_ca_name": dschema.StringAttribute{Computed: true}, "internal_certificate_lifetime_days": dschema.Int64Attribute{Computed: true}, "internal_certificate_key_type": dschema.StringAttribute{Computed: true}, "internal_certificate_digest": dschema.StringAttribute{Computed: true}, "generated_certificate_id": dschema.StringAttribute{Computed: true}, "access_list_id": dschema.StringAttribute{Computed: true}, "basic_auth_ids": dschema.SetAttribute{Computed: true, ElementType: types.StringType}, "description": dschema.StringAttribute{Computed: true}, "dns_challenge": dschema.BoolAttribute{Computed: true}, "dns_challenge_override_domain": dschema.StringAttribute{Computed: true}, "access_log": dschema.BoolAttribute{Computed: true}, "dynamic_dns": dschema.BoolAttribute{Computed: true}, "acme_passthrough": dschema.BoolAttribute{Computed: true}, "client_auth_mode": dschema.StringAttribute{Computed: true}, "client_auth_ca_ref_ids": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
+		"id": dschema.StringAttribute{Required: true}, "enabled": dschema.BoolAttribute{Computed: true}, "domain": dschema.StringAttribute{Computed: true}, "port": dschema.Int64Attribute{Computed: true}, "protocol": dschema.StringAttribute{Computed: true}, "certificate_mode": dschema.StringAttribute{Computed: true}, "certificate_ref_id": dschema.StringAttribute{Computed: true}, "internal_ca_name": dschema.StringAttribute{Computed: true}, "internal_certificate_lifetime_days": dschema.Int64Attribute{Computed: true}, "internal_certificate_key_type": dschema.StringAttribute{Computed: true}, "internal_certificate_digest": dschema.StringAttribute{Computed: true}, "generated_certificate_id": dschema.StringAttribute{Computed: true}, "access_list_id": dschema.StringAttribute{Computed: true}, "basic_auth_ids": dschema.SetAttribute{Computed: true, ElementType: types.StringType}, "description": dschema.StringAttribute{Computed: true}, "dns_challenge": dschema.BoolAttribute{Computed: true}, "dns_challenge_override_domain": dschema.StringAttribute{Computed: true}, "access_log": dschema.BoolAttribute{Computed: true}, "dynamic_dns": dschema.BoolAttribute{Computed: true}, "acme_passthrough": dschema.BoolAttribute{Computed: true}, "acme_passthrough_upstream": dschema.StringAttribute{Computed: true}, "client_auth_mode": dschema.StringAttribute{Computed: true}, "client_auth_ca_ref_ids": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 	}}
 }
 
@@ -91,6 +97,9 @@ func validateDomainModel(d *domainResourceModel) error {
 	if mode == "custom" && d.CertificateRefID.ValueString() == "" {
 		return fmt.Errorf("certificate_ref_id is required when certificate_mode is `custom`")
 	}
+	if d.ACMEPassthrough.ValueBool() && d.ACMEPassthroughUpstream.ValueString() == "" {
+		return fmt.Errorf("acme_passthrough is deprecated and cannot identify an upstream; set acme_passthrough_upstream instead")
+	}
 	return nil
 }
 func buildDomainAPI(d *domainResourceModel, certificateRef string) (*apicaddy.Domain, error) {
@@ -101,7 +110,7 @@ func buildDomainAPI(d *domainResourceModel, certificateRef string) (*apicaddy.Do
 	if d.Protocol.ValueString() == "http" {
 		disable = "1"
 	}
-	return &apicaddy.Domain{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Domain: d.Domain.ValueString(), Port: intToAPI(d.Port), AccessList: api.SelectedMap(d.AccessListID.ValueString()), BasicAuth: api.SelectedMapList(tools.SetToStringSlice(d.BasicAuthIDs)), Description: d.Description.ValueString(), DNSChallenge: tools.BoolToString(d.DNSChallenge.ValueBool()), DNSChallengeOverrideDomain: d.DNSChallengeOverrideDomain.ValueString(), CustomCertificate: api.SelectedMap(certificateRef), AccessLog: tools.BoolToString(d.AccessLog.ValueBool()), DynamicDNS: tools.BoolToString(d.DynamicDNS.ValueBool()), ACMEPassthrough: tools.BoolToString(d.ACMEPassthrough.ValueBool()), DisableTLS: api.SelectedMap(disable), ClientAuthMode: api.SelectedMap(d.ClientAuthMode.ValueString()), ClientAuthTrustPool: api.SelectedMapList(tools.SetToStringSlice(d.ClientAuthCARefIDs))}, nil
+	return &apicaddy.Domain{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Domain: d.Domain.ValueString(), Port: intToAPI(d.Port), AccessList: api.SelectedMap(d.AccessListID.ValueString()), BasicAuth: api.SelectedMapList(tools.SetToStringSlice(d.BasicAuthIDs)), Description: d.Description.ValueString(), DNSChallenge: tools.BoolToString(d.DNSChallenge.ValueBool()), DNSChallengeOverrideDomain: d.DNSChallengeOverrideDomain.ValueString(), CustomCertificate: api.SelectedMap(certificateRef), AccessLog: tools.BoolToString(d.AccessLog.ValueBool()), DynamicDNS: tools.BoolToString(d.DynamicDNS.ValueBool()), ACMEPassthrough: d.ACMEPassthroughUpstream.ValueString(), DisableTLS: api.SelectedMap(disable), ClientAuthMode: api.SelectedMap(d.ClientAuthMode.ValueString()), ClientAuthTrustPool: api.SelectedMapList(tools.SetToStringSlice(d.ClientAuthCARefIDs))}, nil
 }
 func domainStructToSchema(d *apicaddy.Domain, prior *domainResourceModel) (*domainResourceModel, error) {
 	protocol := "https"
@@ -112,7 +121,11 @@ func domainStructToSchema(d *apicaddy.Domain, prior *domainResourceModel) (*doma
 	} else if d.CustomCertificate.String() != "" {
 		mode = "custom"
 	}
-	m := &domainResourceModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Domain: types.StringValue(d.Domain), Port: apiInt(d.Port), Protocol: types.StringValue(protocol), CertificateMode: types.StringValue(mode), CertificateRefID: types.StringValue(d.CustomCertificate.String()), InternalCAName: types.StringValue(""), InternalCertificateLifetimeDays: types.Int64Value(3650), InternalCertificateKeyType: types.StringValue("4096"), InternalCertificateDigest: types.StringValue("sha256"), GeneratedCertificateID: types.StringNull(), AccessListID: types.StringValue(d.AccessList.String()), BasicAuthIDs: tools.StringSliceToSet([]string(d.BasicAuth)), Description: types.StringValue(d.Description), DNSChallenge: types.BoolValue(tools.StringToBool(d.DNSChallenge)), DNSChallengeOverrideDomain: types.StringValue(d.DNSChallengeOverrideDomain), AccessLog: types.BoolValue(tools.StringToBool(d.AccessLog)), DynamicDNS: types.BoolValue(tools.StringToBool(d.DynamicDNS)), ACMEPassthrough: types.BoolValue(tools.StringToBool(d.ACMEPassthrough)), ClientAuthMode: types.StringValue(d.ClientAuthMode.String()), ClientAuthCARefIDs: tools.StringSliceToSet([]string(d.ClientAuthTrustPool))}
+	acmePassthroughUpstream := d.ACMEPassthrough
+	if acmePassthroughUpstream == "0" || acmePassthroughUpstream == "1" {
+		acmePassthroughUpstream = ""
+	}
+	m := &domainResourceModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Domain: types.StringValue(d.Domain), Port: apiInt(d.Port), Protocol: types.StringValue(protocol), CertificateMode: types.StringValue(mode), CertificateRefID: types.StringValue(d.CustomCertificate.String()), InternalCAName: types.StringValue(""), InternalCertificateLifetimeDays: types.Int64Value(3650), InternalCertificateKeyType: types.StringValue("4096"), InternalCertificateDigest: types.StringValue("sha256"), GeneratedCertificateID: types.StringNull(), AccessListID: types.StringValue(d.AccessList.String()), BasicAuthIDs: tools.StringSliceToSet([]string(d.BasicAuth)), Description: types.StringValue(d.Description), DNSChallenge: types.BoolValue(tools.StringToBool(d.DNSChallenge)), DNSChallengeOverrideDomain: types.StringValue(d.DNSChallengeOverrideDomain), AccessLog: types.BoolValue(tools.StringToBool(d.AccessLog)), DynamicDNS: types.BoolValue(tools.StringToBool(d.DynamicDNS)), ACMEPassthrough: types.BoolValue(false), ACMEPassthroughUpstream: types.StringValue(acmePassthroughUpstream), ClientAuthMode: types.StringValue(d.ClientAuthMode.String()), ClientAuthCARefIDs: tools.StringSliceToSet([]string(d.ClientAuthTrustPool))}
 	if prior != nil && prior.CertificateMode.ValueString() == "internal" {
 		m.CertificateMode = types.StringValue("internal")
 		m.InternalCAName = prior.InternalCAName
