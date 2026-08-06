@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/biptec/opnsense-go/pkg/api"
+	apiextensions "github.com/biptec/opnsense-go/pkg/api_extensions"
 	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -57,6 +58,41 @@ func sameStrings(left, right []string) bool {
 	sort.Strings(leftCopy)
 	sort.Strings(rightCopy)
 	return strings.Join(leftCopy, "\x00") == strings.Join(rightCopy, "\x00")
+}
+
+func validateAPIExtensionAction(component, operation, status string, validations map[string]string, present bool) error {
+	if !present {
+		return fmt.Errorf("%s %s API returned an empty response", component, operation)
+	}
+	if !strings.EqualFold(strings.TrimSpace(status), "ok") {
+		message := validationMessage(validations)
+		if message == "" {
+			return fmt.Errorf("%s %s API returned status %q instead of %q", component, operation, status, "ok")
+		}
+		return fmt.Errorf("%s %s API returned status %q instead of %q: %s", component, operation, status, "ok", message)
+	}
+	return nil
+}
+
+func validateWebguiAction(operation string, result *apiextensions.WebguiActionResult) error {
+	if result == nil {
+		return validateAPIExtensionAction("Web GUI", operation, "", nil, false)
+	}
+	return validateAPIExtensionAction("Web GUI", operation, result.Status, result.Validations, true)
+}
+
+func validateSSHAction(operation string, result *apiextensions.SshActionResult) error {
+	if result == nil {
+		return validateAPIExtensionAction("SSH", operation, "", nil, false)
+	}
+	return validateAPIExtensionAction("SSH", operation, result.Status, result.Validations, true)
+}
+
+func validateNTPAction(operation string, result *apiextensions.NtpActionResult) error {
+	if result == nil {
+		return validateAPIExtensionAction("NTP", operation, "", nil, false)
+	}
+	return validateAPIExtensionAction("NTP", operation, result.Status, result.Validations, true)
 }
 
 func validationMessage(validations map[string]string) string {

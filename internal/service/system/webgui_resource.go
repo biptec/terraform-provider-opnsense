@@ -100,6 +100,9 @@ func (r *webguiResource) apply(ctx context.Context, data *webguiResourceModel) e
 	if err != nil {
 		return err
 	}
+	if currentResponse == nil {
+		return fmt.Errorf("web GUI get API returned an empty response")
+	}
 	current := &currentResponse.Webgui
 	if webguiEqual(current, desired) {
 		return nil
@@ -112,15 +115,15 @@ func (r *webguiResource) apply(ctx context.Context, data *webguiResourceModel) e
 	if err != nil {
 		return err
 	}
-	if result.Status != "ok" {
-		return fmt.Errorf("settings update returned status %q: %s", result.Status, validationMessage(result.Validations))
+	if err = validateWebguiAction("settings update", result); err != nil {
+		return err
 	}
 	reconfigured, err := r.client.ApiExtensions().WebguiReconfigure(ctx)
 	if err != nil {
 		return err
 	}
-	if reconfigured.Status != "ok" {
-		return fmt.Errorf("reconfigure returned status %q", reconfigured.Status)
+	if err = validateWebguiAction("reconfigure", reconfigured); err != nil {
+		return err
 	}
 	tflog.Trace(ctx, "configured Web GUI listener settings")
 	return nil
