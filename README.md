@@ -104,6 +104,7 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Core/Hasync`                    | ❌        | ❌           |
 | `Core/Snapshots`                 | ❌        | ❌           |
 | `Core/Tunables`                  | ❌        | ❌           |
+| `Core/Firmware/Plugin`           | ✅        |               |
 | `Cron/Job`                       | ❌        | ❌           |
 | `Dhcrelay/Settings`              | ❌        | ❌           |
 | `Dhcrelay/Settings/Dest`         | ❌        | ❌           |
@@ -111,7 +112,7 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Diagnostics/Interface`          | ❌        | 🚧          |
 | `Diagnostics/Lvtemplate`         | ❌        | ❌           |
 | `Diagnostics/Lvtemplate/Item`    | ❌        | ❌           |
-| `Dnsmasq/Settings`               | ❌        | ❌           |
+| `Dnsmasq/Settings`               | ✅        | ✅           |
 | `Dnsmasq/Settings/Boot`          | ❌        | ❌           |
 | `Dnsmasq/Settings/Domain`        | ❌        | ❌           |
 | `Dnsmasq/Settings/Host`          | ✅        | ✅           |
@@ -125,6 +126,8 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Firewall/NPTv6`                 | ✅        | ✅           |
 | `Firewall/Source NAT`            | ✅        | ✅           |
 | `Firewall/One-to-One NAT`        | ✅        | ✅           |
+| `Firewall/Port Forward`          | ✅        | ✅           |
+| `Firewall/NAT Settings`          | ✅        |               |
 | `Interfaces/Assignment`          | ✅        | ✅           |
 | `Interfaces/Bridge`              | ✅        | ✅           |
 | `Interfaces/Details`             |           | ✅           |
@@ -173,18 +176,19 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Trafficshaper/Pipe`             | ❌        | ❌           |
 | `Trafficshaper/Queue`            | ❌        | ❌           |
 | `Trafficshaper/Rule`             | ❌        | ❌           |
-| `Trust/Settings`                 | ❌        | ❌           |
-| `Trust/CA`                       | ❌        | ❌           |
-| `Trust/Cert`                     | ❌        | ❌           |
+| `Trust/Settings`                 | ✅        | ✅           |
+| `Trust/CA`                       | ✅        | ✅           |
+| `Trust/Cert`                     | ✅        | ✅           |
 | `Unbound/Settings`               | ✅        | ✅           |
 | `Unbound/Settings/Domain Override` | ✅      | ✅           |
 | `Unbound/Settings/Forward`       | ✅        | ✅           |
 | `Unbound/Settings/Host Alias`    | ✅        | ✅           |
 | `Unbound/Settings/Host Override` | ✅        | ✅           |
-| `Unbound/Settings/ACL`           | ❌        | ❌           |
-| `Wireguard/Settings`             | ❌        | ❌           |
-| `Wireguard/Client`               | 🚧       | 🚧          |
-| `Wireguard/Server`               | 🚧       | 🚧          |
+| `Unbound/Settings/ACL`           | ✅        | ✅           |
+| `Unbound/Service`                | ✅        | ✅           |
+| `Wireguard/Settings`             | ✅        | ✅           |
+| `Wireguard/Client`               | ✅        | ✅           |
+| `Wireguard/Server`               | ✅        | ✅           |
 | `Wireguard/Generate Key Pair`    | ❌        | ❌           |
 | `Wireguard/Generate PSK`         | ❌        | ❌           |
 
@@ -213,7 +217,11 @@ The following is a non-exhaustive list of the plugin APIs OPNsense supports. The
 | `Caddy/Reverse Proxy/Domain`    | ✅        | ✅           |
 | `Caddy/Reverse Proxy/Handler`   | ✅        | ✅           |
 | `Caddy/Reverse Proxy/Access List` | ✅      | ✅           |
+| `Caddy/Reverse Proxy/Header`     | ✅        | ✅           |
 | `Caddy/Service Status`          |           | ✅           |
+| `ApiExtensions/WebGUI`          | ✅        |               |
+| `ApiExtensions/SSH`             | ✅        |               |
+| `ApiExtensions/NTP`             | ✅        |               |
 | `Haproxy/Maintenance`          | ❌        | ❌           |
 | `Haproxy/Settings`             | ❌        | ❌           |
 | `Haproxy/Settings/Acl`         | ❌        | ❌           |
