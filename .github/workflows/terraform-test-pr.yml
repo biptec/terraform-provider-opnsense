@@ -2,8 +2,6 @@ name: PR Tests (Tier 1)
 
 on:
   pull_request:
-    branches:
-      - main
     paths:
       - '**'
       - '!docs/**'
@@ -28,12 +26,16 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
-      - name: Fetch main branch
-        run: git fetch origin main --depth=1
+      - name: Fetch pull request base
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch origin "$BASE_SHA"
       - name: Detect changed packages
         id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          ALL_CHANGED=$(git diff --name-only origin/main...HEAD)
+          ALL_CHANGED=$(git diff --name-only "$BASE_SHA...HEAD")
 
           # Check for any Go source or module file changes
           GO_FILES=$(echo "$ALL_CHANGED" | grep '\.go$' || true)
