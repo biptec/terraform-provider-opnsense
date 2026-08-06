@@ -11,6 +11,7 @@ import (
 var _ resource.Resource = &primaryDomainResource{}
 var _ resource.ResourceWithConfigure = &primaryDomainResource{}
 var _ resource.ResourceWithImportState = &primaryDomainResource{}
+var _ resource.ResourceWithConfigValidators = &primaryDomainResource{}
 
 type primaryDomainResource struct{ resourceClient }
 
@@ -20,6 +21,9 @@ func (r *primaryDomainResource) Metadata(_ context.Context, req resource.Metadat
 }
 func (r *primaryDomainResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = primaryDomainResourceSchema()
+}
+func (r *primaryDomainResource) ConfigValidators(context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{primaryDomainTransferConfigValidator{}}
 }
 func (r *primaryDomainResource) operations() crudOperations[primaryDomainResourceModel, apibind.PrimaryDomain] {
 	c := r.client.Bind()

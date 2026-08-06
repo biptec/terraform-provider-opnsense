@@ -81,9 +81,15 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 					resource.TestCheckResourceAttr("opnsense_bind_tsig_key.test", "algorithm", "hmac-sha256"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_primary_domain.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_bind_primary_domain.test", "dnssec", "true"),
+					resource.TestCheckResourceAttrSet("opnsense_bind_primary_domain.test", "transfer_key_id"),
+					resource.TestCheckResourceAttr("opnsense_bind_primary_domain.test", "also_notify.#", "1"),
+					resource.TestCheckTypeSetElemAttr("opnsense_bind_primary_domain.test", "also_notify.*", "192.0.2.54"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_record.ns_address", "id"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_record.ns", "id"),
 					resource.TestCheckResourceAttr("data.opnsense_bind_primary_domain.test", "domain_name", "tfacc-bind.invalid"),
+					resource.TestCheckResourceAttrSet("data.opnsense_bind_primary_domain.test", "transfer_key_id"),
+					resource.TestCheckTypeSetElemAttr("data.opnsense_bind_primary_domain.test", "also_notify.*", "192.0.2.54"),
+					checkBindPrimaryTransferRuntime(),
 				),
 			},
 			{ResourceName: "opnsense_bind_acl.test", ImportState: true, ImportStateVerify: true},
@@ -109,6 +115,35 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 type bindDomainSearchRow struct {
 	UUID       string `json:"uuid"`
 	DomainName string `json:"domainname"`
+}
+
+func checkBindPrimaryTransferRuntime() resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		if acctest.QGASocket() == "" {
+			return nil
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		script := `set -eu
+config=/usr/local/etc/namedb/named.conf
+named-checkconf "$config"
+awk '
+/zone "tfacc-bind.invalid"/ { zone = 1 }
+zone && /also-notify[[:space:]]*{/ { in_notify = 1; next }
+in_notify && /192[.]0[.]2[.]54 key "_acme-challenge[.]tfacc-bind[.]invalid";/ { notify_ok = 1 }
+in_notify && /^[[:space:]]*};/ { in_notify = 0 }
+zone && /allow-transfer[[:space:]]*{/ { in_transfer = 1; next }
+in_transfer && /key "_acme-challenge[.]tfacc-bind[.]invalid";/ { transfer_ok = 1 }
+in_transfer && /^[[:space:]]*};/ { in_transfer = 0 }
+END { exit !(notify_ok && transfer_ok) }
+' "$config"`
+		output, err := acctest.QGAGuestExec(ctx, "/bin/sh", "-c", script)
+		if err != nil {
+			return fmt.Errorf("BIND primary transfer configuration is not authenticated: %w; output: %s", err, output)
+		}
+		return nil
+	}
 }
 
 func waitForBindDNSSEC(t *testing.T) {
@@ -244,6 +279,8 @@ resource "opnsense_bind_tsig_key" "test" {
 resource "opnsense_bind_primary_domain" "test" {
   view_id          = opnsense_bind_view.test.id
   domain_name      = "tfacc-bind.invalid"
+  transfer_key_id  = opnsense_bind_tsig_key.test.id
+  also_notify      = ["192.0.2.54"]
   update_key_ids   = [opnsense_bind_tsig_key.test.id]
   update_policy    = "self_txt"
   dnssec           = true

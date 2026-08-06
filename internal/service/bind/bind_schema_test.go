@@ -40,6 +40,7 @@ func TestBindPrimaryDomainRoundTrip(t *testing.T) {
 	model := &primaryDomainResourceModel{
 		ViewID: types.StringValue("view-id"), DomainName: types.StringValue("example.test"), Enabled: types.BoolValue(true),
 		AllowTransferACLs: tools.StringSliceToSet([]string{"secondary-acl"}), AllowRndcTransfer: types.BoolValue(false),
+		TransferKeyID: types.StringValue("transfer-key-id"), AlsoNotify: tools.StringSliceToSet([]string{"192.0.2.54"}),
 		AllowQueryACLs: tools.StringSliceToSet([]string{"public-acl"}), AllowRndcUpdate: types.BoolValue(false),
 		UpdateKeyIDs: tools.StringSliceToSet([]string{"key-id"}), UpdatePolicy: types.StringValue("self_txt"), DNSSEC: types.BoolValue(true),
 		Serial: types.StringUnknown(), TTL: types.Int64Value(300), Refresh: types.Int64Value(600), Retry: types.Int64Value(300),
@@ -49,7 +50,7 @@ func TestBindPrimaryDomainRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("primaryDomainModelToAPI() error = %v", err)
 	}
-	if remote.View.String() != "view-id" || remote.UpdateKeys.String() != "key-id" || remote.UpdatePolicy.String() != "self_txt" || remote.DNSSEC != "1" || remote.Serial != "" {
+	if remote.View.String() != "view-id" || remote.TransferKey.String() != "transfer-key-id" || remote.AlsoNotify.String() != "192.0.2.54" || remote.UpdateKeys.String() != "key-id" || remote.UpdatePolicy.String() != "self_txt" || remote.DNSSEC != "1" || remote.Serial != "" {
 		t.Fatalf("unexpected API primary domain: %+v", remote)
 	}
 	remote.Serial = "2026080501"
@@ -57,7 +58,7 @@ func TestBindPrimaryDomainRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("primaryDomainAPIToModel() error = %v", err)
 	}
-	if state.Serial.ValueString() != "2026080501" || !state.DNSSEC.ValueBool() || state.UpdateKeyIDs.Elements()[0].String() == "" {
+	if state.Serial.ValueString() != "2026080501" || !state.DNSSEC.ValueBool() || state.TransferKeyID.ValueString() != "transfer-key-id" || state.AlsoNotify.Elements()[0].String() == "" || state.UpdateKeyIDs.Elements()[0].String() == "" {
 		t.Fatalf("unexpected primary domain state: %+v", state)
 	}
 }

@@ -13,12 +13,36 @@ Manages a primary authoritative BIND zone inside a selected view.
 ## Example Usage
 
 ```terraform
+variable "acme_tsig_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "secondary_transfer_tsig_secret" {
+  type      = string
+  sensitive = true
+}
+
+resource "opnsense_bind_tsig_key" "acme" {
+  name      = "_acme-challenge.example.net"
+  algorithm = "hmac-sha256"
+  secret    = var.acme_tsig_secret
+}
+
+resource "opnsense_bind_tsig_key" "secondary_transfer" {
+  name      = "secondary-transfer.example.net"
+  algorithm = "hmac-sha256"
+  secret    = var.secondary_transfer_tsig_secret
+}
+
 resource "opnsense_bind_primary_domain" "public" {
-  view_id        = opnsense_bind_view.public.id
-  domain_name    = "example.net"
-  update_key_ids = [opnsense_bind_tsig_key.acme.id]
-  update_policy  = "zonesub_txt"
-  dnssec         = true
+  view_id         = opnsense_bind_view.public.id
+  domain_name     = "example.net"
+  transfer_key_id = opnsense_bind_tsig_key.secondary_transfer.id
+  also_notify     = ["192.0.2.54"]
+  update_key_ids  = [opnsense_bind_tsig_key.acme.id]
+  update_policy   = "self_txt"
+  dnssec          = true
 
   ttl          = 300
   refresh      = 3600
@@ -46,12 +70,14 @@ resource "opnsense_bind_primary_domain" "public" {
 - `allow_rndc_transfer` (Boolean) Allow transfer using the built-in rndc key.
 - `allow_rndc_update` (Boolean) Allow unrestricted dynamic updates using the built-in rndc key.
 - `allow_transfer_acl_ids` (Set of String) ACL UUIDs allowed to transfer this zone.
+- `also_notify` (Set of String) Secondary nameserver IP addresses that receive NOTIFY. A non-empty set requires transfer_key_id so notifications are authenticated.
 - `dnssec` (Boolean) Enable automatic DNSSEC signing with the BIND default policy.
 - `enabled` (Boolean)
 - `expire` (Number)
 - `negative_ttl` (Number)
 - `refresh` (Number)
 - `retry` (Number)
+- `transfer_key_id` (String) Optional TSIG key UUID used for authenticated AXFR/IXFR and also-notify. The key secret remains owned by opnsense_bind_tsig_key.
 - `ttl` (Number) Default zone TTL in seconds.
 - `update_key_ids` (Set of String) TSIG key UUIDs allowed to perform RFC2136 updates.
 - `update_policy` (String) RFC2136 update policy. `self_txt` allows each TSIG key to update only the TXT owner matching the key name and is recommended for ACME DNS-01. The `zonesub_*` policies grant broader zone-wide access.
