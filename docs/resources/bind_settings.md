@@ -51,8 +51,8 @@ resource "opnsense_bind_settings" "main" {
 - `legacy_allow_query_acl_ids` (Set of String) Legacy global query ACLs used only when no views are enabled.
 - `legacy_allow_transfer_acl_ids` (Set of String) Legacy global transfer ACLs used only when no views are enabled.
 - `legacy_recursion_acl_ids` (Set of String) Legacy global recursion ACLs used only when no views are enabled.
-- `listen_ipv4` (Set of String) IPv4 addresses on which BIND listens.
-- `listen_ipv6` (Set of String) IPv6 addresses on which BIND listens.
+- `listen_ipv4` (Set of String) Non-empty IPv4 listener set required by os-bind. Use 0.0.0.0 for any IPv4 address.
+- `listen_ipv6` (Set of String) Non-empty IPv6 listener set required by os-bind. Use ::1 when BIND runs with IPv6 disabled.
 - `log_level` (String)
 - `log_size_mb` (Number) Maximum size of each BIND log file in MiB.
 - `max_cache_size_percent` (Number) Maximum BIND cache size as a percentage of memory.

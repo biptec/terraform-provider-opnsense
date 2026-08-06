@@ -1,12 +1,15 @@
 package bind
 
 import (
+	"context"
 	"testing"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	apibind "github.com/biptec/opnsense-go/pkg/bind"
 	"github.com/biptec/terraform-provider-opnsense/internal/tools"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	frameworkvalidator "github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -151,5 +154,40 @@ func TestValidateBindSettingsSetResult(t *testing.T) {
 	}
 	if err := validateSettingsSetResult(nil); err == nil {
 		t.Fatal("nil result must return an error")
+	}
+}
+
+func TestBindListenerSetsRejectEmptyValues(t *testing.T) {
+	attributes := settingsResourceSchema().Attributes
+	for _, name := range []string{"listen_ipv4", "listen_ipv6"} {
+		attribute, ok := attributes[name].(rschema.SetAttribute)
+		if !ok {
+			t.Fatalf("%s schema type = %T, want SetAttribute", name, attributes[name])
+		}
+		response := &frameworkvalidator.SetResponse{}
+		request := frameworkvalidator.SetRequest{
+			ConfigValue: types.SetValueMust(types.StringType, []attr.Value{}),
+		}
+		for _, configuredValidator := range attribute.Validators {
+			configuredValidator.ValidateSet(context.Background(), request, response)
+		}
+		if !response.Diagnostics.HasError() {
+			t.Fatalf("%s accepted an explicit empty listener set", name)
+		}
+	}
+
+	forwarders, ok := attributes["forwarders"].(rschema.SetAttribute)
+	if !ok {
+		t.Fatalf("forwarders schema type = %T, want SetAttribute", attributes["forwarders"])
+	}
+	response := &frameworkvalidator.SetResponse{}
+	request := frameworkvalidator.SetRequest{
+		ConfigValue: types.SetValueMust(types.StringType, []attr.Value{}),
+	}
+	for _, configuredValidator := range forwarders.Validators {
+		configuredValidator.ValidateSet(context.Background(), request, response)
+	}
+	if response.Diagnostics.HasError() {
+		t.Fatalf("forwarders rejected an optional empty set: %v", response.Diagnostics)
 	}
 }

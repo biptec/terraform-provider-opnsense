@@ -9,6 +9,7 @@ import (
 	"github.com/biptec/terraform-provider-opnsense/internal/service/bind"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/caddy"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/diagnostics"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/dns"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/dnsmasq"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/firewall"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/interfaces"
@@ -296,6 +297,7 @@ func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Reso
 		bind.Resources(ctx),
 		caddy.Resources(ctx),
 		diagnostics.Resources(ctx),
+		dns.Resources(ctx),
 		dnsmasq.Resources(ctx),
 		firewall.Resources(ctx),
 		interfaces.Resources(ctx),
