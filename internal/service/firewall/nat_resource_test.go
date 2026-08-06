@@ -89,16 +89,21 @@ func TestAccFirewallNATEgressAliasResource(t *testing.T) {
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccFirewallNATEgressAliasConfig("10.200.0.0/16", "198.51.100.230/32", "hybrid"),
+				Config: testAccFirewallNATEgressAliasConfig([]string{"10.200.0.0/16", "10.201.0.0/16"}, "198.51.100.230/32", "hybrid"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("opnsense_firewall_nat_settings.egress", "mode", "hybrid"),
+					resource.TestCheckResourceAttr("opnsense_firewall_alias.internal_networks", "name", "INTERNAL_EGRESS_NETWORKS"),
+					resource.TestCheckResourceAttr("opnsense_firewall_alias.internal_networks", "content.#", "2"),
+					resource.TestCheckTypeSetElemAttr("opnsense_firewall_alias.internal_networks", "content.*", "10.200.0.0/16"),
+					resource.TestCheckTypeSetElemAttr("opnsense_firewall_alias.internal_networks", "content.*", "10.201.0.0/16"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.egress", "mode", "ipalias"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.egress", "interface", "wan"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.egress", "network", "198.51.100.230/32"),
-					resource.TestCheckResourceAttr("opnsense_firewall_nat.egress", "source.net", "10.200.0.0/16"),
+					resource.TestCheckResourceAttr("opnsense_firewall_nat.egress", "source.net", "INTERNAL_EGRESS_NETWORKS"),
 					resource.TestCheckResourceAttr("opnsense_firewall_nat.egress", "target.ip", "198.51.100.230"),
 					checkActiveIPv4Address("198.51.100.230", true),
-					checkActiveSourceNATRule("10.200.0.0/16", "198.51.100.230", true),
+					checkActiveAliasTable("INTERNAL_EGRESS_NETWORKS", []string{"10.200.0.0/16", "10.201.0.0/16"}),
+					checkActiveSourceNATTableRule("INTERNAL_EGRESS_NETWORKS", "198.51.100.230", true),
 				),
 			},
 			{
@@ -107,23 +112,28 @@ func TestAccFirewallNATEgressAliasResource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccFirewallNATEgressAliasConfig("10.201.0.0/16", "198.51.100.231/32", "hybrid"),
+				Config: testAccFirewallNATEgressAliasConfig([]string{"10.202.0.0/16", "10.203.0.0/16"}, "198.51.100.231/32", "hybrid"),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_firewall_alias.internal_networks", "content.#", "2"),
+					resource.TestCheckTypeSetElemAttr("opnsense_firewall_alias.internal_networks", "content.*", "10.202.0.0/16"),
+					resource.TestCheckTypeSetElemAttr("opnsense_firewall_alias.internal_networks", "content.*", "10.203.0.0/16"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.egress", "network", "198.51.100.231/32"),
-					resource.TestCheckResourceAttr("opnsense_firewall_nat.egress", "source.net", "10.201.0.0/16"),
+					resource.TestCheckResourceAttr("opnsense_firewall_nat.egress", "source.net", "INTERNAL_EGRESS_NETWORKS"),
 					resource.TestCheckResourceAttr("opnsense_firewall_nat.egress", "target.ip", "198.51.100.231"),
 					checkActiveIPv4Address("198.51.100.230", false),
 					checkActiveIPv4Address("198.51.100.231", true),
-					checkActiveSourceNATRule("10.200.0.0/16", "198.51.100.230", false),
-					checkActiveSourceNATRule("10.201.0.0/16", "198.51.100.231", true),
+					checkActiveAliasTable("INTERNAL_EGRESS_NETWORKS", []string{"10.202.0.0/16", "10.203.0.0/16"}),
+					checkActiveSourceNATTableRule("INTERNAL_EGRESS_NETWORKS", "198.51.100.230", false),
+					checkActiveSourceNATTableRule("INTERNAL_EGRESS_NETWORKS", "198.51.100.231", true),
 				),
 			},
 			{
-				Config: testAccFirewallNATEgressAliasConfig("10.201.0.0/16", "198.51.100.231/32", "automatic"),
+				Config: testAccFirewallNATEgressAliasConfig([]string{"10.202.0.0/16", "10.203.0.0/16"}, "198.51.100.231/32", "automatic"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("opnsense_firewall_nat_settings.egress", "mode", "automatic"),
 					checkActiveIPv4Address("198.51.100.231", true),
-					checkActiveSourceNATRule("10.201.0.0/16", "198.51.100.231", false),
+					checkActiveAliasTable("INTERNAL_EGRESS_NETWORKS", []string{"10.202.0.0/16", "10.203.0.0/16"}),
+					checkActiveSourceNATTableRule("INTERNAL_EGRESS_NETWORKS", "198.51.100.231", false),
 				),
 			},
 		},
@@ -157,14 +167,56 @@ func checkActiveIPv4Address(address string, expected bool) resource.TestCheckFun
 	}
 }
 
-func checkActiveSourceNATRule(source, target string, expected bool) resource.TestCheckFunc {
+func checkActiveAliasTable(name string, expected []string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
 		if acctest.QGASocket() == "" {
 			return nil
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		expectedSource := " from " + source + " to any"
+		expectedSet := make(map[string]struct{}, len(expected))
+		for _, value := range expected {
+			expectedSet[value] = struct{}{}
+		}
+		var lastOutput string
+		for ctx.Err() == nil {
+			output, err := acctest.QGAGuestExec(ctx, "/sbin/pfctl", "-t", name, "-T", "show")
+			if err == nil {
+				lastOutput = output
+				actualSet := make(map[string]struct{})
+				for _, line := range strings.Split(output, "\n") {
+					value := strings.TrimSpace(line)
+					if value != "" {
+						actualSet[value] = struct{}{}
+					}
+				}
+				matches := len(actualSet) == len(expectedSet)
+				if matches {
+					for value := range expectedSet {
+						if _, ok := actualSet[value]; !ok {
+							matches = false
+							break
+						}
+					}
+				}
+				if matches {
+					return nil
+				}
+			}
+			time.Sleep(time.Second)
+		}
+		return fmt.Errorf("active PF table %s does not match %v; table: %s", name, expected, strings.TrimSpace(lastOutput))
+	}
+}
+
+func checkActiveSourceNATTableRule(alias, target string, expected bool) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		if acctest.QGASocket() == "" {
+			return nil
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		expectedSource := " from <" + alias + "> to any"
 		expectedTarget := " -> " + target
 		var lastRules string
 		for ctx.Err() == nil {
@@ -184,14 +236,27 @@ func checkActiveSourceNATRule(source, target string, expected bool) resource.Tes
 			}
 			time.Sleep(time.Second)
 		}
-		return fmt.Errorf("active source NAT rule from %s to %s expected=%t; PF rules: %s", source, target, expected, strings.TrimSpace(lastRules))
+		return fmt.Errorf("active source NAT rule from table %s to %s expected=%t; PF rules: %s", alias, target, expected, strings.TrimSpace(lastRules))
 	}
 }
 
-func testAccFirewallNATEgressAliasConfig(source, vipNetwork, mode string) string {
+func testAccFirewallNATEgressAliasConfig(sources []string, vipNetwork, mode string) string {
+	quotedSources := make([]string, 0, len(sources))
+	for _, source := range sources {
+		quotedSources = append(quotedSources, fmt.Sprintf("%q", source))
+	}
 	return fmt.Sprintf(`
 resource "opnsense_firewall_nat_settings" "egress" {
   mode = %[3]q
+}
+
+resource "opnsense_firewall_alias" "internal_networks" {
+  name = "INTERNAL_EGRESS_NETWORKS"
+  type = "network"
+  content = [
+    %[1]s,
+  ]
+  description = "Dedicated egress NAT acceptance"
 }
 
 resource "opnsense_interfaces_vip" "egress" {
@@ -207,7 +272,7 @@ resource "opnsense_firewall_nat" "egress" {
   protocol  = "any"
 
   source = {
-    net = %[1]q
+    net = opnsense_firewall_alias.internal_networks.name
   }
 
   target = {
@@ -217,7 +282,7 @@ resource "opnsense_firewall_nat" "egress" {
   description = "Internal networks through dedicated egress IP"
   depends_on  = [opnsense_firewall_nat_settings.egress]
 }
-`, source, vipNetwork, mode)
+`, strings.Join(quotedSources, ",\n    "), vipNetwork, mode)
 }
 
 func checkActiveNoNATRule(source string, expected bool) resource.TestCheckFunc {
