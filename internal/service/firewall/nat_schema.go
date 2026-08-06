@@ -1,7 +1,9 @@
 package firewall
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	"github.com/biptec/opnsense-go/pkg/firewall"
@@ -171,11 +173,12 @@ func natResourceSchema() schema.Schema {
 				},
 			},
 			"target": schema.SingleNestedAttribute{
-				Required: true,
+				Optional:            true,
+				MarkdownDescription: "Optional translation target. Omit it for NO-NAT rules or to use the selected interface address automatically.",
 				Attributes: map[string]schema.Attribute{
 					"ip": schema.StringAttribute{
 						MarkdownDescription: "Specify the IP address or alias for the packets to be mapped to. For `<INT> address`, enter `<int>ip` (e.g. `lanip`).",
-						Required:            true,
+						Optional:            true,
 					},
 					"port": schema.StringAttribute{
 						MarkdownDescription: "Destination port number or well known name (imap, imaps, http, https, ...), for ranges use a dash. Defaults to `\"\"`.",
@@ -309,7 +312,37 @@ func natDataSourceSchema() dschema.Schema {
 	}
 }
 
+func validateNATTargetConfiguration(d *natResourceModel) error {
+	if d == nil || d.Target == nil {
+		return nil
+	}
+	if !d.DisableNAT.IsNull() && !d.DisableNAT.IsUnknown() && d.DisableNAT.ValueBool() {
+		return fmt.Errorf("target must be omitted when disable_nat is true")
+	}
+	if d.Target.IP.IsUnknown() || d.Target.Port.IsUnknown() {
+		return nil
+	}
+	targetIP := strings.TrimSpace(d.Target.IP.ValueString())
+	targetPort := strings.TrimSpace(d.Target.Port.ValueString())
+	if targetIP == "" && targetPort != "" {
+		return fmt.Errorf("target.ip must be set when target.port is configured")
+	}
+	if targetIP == "" && targetPort == "" {
+		return fmt.Errorf("empty target block must be omitted")
+	}
+	return nil
+}
+
 func convertNATSchemaToStruct(d *natResourceModel) (*firewall.NAT, error) {
+	if err := validateNATTargetConfiguration(d); err != nil {
+		return nil, err
+	}
+	target := ""
+	targetPort := ""
+	if d.Target != nil {
+		target = d.Target.IP.ValueString()
+		targetPort = d.Target.Port.ValueString()
+	}
 	return &firewall.NAT{
 		Enabled:           tools.BoolToString(d.Enabled.ValueBool()),
 		DisableNAT:        tools.BoolToString(d.DisableNAT.ValueBool()),
@@ -323,14 +356,21 @@ func convertNATSchemaToStruct(d *natResourceModel) (*firewall.NAT, error) {
 		DestinationNet:    d.Destination.Net.ValueString(),
 		DestinationPort:   d.Destination.Port.ValueString(),
 		DestinationInvert: tools.BoolToString(d.Destination.Invert.ValueBool()),
-		Target:            d.Target.IP.ValueString(),
-		TargetPort:        d.Target.Port.ValueString(),
+		Target:            target,
+		TargetPort:        targetPort,
 		Log:               tools.BoolToString(d.Log.ValueBool()),
 		Description:       d.Description.ValueString(),
 	}, nil
 }
 
 func convertNATStructToSchema(d *firewall.NAT) (*natResourceModel, error) {
+	var target *firewallTarget
+	if strings.TrimSpace(d.Target) != "" || strings.TrimSpace(d.TargetPort) != "" {
+		target = &firewallTarget{
+			IP:   types.StringValue(d.Target),
+			Port: types.StringValue(d.TargetPort),
+		}
+	}
 	return &natResourceModel{
 		Enabled:    types.BoolValue(tools.StringToBool(d.Enabled)),
 		DisableNAT: types.BoolValue(tools.StringToBool(d.DisableNAT)),
@@ -348,10 +388,7 @@ func convertNATStructToSchema(d *firewall.NAT) (*natResourceModel, error) {
 			Port:   types.StringValue(d.DestinationPort),
 			Invert: types.BoolValue(tools.StringToBool(d.DestinationInvert)),
 		},
-		Target: &firewallTarget{
-			IP:   types.StringValue(d.Target),
-			Port: types.StringValue(d.TargetPort),
-		},
+		Target:      target,
 		Log:         types.BoolValue(tools.StringToBool(d.Log)),
 		Description: tools.StringOrNull(d.Description),
 	}, nil
