@@ -139,8 +139,8 @@ func webguiToAPI(ctx context.Context, data *webguiResourceModel) (*apiextensions
 		return nil, err
 	}
 	var timeout *int
-	if !data.SessionTimeout.IsNull() && !data.SessionTimeout.IsUnknown() {
-		value := int(data.SessionTimeout.ValueInt64())
+	if !data.SessionTimeoutMinutes.IsNull() && !data.SessionTimeoutMinutes.IsUnknown() {
+		value := int(data.SessionTimeoutMinutes.ValueInt64())
 		timeout = &value
 	}
 	return &apiextensions.WebguiSettings{
@@ -168,9 +168,9 @@ func webguiFromAPI(data *apiextensions.WebguiSettings, allowReaddress bool) *web
 		ID:                  types.StringValue("system_webgui"),
 	}
 	if data.SessionTimeout == nil {
-		result.SessionTimeout = types.Int64Null()
+		result.SessionTimeoutMinutes = types.Int64Null()
 	} else {
-		result.SessionTimeout = types.Int64Value(int64(*data.SessionTimeout))
+		result.SessionTimeoutMinutes = types.Int64Value(int64(*data.SessionTimeout))
 	}
 	return result
 }

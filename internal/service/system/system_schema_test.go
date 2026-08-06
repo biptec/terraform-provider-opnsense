@@ -71,18 +71,28 @@ func TestValidateAPIExtensionActions(t *testing.T) {
 	}
 }
 
+func TestWebguiTimeoutSchemaUsesMinutes(t *testing.T) {
+	attributes := webguiResourceSchema().Attributes
+	if _, ok := attributes["session_timeout_minutes"]; !ok {
+		t.Fatal("session_timeout_minutes attribute is missing")
+	}
+	if _, ok := attributes["session_timeout"]; ok {
+		t.Fatal("ambiguous session_timeout attribute must not be exposed")
+	}
+}
+
 func TestWebguiRoundTripAndSafety(t *testing.T) {
-	timeout := int64(600)
+	timeout := int64(15)
 	model := &webguiResourceModel{
-		Protocol:            types.StringValue("https"),
-		Port:                types.Int64Value(443),
-		Interfaces:          stringSetValue([]string{"lan"}),
-		CertificateRef:      types.StringValue("cert-ref"),
-		SessionTimeout:      types.Int64Value(timeout),
-		HSTS:                types.BoolValue(true),
-		DisableHTTPRedirect: types.BoolValue(false),
-		AlternateHostnames:  stringSetValue([]string{"router.internal"}),
-		AllowReaddress:      types.BoolValue(true),
+		Protocol:              types.StringValue("https"),
+		Port:                  types.Int64Value(443),
+		Interfaces:            stringSetValue([]string{"lan"}),
+		CertificateRef:        types.StringValue("cert-ref"),
+		SessionTimeoutMinutes: types.Int64Value(timeout),
+		HSTS:                  types.BoolValue(true),
+		DisableHTTPRedirect:   types.BoolValue(false),
+		AlternateHostnames:    stringSetValue([]string{"router.internal"}),
+		AllowReaddress:        types.BoolValue(true),
 	}
 	remote, err := webguiToAPI(context.Background(), model)
 	if err != nil {

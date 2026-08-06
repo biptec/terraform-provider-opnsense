@@ -164,7 +164,7 @@ func testAccWebguiConfig() string {
 	certificate := strconv.Quote(originalWebgui.CertificateRef)
 	timeout := ""
 	if originalWebgui.SessionTimeout != nil {
-		timeout = fmt.Sprintf("  session_timeout = %d\n", *originalWebgui.SessionTimeout)
+		timeout = fmt.Sprintf("  session_timeout_minutes = %d\n", *originalWebgui.SessionTimeout)
 	}
 	return fmt.Sprintf(`
 resource "opnsense_system_webgui" "test" {
