@@ -1,6 +1,6 @@
-import {
-  to = opnsense_ntp_settings.main
-  id = "ntp_settings"
+// The package must be available from a configured OPNsense package repository.
+resource "opnsense_plugin" "api_extensions" {
+  name = "os-api-extensions"
 }
 
 resource "opnsense_ntp_settings" "main" {
@@ -25,4 +25,6 @@ resource "opnsense_ntp_settings" "main" {
   disable_queries        = true
   deny_peer_associations = true
   deny_trap_service      = true
+
+  depends_on = [opnsense_plugin.api_extensions]
 }

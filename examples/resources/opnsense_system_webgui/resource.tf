@@ -1,6 +1,6 @@
-import {
-  to = opnsense_system_webgui.main
-  id = "system_webgui"
+// The package must be available from a configured OPNsense package repository.
+resource "opnsense_plugin" "api_extensions" {
+  name = "os-api-extensions"
 }
 
 resource "opnsense_system_webgui" "main" {
@@ -11,4 +11,6 @@ resource "opnsense_system_webgui" "main" {
   session_timeout  = 900
   hsts             = true
   allow_readdress  = false
+
+  depends_on = [opnsense_plugin.api_extensions]
 }

@@ -48,7 +48,7 @@ var ntpServerAttributeTypes = map[string]attr.Type{
 
 func ntpSettingsResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Manages the built-in OPNsense NTP service through `os-api-extensions`. This is a singleton resource.",
+		MarkdownDescription: "Manages the built-in OPNsense NTP service through `os-api-extensions`. This is a singleton resource. The `os-api-extensions` package must be installed first.",
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
 				Optional:            true,

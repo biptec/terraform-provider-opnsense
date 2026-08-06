@@ -25,7 +25,7 @@ type pluginResourceModel struct {
 
 func pluginResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Installs and manages an OPNsense plugin through the native firmware API.",
+		MarkdownDescription: "Installs and manages an OPNsense plugin through the native firmware API. The package must be available from a configured OPNsense package repository.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:            true,

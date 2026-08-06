@@ -3,19 +3,19 @@
 page_title: "opnsense_system_webgui Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages OPNsense Web GUI listener settings through os-api-extensions. This is a singleton resource.
+  Manages OPNsense Web GUI listener settings through os-api-extensions. This is a singleton resource. The os-api-extensions package must be installed first.
 ---
 
 # opnsense_system_webgui (Resource)
 
-Manages OPNsense Web GUI listener settings through `os-api-extensions`. This is a singleton resource.
+Manages OPNsense Web GUI listener settings through `os-api-extensions`. This is a singleton resource. The `os-api-extensions` package must be installed first.
 
 ## Example Usage
 
 ```terraform
-import {
-  to = opnsense_system_webgui.main
-  id = "system_webgui"
+// The package must be available from a configured OPNsense package repository.
+resource "opnsense_plugin" "api_extensions" {
+  name = "os-api-extensions"
 }
 
 resource "opnsense_system_webgui" "main" {
@@ -26,6 +26,8 @@ resource "opnsense_system_webgui" "main" {
   session_timeout  = 900
   hsts             = true
   allow_readdress  = false
+
+  depends_on = [opnsense_plugin.api_extensions]
 }
 ```
 

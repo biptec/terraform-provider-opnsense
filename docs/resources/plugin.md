@@ -3,12 +3,12 @@
 page_title: "opnsense_plugin Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Installs and manages an OPNsense plugin through the native firmware API.
+  Installs and manages an OPNsense plugin through the native firmware API. The package must be available from a configured OPNsense package repository.
 ---
 
 # opnsense_plugin (Resource)
 
-Installs and manages an OPNsense plugin through the native firmware API.
+Installs and manages an OPNsense plugin through the native firmware API. The package must be available from a configured OPNsense package repository.
 
 ## Example Usage
 

@@ -3,19 +3,19 @@
 page_title: "opnsense_ntp_settings Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages the built-in OPNsense NTP service through os-api-extensions. This is a singleton resource.
+  Manages the built-in OPNsense NTP service through os-api-extensions. This is a singleton resource. The os-api-extensions package must be installed first.
 ---
 
 # opnsense_ntp_settings (Resource)
 
-Manages the built-in OPNsense NTP service through `os-api-extensions`. This is a singleton resource.
+Manages the built-in OPNsense NTP service through `os-api-extensions`. This is a singleton resource. The `os-api-extensions` package must be installed first.
 
 ## Example Usage
 
 ```terraform
-import {
-  to = opnsense_ntp_settings.main
-  id = "ntp_settings"
+// The package must be available from a configured OPNsense package repository.
+resource "opnsense_plugin" "api_extensions" {
+  name = "os-api-extensions"
 }
 
 resource "opnsense_ntp_settings" "main" {
@@ -40,6 +40,8 @@ resource "opnsense_ntp_settings" "main" {
   disable_queries        = true
   deny_peer_associations = true
   deny_trap_service      = true
+
+  depends_on = [opnsense_plugin.api_extensions]
 }
 ```
 

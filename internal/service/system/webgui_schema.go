@@ -31,7 +31,7 @@ type webguiResourceModel struct {
 
 func webguiResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Manages OPNsense Web GUI listener settings through `os-api-extensions`. This is a singleton resource.",
+		MarkdownDescription: "Manages OPNsense Web GUI listener settings through `os-api-extensions`. This is a singleton resource. The `os-api-extensions` package must be installed first.",
 		Attributes: map[string]schema.Attribute{
 			"protocol": schema.StringAttribute{
 				Optional: true,

@@ -3,19 +3,19 @@
 page_title: "opnsense_system_ssh Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages OPNsense SSH listener settings through os-api-extensions. This is a singleton resource.
+  Manages OPNsense SSH listener settings through os-api-extensions. This is a singleton resource. The os-api-extensions package must be installed first.
 ---
 
 # opnsense_system_ssh (Resource)
 
-Manages OPNsense SSH listener settings through `os-api-extensions`. This is a singleton resource.
+Manages OPNsense SSH listener settings through `os-api-extensions`. This is a singleton resource. The `os-api-extensions` package must be installed first.
 
 ## Example Usage
 
 ```terraform
-import {
-  to = opnsense_system_ssh.main
-  id = "system_ssh"
+// The package must be available from a configured OPNsense package repository.
+resource "opnsense_plugin" "api_extensions" {
+  name = "os-api-extensions"
 }
 
 resource "opnsense_system_ssh" "main" {
@@ -25,6 +25,8 @@ resource "opnsense_system_ssh" "main" {
   password_authentication = false
   permit_root_login       = false
   allow_readdress         = false
+
+  depends_on = [opnsense_plugin.api_extensions]
 }
 ```
 

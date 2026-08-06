@@ -24,7 +24,7 @@ type sshResourceModel struct {
 
 func sshResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Manages OPNsense SSH listener settings through `os-api-extensions`. This is a singleton resource.",
+		MarkdownDescription: "Manages OPNsense SSH listener settings through `os-api-extensions`. This is a singleton resource. The `os-api-extensions` package must be installed first.",
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
 				Optional:            true,
