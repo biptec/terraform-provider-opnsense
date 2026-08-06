@@ -18,6 +18,7 @@ import (
 	"github.com/biptec/terraform-provider-opnsense/internal/service/quagga"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/routes"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/routing"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/system"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/trust"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/unbound"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/wireguard"
@@ -304,6 +305,7 @@ func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Reso
 		quagga.Resources(ctx),
 		routes.Resources(ctx),
 		routing.Resources(ctx),
+		system.Resources(ctx),
 		trust.Resources(ctx),
 		unbound.Resources(ctx),
 		wireguard.Resources(ctx),
