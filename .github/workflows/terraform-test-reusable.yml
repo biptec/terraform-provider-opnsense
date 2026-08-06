@@ -72,11 +72,12 @@ jobs:
           # "other". Every internal/service/<pkg> directory MUST be assigned
           # to a shard — the check below fails the run otherwise.
           SHARDS = {
+              "bind": ["bind"],
               "firewall": ["firewall"],
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
               "system": ["system"],
-              "other": ["bind", "caddy", "diagnostics", "dnsmasq", "interfaces", "kea",
+              "other": ["caddy", "diagnostics", "dnsmasq", "interfaces", "kea",
                         "openvpn", "quagga", "routes", "routing", "trust", "wireguard"],
           }
           # Non-service packages, tested with "other" on full-suite runs.
@@ -126,6 +127,7 @@ jobs:
   test:
     name: test (${{ matrix.name }})
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     needs:
       - build
       - opnsense-image
