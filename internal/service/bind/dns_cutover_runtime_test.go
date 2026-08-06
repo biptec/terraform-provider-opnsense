@@ -2,7 +2,11 @@ package bind_test
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -46,6 +50,7 @@ func TestAccDNSServiceCutover(t *testing.T) {
 					resource.TestCheckResourceAttr("opnsense_dnsmasq_settings.test", "dns_port", "0"),
 					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "enabled", "false"),
 					checkDNSPort53("", nil, nil),
+					checkOPNsenseAPIStable(),
 				),
 			},
 			{
@@ -75,11 +80,17 @@ func TestAccDNSServiceCutover(t *testing.T) {
 			},
 			{
 				Config: testAccDNSCutoverCleanupConfig(true),
-				Check:  checkDNSPort53("unbound", []string{"*"}, []string{"*"}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkDNSPort53("unbound", []string{"*"}, []string{"*"}),
+					checkOPNsenseAPIStable(),
+				),
 			},
 			{
 				Config: testAccDNSCutoverCleanupConfig(false),
-				Check:  checkDNSPort53("unbound", []string{"*"}, []string{"*"}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkDNSPort53("unbound", []string{"*"}, []string{"*"}),
+					checkOPNsenseAPIStable(),
+				),
 			},
 		},
 	})
@@ -185,6 +196,87 @@ resource "opnsense_bind_settings" "test" {
   port         = 53531
 }
 `, loopback)
+}
+
+func checkOPNsenseAPIStable() resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		endpoint := strings.TrimRight(os.Getenv("OPNSENSE_URI"), "/") + "/api/bind/general/get"
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				MinVersion:         tls.VersionTLS12,
+				InsecureSkipVerify: os.Getenv("OPNSENSE_ALLOW_INSECURE") == "true", // #nosec G402 -- acceptance targets use self-signed certificates.
+			},
+		}
+		defer transport.CloseIdleConnections()
+
+		client := &http.Client{Timeout: 10 * time.Second, Transport: transport}
+		probe := func(ctx context.Context) error {
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+			if err != nil {
+				return err
+			}
+			req.SetBasicAuth(os.Getenv("OPNSENSE_API_KEY"), os.Getenv("OPNSENSE_API_SECRET"))
+
+			resp, err := client.Do(req)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+			_, _ = io.Copy(io.Discard, resp.Body)
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("BIND API readiness probe returned HTTP %d", resp.StatusCode)
+			}
+			return nil
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := waitForConsecutiveSuccesses(ctx, 2*time.Second, 5, probe); err != nil {
+			return fmt.Errorf("OPNsense API did not remain stable after interface reconfiguration: %w", err)
+		}
+		return nil
+	}
+}
+
+func waitForConsecutiveSuccesses(
+	ctx context.Context,
+	interval time.Duration,
+	required int,
+	probe func(context.Context) error,
+) error {
+	if required < 1 {
+		return fmt.Errorf("required successes must be at least one")
+	}
+
+	consecutive := 0
+	var lastErr error
+	for {
+		if err := probe(ctx); err != nil {
+			lastErr = err
+			consecutive = 0
+		} else {
+			consecutive++
+			if consecutive >= required {
+				return nil
+			}
+		}
+
+		timer := time.NewTimer(interval)
+		select {
+		case <-ctx.Done():
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			if lastErr != nil {
+				return fmt.Errorf("%w: last probe error: %v", ctx.Err(), lastErr)
+			}
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
 }
 
 func checkDNSPort53(expectedProcess string, expectedIPv4, expectedIPv6 []string) resource.TestCheckFunc {
