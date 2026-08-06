@@ -100,6 +100,9 @@ func (r *sshResource) apply(ctx context.Context, data *sshResourceModel) error {
 	if err != nil {
 		return err
 	}
+	if currentResponse == nil {
+		return fmt.Errorf("SSH get API returned an empty response")
+	}
 	current := &currentResponse.SSH
 	if sshEqual(current, desired) {
 		return nil
@@ -112,15 +115,15 @@ func (r *sshResource) apply(ctx context.Context, data *sshResourceModel) error {
 	if err != nil {
 		return err
 	}
-	if result.Status != "ok" {
-		return fmt.Errorf("settings update returned status %q: %s", result.Status, validationMessage(result.Validations))
+	if err = validateSSHAction("settings update", result); err != nil {
+		return err
 	}
 	reconfigured, err := r.client.ApiExtensions().SshReconfigure(ctx)
 	if err != nil {
 		return err
 	}
-	if reconfigured.Status != "ok" {
-		return fmt.Errorf("reconfigure returned status %q", reconfigured.Status)
+	if err = validateSSHAction("reconfigure", reconfigured); err != nil {
+		return err
 	}
 	tflog.Trace(ctx, "configured SSH listener settings")
 	return nil
