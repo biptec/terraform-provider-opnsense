@@ -34,8 +34,11 @@ func TestAccCaddyMultipleListenerAddresses(t *testing.T) {
 					resource.TestCheckResourceAttr("opnsense_caddy_settings.test", "http_port", "18080"),
 					resource.TestCheckResourceAttr("opnsense_caddy_settings.test", "listen_addresses.#", "2"),
 					resource.TestCheckTypeSetElemAttr("opnsense_caddy_settings.test", "listen_addresses.*", "192.0.2.2"),
-					resource.TestCheckTypeSetElemAttr("opnsense_caddy_settings.test", "listen_addresses.*", "198.51.100.2"),
-					checkCaddyTCPListeners(18080, []string{"192.0.2.2", "198.51.100.2"}),
+					resource.TestCheckTypeSetElemAttr("opnsense_caddy_settings.test", "listen_addresses.*", "198.51.100.230"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.public", "mode", "ipalias"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.public", "interface", "wan"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.public", "network", "198.51.100.230/32"),
+					checkCaddyTCPListeners(18080, []string{"192.0.2.2", "198.51.100.230"}),
 				),
 			},
 			{
@@ -54,7 +57,7 @@ func TestAccCaddyMultipleListenerAddresses(t *testing.T) {
 func testAccCaddyMultipleListenerConfig(enabled bool) string {
 	addresses := `["127.0.0.1"]`
 	if enabled {
-		addresses = `["192.0.2.2", "198.51.100.2"]`
+		addresses = `["192.0.2.2", "198.51.100.230"]`
 	}
 	return fmt.Sprintf(`
 resource "opnsense_interfaces_loopback" "frontend_a" {
@@ -78,25 +81,11 @@ resource "opnsense_interfaces_assignment" "frontend_a" {
   }
 }
 
-resource "opnsense_interfaces_loopback" "frontend_b" {
-  description = "Caddy frontend B"
-}
-
-resource "opnsense_interfaces_assignment" "frontend_b" {
-  device          = format("lo%%d", opnsense_interfaces_loopback.frontend_b.device_id)
-  description     = "Caddy frontend B"
-  enabled         = true
-  allow_readdress = true
-
-  ipv4 = {
-    mode    = "static"
-    address = "198.51.100.2"
-    prefix  = 30
-  }
-
-  ipv6 = {
-    mode = "none"
-  }
+resource "opnsense_interfaces_vip" "public" {
+  mode        = "ipalias"
+  interface   = "wan"
+  network     = "198.51.100.230/32"
+  description = "Caddy public frontend"
 }
 
 resource "opnsense_caddy_settings" "test" {
@@ -116,7 +105,7 @@ resource "opnsense_caddy_settings" "test" {
 
   depends_on = [
     opnsense_interfaces_assignment.frontend_a,
-    opnsense_interfaces_assignment.frontend_b,
+    opnsense_interfaces_vip.public,
   ]
 }
 `, enabled, addresses)
