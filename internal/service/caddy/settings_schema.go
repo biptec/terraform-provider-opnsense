@@ -4,7 +4,9 @@ import (
 	"github.com/biptec/opnsense-go/pkg/api"
 	apicaddy "github.com/biptec/opnsense-go/pkg/caddy"
 	"github.com/biptec/terraform-provider-opnsense/internal/tools"
+	"github.com/biptec/terraform-provider-opnsense/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -17,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"sort"
 )
 
 type settingsResourceModel struct {
@@ -25,6 +28,7 @@ type settingsResourceModel struct {
 	EnableLayer4       types.Bool   `tfsdk:"enable_layer4"`
 	HTTPPort           types.Int64  `tfsdk:"http_port"`
 	HTTPSPort          types.Int64  `tfsdk:"https_port"`
+	ListenAddresses    types.Set    `tfsdk:"listen_addresses"`
 	ACMEEmail          types.String `tfsdk:"acme_email"`
 	AutoHTTPS          types.String `tfsdk:"auto_https"`
 	RunAsUser          types.String `tfsdk:"run_as_user"`
@@ -44,6 +48,7 @@ func settingsResourceSchema() schema.Schema {
 			"enable_layer4":         schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether to enable Layer 4 routing. Defaults to `false`."},
 			"http_port":             schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(80), MarkdownDescription: "Local HTTP listen port. Defaults to `80`.", Validators: []validator.Int64{int64validator.Between(1, 65535)}},
 			"https_port":            schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(443), MarkdownDescription: "Local HTTPS listen port. Defaults to `443`.", Validators: []validator.Int64{int64validator.Between(1, 65535)}},
+			"listen_addresses":      schema.SetAttribute{Required: true, ElementType: types.StringType, Validators: []validator.Set{setvalidator.SizeAtLeast(1), setvalidator.ValueStringsAre(validators.IPAddress())}, MarkdownDescription: "Explicit IPv4 and IPv6 addresses on which all Caddy HTTP and HTTPS frontends listen. A non-empty set is required to prevent wildcard listeners."},
 			"acme_email":            schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), MarkdownDescription: "Email address used by public ACME issuers such as Let's Encrypt and ZeroSSL. Defaults to `\"\"`."},
 			"auto_https":            schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), MarkdownDescription: "Global automatic HTTPS mode: empty for enabled, `off`, `disable_redirects`, `disable_certs`, or `ignore_loaded_certs`. Defaults to enabled.", Validators: []validator.String{stringvalidator.OneOf("", "off", "disable_redirects", "disable_certs", "ignore_loaded_certs")}},
 			"run_as_user":           schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("root"), MarkdownDescription: "Operating-system account used to run Caddy: `root` or `www`. Defaults to `root`.", Validators: []validator.String{stringvalidator.OneOf("root", "www")}},
@@ -59,7 +64,8 @@ func settingsResourceSchema() schema.Schema {
 func settingsDataSourceSchema() dschema.Schema {
 	return dschema.Schema{MarkdownDescription: "Reads Caddy global settings.", Attributes: map[string]dschema.Attribute{
 		"id": dschema.StringAttribute{Computed: true}, "enabled": dschema.BoolAttribute{Computed: true}, "enable_layer4": dschema.BoolAttribute{Computed: true},
-		"http_port": dschema.Int64Attribute{Computed: true}, "https_port": dschema.Int64Attribute{Computed: true}, "acme_email": dschema.StringAttribute{Computed: true},
+		"http_port": dschema.Int64Attribute{Computed: true}, "https_port": dschema.Int64Attribute{Computed: true},
+		"listen_addresses": dschema.SetAttribute{Computed: true, ElementType: types.StringType}, "acme_email": dschema.StringAttribute{Computed: true},
 		"auto_https": dschema.StringAttribute{Computed: true}, "run_as_user": dschema.StringAttribute{Computed: true}, "grace_period": dschema.Int64Attribute{Computed: true},
 		"http_versions": dschema.SetAttribute{Computed: true, ElementType: types.StringType}, "log_level": dschema.StringAttribute{Computed: true},
 		"plain_access_log": dschema.BoolAttribute{Computed: true}, "plain_access_log_keep": dschema.Int64Attribute{Computed: true},
@@ -80,7 +86,7 @@ func settingsStructToSchema(d *apicaddy.SettingsResponse) (*settingsResourceMode
 	if g.RunAsUser.String() == "1" {
 		runAs = "www"
 	}
-	return &settingsResourceModel{ID: types.StringValue("caddy_settings"), Enabled: types.BoolValue(tools.StringToBool(g.Enabled)), EnableLayer4: types.BoolValue(tools.StringToBool(g.EnableLayer4)), HTTPPort: types.Int64Value(httpPort), HTTPSPort: types.Int64Value(httpsPort), ACMEEmail: types.StringValue(g.ACMEEmail), AutoHTTPS: types.StringValue(g.AutoHTTPS.String()), RunAsUser: types.StringValue(runAs), GracePeriod: types.Int64Value(tools.StringToInt64(g.GracePeriod)), HTTPVersions: tools.StringSliceToSet([]string(g.HTTPVersions)), LogLevel: types.StringValue(g.LogLevel.String()), PlainAccessLog: types.BoolValue(tools.StringToBool(g.PlainAccessLog)), PlainAccessLogKeep: types.Int64Value(tools.StringToInt64(g.PlainAccessLogKeep))}, nil
+	return &settingsResourceModel{ID: types.StringValue("caddy_settings"), Enabled: types.BoolValue(tools.StringToBool(g.Enabled)), EnableLayer4: types.BoolValue(tools.StringToBool(g.EnableLayer4)), HTTPPort: types.Int64Value(httpPort), HTTPSPort: types.Int64Value(httpsPort), ListenAddresses: tools.StringSliceToSet([]string(g.ListenAddresses)), ACMEEmail: types.StringValue(g.ACMEEmail), AutoHTTPS: types.StringValue(g.AutoHTTPS.String()), RunAsUser: types.StringValue(runAs), GracePeriod: types.Int64Value(tools.StringToInt64(g.GracePeriod)), HTTPVersions: tools.StringSliceToSet([]string(g.HTTPVersions)), LogLevel: types.StringValue(g.LogLevel.String()), PlainAccessLog: types.BoolValue(tools.StringToBool(g.PlainAccessLog)), PlainAccessLogKeep: types.Int64Value(tools.StringToInt64(g.PlainAccessLogKeep))}, nil
 }
 
 func applySettingsModel(g *apicaddy.GeneralSettings, d *settingsResourceModel) {
@@ -88,6 +94,9 @@ func applySettingsModel(g *apicaddy.GeneralSettings, d *settingsResourceModel) {
 	g.EnableLayer4 = tools.BoolToString(d.EnableLayer4.ValueBool())
 	g.HTTPPort = tools.Int64ToString(d.HTTPPort.ValueInt64())
 	g.HTTPSPort = tools.Int64ToString(d.HTTPSPort.ValueInt64())
+	listenAddresses := tools.SetToStringSlice(d.ListenAddresses)
+	sort.Strings(listenAddresses)
+	g.ListenAddresses = api.SelectedMapList(listenAddresses)
 	g.ACMEEmail = d.ACMEEmail.ValueString()
 	g.AutoHTTPS = api.SelectedMap(d.AutoHTTPS.ValueString())
 	if d.RunAsUser.ValueString() == "www" {

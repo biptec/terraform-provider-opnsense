@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/biptec/opnsense-go/pkg/api"
+	apicaddy "github.com/biptec/opnsense-go/pkg/caddy"
 	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -19,6 +20,29 @@ func stringSet(values ...string) types.Set {
 		items = append(items, types.StringValue(value))
 	}
 	return types.SetValueMust(types.StringType, items)
+}
+
+func TestSettingsListenerAddressesRoundTrip(t *testing.T) {
+	remote := &apicaddy.SettingsResponse{Caddy: apicaddy.Settings{General: apicaddy.GeneralSettings{
+		HTTPPort: "80", HTTPSPort: "443", ListenAddresses: api.SelectedMapList{"10.0.0.2", "192.0.2.10"},
+	}}}
+	state, err := settingsStructToSchema(remote)
+	if err != nil {
+		t.Fatalf("settingsStructToSchema() error = %v", err)
+	}
+	if state.ListenAddresses.Elements()[0].String() == "" || len(state.ListenAddresses.Elements()) != 2 {
+		t.Fatalf("unexpected listen addresses state: %#v", state.ListenAddresses)
+	}
+
+	model := &settingsResourceModel{
+		ListenAddresses: stringSet("192.0.2.10", "10.0.0.2"),
+		HTTPVersions:    stringSet("h1", "h2"),
+	}
+	general := &apicaddy.GeneralSettings{}
+	applySettingsModel(general, model)
+	if general.ListenAddresses.String() != "10.0.0.2,192.0.2.10" {
+		t.Fatalf("unexpected API listen addresses: %q", general.ListenAddresses.String())
+	}
 }
 
 func TestAccessListRoundTrip(t *testing.T) {
@@ -147,7 +171,41 @@ func baseDomainModel() *domainResourceModel {
 		GeneratedCertificateID: types.StringNull(), AccessListID: types.StringValue(""), BasicAuthIDs: stringSet(),
 		Description: types.StringValue("application"), DNSChallenge: types.BoolValue(false),
 		DNSChallengeOverrideDomain: types.StringValue(""), AccessLog: types.BoolValue(false), DynamicDNS: types.BoolValue(false),
-		ACMEPassthrough: types.BoolValue(false), ClientAuthMode: types.StringValue(""), ClientAuthCARefIDs: stringSet(),
+		ACMEPassthrough: types.BoolValue(false), ACMEPassthroughUpstream: types.StringValue(""),
+		ClientAuthMode: types.StringValue(""), ClientAuthCARefIDs: stringSet(),
+	}
+}
+
+func TestDomainACMEPassthroughUsesExplicitUpstream(t *testing.T) {
+	model := baseDomainModel()
+	remote, err := buildDomainAPI(model, "")
+	if err != nil {
+		t.Fatalf("buildDomainAPI() default error = %v", err)
+	}
+	if remote.ACMEPassthrough != "" {
+		t.Fatalf("default passthrough = %q, want empty", remote.ACMEPassthrough)
+	}
+
+	model.ACMEPassthrough = types.BoolValue(true)
+	if _, err = buildDomainAPI(model, ""); err == nil {
+		t.Fatal("legacy boolean passthrough should require an explicit upstream")
+	}
+
+	model.ACMEPassthroughUpstream = types.StringValue("acme-backend.internal")
+	remote, err = buildDomainAPI(model, "")
+	if err != nil {
+		t.Fatalf("buildDomainAPI() upstream error = %v", err)
+	}
+	if remote.ACMEPassthrough != "acme-backend.internal" {
+		t.Fatalf("passthrough upstream = %q", remote.ACMEPassthrough)
+	}
+
+	state, err := domainStructToSchema(&apicaddy.Domain{ACMEPassthrough: "0", DisableTLS: api.SelectedMap("1")}, nil)
+	if err != nil {
+		t.Fatalf("domainStructToSchema() error = %v", err)
+	}
+	if state.ACMEPassthrough.ValueBool() || state.ACMEPassthroughUpstream.ValueString() != "" {
+		t.Fatalf("legacy API value was not normalized: %#v", state)
 	}
 }
 

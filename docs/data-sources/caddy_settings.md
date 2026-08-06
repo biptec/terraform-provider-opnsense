@@ -29,6 +29,7 @@ data "opnsense_caddy_settings" "current" {}
 - `http_versions` (Set of String)
 - `https_port` (Number)
 - `id` (String) The ID of this resource.
+- `listen_addresses` (Set of String)
 - `log_level` (String)
 - `plain_access_log` (Boolean)
 - `plain_access_log_keep` (Number)
