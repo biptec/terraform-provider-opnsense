@@ -2,14 +2,14 @@ resource "opnsense_firewall_nat" "example_one" {
   disable_nat = true
 
   interface = "wan"
-  protocol  = "TCP"
+  protocol  = "any"
 
-  target = {
-    ip = "wanip"
+  source = {
+    net = "198.51.100.112/29"
   }
 
   log         = true
-  description = "Example"
+  description = "Do not NAT routed public subnet"
 }
 
 resource "opnsense_firewall_nat" "example_two" {

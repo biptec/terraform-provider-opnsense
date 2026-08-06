@@ -16,14 +16,14 @@ resource "opnsense_firewall_nat" "example_one" {
   disable_nat = true
 
   interface = "wan"
-  protocol  = "TCP"
+  protocol  = "any"
 
-  target = {
-    ip = "wanip"
+  source = {
+    net = "198.51.100.112/29"
   }
 
   log         = true
-  description = "Example"
+  description = "Do not NAT routed public subnet"
 }
 
 resource "opnsense_firewall_nat" "example_two" {
@@ -80,7 +80,6 @@ resource "opnsense_firewall_nat" "example_three" {
 
 - `interface` (String) Choose on which interface(s) packets must come in to match this rule.
 - `protocol` (String) Choose which IP protocol this rule should match.
-- `target` (Attributes) (see [below for nested schema](#nestedatt--target))
 
 ### Optional
 
@@ -92,22 +91,11 @@ resource "opnsense_firewall_nat" "example_three" {
 - `log` (Boolean) Log packets that are handled by this rule. Defaults to `false`.
 - `sequence` (Number) Specify the order of this NAT rule. Defaults to `1`.
 - `source` (Attributes) (see [below for nested schema](#nestedatt--source))
+- `target` (Attributes) Optional translation target. Omit it for NO-NAT rules or to use the selected interface address automatically. (see [below for nested schema](#nestedatt--target))
 
 ### Read-Only
 
 - `id` (String) UUID of the resource.
-
-<a id="nestedatt--target"></a>
-### Nested Schema for `target`
-
-Required:
-
-- `ip` (String) Specify the IP address or alias for the packets to be mapped to. For `<INT> address`, enter `<int>ip` (e.g. `lanip`).
-
-Optional:
-
-- `port` (String) Destination port number or well known name (imap, imaps, http, https, ...), for ranges use a dash. Defaults to `""`.
-
 
 <a id="nestedatt--destination"></a>
 ### Nested Schema for `destination`
@@ -127,6 +115,15 @@ Optional:
 - `invert` (Boolean) Use this option to invert the sense of the match. Defaults to `false`.
 - `net` (String) Specify the IP address, CIDR or alias for the source of the packet for this mapping. For `<INT> net`, enter `<int>` (e.g. `lan`). For `<INT> address`, enter `<int>ip` (e.g. `lanip`). Defaults to `any`.
 - `port` (String) Specify the source port for this rule. This is usually random and almost never equal to the destination port range (and should usually be `""`). Defaults to `""`.
+
+
+<a id="nestedatt--target"></a>
+### Nested Schema for `target`
+
+Optional:
+
+- `ip` (String) Specify the IP address or alias for the packets to be mapped to. For `<INT> address`, enter `<int>ip` (e.g. `lanip`).
+- `port` (String) Destination port number or well known name (imap, imaps, http, https, ...), for ranges use a dash. Defaults to `""`.
 
 ## Import
 
