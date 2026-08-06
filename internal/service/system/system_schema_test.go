@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	apiextensions "github.com/biptec/opnsense-go/pkg/api_extensions"
@@ -48,6 +49,25 @@ func TestFirmwareStatusDescription(t *testing.T) {
 	}
 	if got := firmwareStatusDescription(&apicore.FirmwareUpgradeStatusResponse{Status: "ready"}, nil); got != `"ready"` {
 		t.Fatalf("unexpected ready status description: %q", got)
+	}
+}
+
+func TestValidateAPIExtensionActions(t *testing.T) {
+	if err := validateWebguiAction("settings update", nil); err == nil {
+		t.Fatal("nil Web GUI action result was accepted")
+	}
+	if err := validateSSHAction("reconfigure", &apiextensions.SshActionResult{Status: "failed"}); err == nil {
+		t.Fatal("failed SSH action result was accepted")
+	}
+	if err := validateNTPAction("reconfigure", &apiextensions.NtpActionResult{Status: "OK"}); err != nil {
+		t.Fatalf("successful NTP action result rejected: %v", err)
+	}
+	validation := &apiextensions.WebguiActionResult{
+		Status:      "failed",
+		Validations: map[string]string{"interfaces": "required"},
+	}
+	if err := validateWebguiAction("settings update", validation); err == nil || !strings.Contains(err.Error(), "interfaces: required") {
+		t.Fatalf("validation details missing from error: %v", err)
 	}
 }
 
