@@ -23,7 +23,7 @@ resource "opnsense_system_webgui" "main" {
   port             = 443
   interfaces       = ["lan"]
   certificate_ref  = "existing-certificate-reference"
-  session_timeout  = 900
+  session_timeout_minutes = 15
   hsts             = true
   allow_readdress  = false
 
@@ -47,7 +47,7 @@ resource "opnsense_system_webgui" "main" {
 - `hsts` (Boolean) Enable HTTP Strict Transport Security. Defaults to `true`.
 - `port` (Number) Web GUI TCP port. Defaults to `443`.
 - `protocol` (String) Web GUI protocol. Defaults to `https`.
-- `session_timeout` (Number) Session timeout in seconds. Leave unset to retain the OPNsense default behavior.
+- `session_timeout_minutes` (Number) Session timeout in minutes. Leave unset to retain the OPNsense default behavior.
 
 ### Read-Only
 

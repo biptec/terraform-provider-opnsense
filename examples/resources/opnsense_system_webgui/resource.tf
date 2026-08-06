@@ -8,7 +8,7 @@ resource "opnsense_system_webgui" "main" {
   port             = 443
   interfaces       = ["lan"]
   certificate_ref  = "existing-certificate-reference"
-  session_timeout  = 900
+  session_timeout_minutes = 15
   hsts             = true
   allow_readdress  = false
 

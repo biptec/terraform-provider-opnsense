@@ -17,16 +17,16 @@ import (
 )
 
 type webguiResourceModel struct {
-	Protocol            types.String `tfsdk:"protocol"`
-	Port                types.Int64  `tfsdk:"port"`
-	Interfaces          types.Set    `tfsdk:"interfaces"`
-	CertificateRef      types.String `tfsdk:"certificate_ref"`
-	SessionTimeout      types.Int64  `tfsdk:"session_timeout"`
-	HSTS                types.Bool   `tfsdk:"hsts"`
-	DisableHTTPRedirect types.Bool   `tfsdk:"disable_http_redirect"`
-	AlternateHostnames  types.Set    `tfsdk:"alternate_hostnames"`
-	AllowReaddress      types.Bool   `tfsdk:"allow_readdress"`
-	ID                  types.String `tfsdk:"id"`
+	Protocol              types.String `tfsdk:"protocol"`
+	Port                  types.Int64  `tfsdk:"port"`
+	Interfaces            types.Set    `tfsdk:"interfaces"`
+	CertificateRef        types.String `tfsdk:"certificate_ref"`
+	SessionTimeoutMinutes types.Int64  `tfsdk:"session_timeout_minutes"`
+	HSTS                  types.Bool   `tfsdk:"hsts"`
+	DisableHTTPRedirect   types.Bool   `tfsdk:"disable_http_redirect"`
+	AlternateHostnames    types.Set    `tfsdk:"alternate_hostnames"`
+	AllowReaddress        types.Bool   `tfsdk:"allow_readdress"`
+	ID                    types.String `tfsdk:"id"`
 }
 
 func webguiResourceSchema() schema.Schema {
@@ -63,12 +63,12 @@ func webguiResourceSchema() schema.Schema {
 				Default:             stringdefault.StaticString(""),
 				MarkdownDescription: "OPNsense certificate reference used by HTTPS. Required by the API when protocol is `https`.",
 			},
-			"session_timeout": schema.Int64Attribute{
+			"session_timeout_minutes": schema.Int64Attribute{
 				Optional: true,
 				Validators: []validator.Int64{
 					int64validator.Between(1, 86400),
 				},
-				MarkdownDescription: "Session timeout in seconds. Leave unset to retain the OPNsense default behavior.",
+				MarkdownDescription: "Session timeout in minutes. Leave unset to retain the OPNsense default behavior.",
 			},
 			"hsts": schema.BoolAttribute{
 				Optional:            true,
