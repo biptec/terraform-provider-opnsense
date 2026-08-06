@@ -14,7 +14,9 @@ permissions:
 env:
   OPNSENSE_SSH_PORT: 8022
   OPNSENSE_BIND_PLUGIN_COMMIT: fc897dbb8fbcc1d33fcb87239297d2960a893893
+  OPNSENSE_API_EXTENSIONS_PLUGIN_COMMIT: ced75ef387166354aeaed512c05f7461e6d483b3
   OPNSENSE_WEB_PORT: 8443
+  QEMU_GA_SOCKET: /tmp/qemu-virtserialport.sock
   TERRAFORM_PLUGIN_URI: "registry.terraform.io/biptec/opnsense"
   OPNSENSE_KEA_DHCPV6_IFACE: lan
   OPNSENSE_MANAGEMENT_MAC: "52:54:00:12:34:56"
@@ -70,6 +72,7 @@ jobs:
               "firewall": ["firewall"],
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
+              "system": ["system"],
               "other": ["bind", "caddy", "diagnostics", "dnsmasq", "interfaces", "kea",
                         "openvpn", "quagga", "routes", "routing", "trust", "wireguard"],
           }
@@ -234,6 +237,10 @@ jobs:
       - name: Install os-bind candidate
         if: contains(matrix.packages, './internal/service/bind/')
         run: python3 scripts/install-bind-plugin.py
+
+      - name: Install os-api-extensions candidate
+        if: contains(matrix.packages, './internal/service/system/')
+        run: python3 scripts/install-api-extensions-plugin.py
 
       - name: Create API key
         id: apikey
