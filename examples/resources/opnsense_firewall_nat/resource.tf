@@ -1,7 +1,7 @@
 resource "opnsense_firewall_nat" "example_one" {
   disable_nat = true
-
-  interface = "wan"
+  sequence    = 10
+  interface   = "wan"
   protocol  = "any"
 
   source = {
@@ -10,6 +10,7 @@ resource "opnsense_firewall_nat" "example_one" {
 
   log         = true
   description = "Do not NAT routed public subnet"
+  depends_on  = [opnsense_firewall_nat_settings.outbound]
 }
 
 // Send internal networks through a dedicated public WAN IP alias.

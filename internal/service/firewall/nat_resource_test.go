@@ -99,11 +99,16 @@ func TestAccFirewallNATEgressAliasResource(t *testing.T) {
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.egress", "mode", "ipalias"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.egress", "interface", "wan"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.egress", "network", "198.51.100.230/32"),
+					resource.TestCheckResourceAttr("opnsense_firewall_nat.routed_public", "disable_nat", "true"),
+					resource.TestCheckResourceAttr("opnsense_firewall_nat.routed_public", "sequence", "900000"),
+					resource.TestCheckResourceAttr("opnsense_firewall_nat.routed_public", "source.net", "198.51.100.112/29"),
 					resource.TestCheckResourceAttr("opnsense_firewall_nat.egress", "source.net", "INTERNAL_EGRESS_NETWORKS"),
 					resource.TestCheckResourceAttr("opnsense_firewall_nat.egress", "target.ip", "198.51.100.230"),
 					checkActiveIPv4Address("198.51.100.230", true),
 					checkActiveAliasTable("INTERNAL_EGRESS_NETWORKS", []string{"10.200.0.0/16", "10.201.0.0/16"}),
+					checkActiveNoNATRule("198.51.100.112/29", true),
 					checkActiveSourceNATTableRule("INTERNAL_EGRESS_NETWORKS", "198.51.100.230", true),
+					checkActiveNATRuleOrder("198.51.100.112/29", "INTERNAL_EGRESS_NETWORKS", "198.51.100.230"),
 				),
 			},
 			{
@@ -123,8 +128,10 @@ func TestAccFirewallNATEgressAliasResource(t *testing.T) {
 					checkActiveIPv4Address("198.51.100.230", false),
 					checkActiveIPv4Address("198.51.100.231", true),
 					checkActiveAliasTable("INTERNAL_EGRESS_NETWORKS", []string{"10.202.0.0/16", "10.203.0.0/16"}),
+					checkActiveNoNATRule("198.51.100.112/29", true),
 					checkActiveSourceNATTableRule("INTERNAL_EGRESS_NETWORKS", "198.51.100.230", false),
 					checkActiveSourceNATTableRule("INTERNAL_EGRESS_NETWORKS", "198.51.100.231", true),
+					checkActiveNATRuleOrder("198.51.100.112/29", "INTERNAL_EGRESS_NETWORKS", "198.51.100.231"),
 				),
 			},
 			{
@@ -133,6 +140,7 @@ func TestAccFirewallNATEgressAliasResource(t *testing.T) {
 					resource.TestCheckResourceAttr("opnsense_firewall_nat_settings.egress", "mode", "automatic"),
 					checkActiveIPv4Address("198.51.100.231", true),
 					checkActiveAliasTable("INTERNAL_EGRESS_NETWORKS", []string{"10.202.0.0/16", "10.203.0.0/16"}),
+					checkActiveNoNATRule("198.51.100.112/29", false),
 					checkActiveSourceNATTableRule("INTERNAL_EGRESS_NETWORKS", "198.51.100.231", false),
 				),
 			},
@@ -240,6 +248,41 @@ func checkActiveSourceNATTableRule(alias, target string, expected bool) resource
 	}
 }
 
+func checkActiveNATRuleOrder(noNATSource, alias, target string) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		if acctest.QGASocket() == "" {
+			return nil
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		noNATFragment := " from " + noNATSource + " to any"
+		natSourceFragment := " from <" + alias + "> to any"
+		natTargetFragment := " -> " + target
+		var lastRules string
+		for ctx.Err() == nil {
+			rules, err := acctest.QGAGuestExec(ctx, "/sbin/pfctl", "-sn")
+			if err == nil {
+				lastRules = rules
+				noNATIndex := -1
+				natIndex := -1
+				for index, line := range strings.Split(rules, "\n") {
+					if noNATIndex < 0 && strings.HasPrefix(line, "no nat ") && strings.Contains(line, noNATFragment) {
+						noNATIndex = index
+					}
+					if natIndex < 0 && strings.HasPrefix(line, "nat ") && strings.Contains(line, natSourceFragment) && strings.Contains(line, natTargetFragment) {
+						natIndex = index
+					}
+				}
+				if noNATIndex >= 0 && natIndex >= 0 && noNATIndex < natIndex {
+					return nil
+				}
+			}
+			time.Sleep(time.Second)
+		}
+		return fmt.Errorf("NO-NAT rule for %s must precede source NAT from table %s to %s; PF rules: %s", noNATSource, alias, target, strings.TrimSpace(lastRules))
+	}
+}
+
 func testAccFirewallNATEgressAliasConfig(sources []string, vipNetwork, mode string) string {
 	quotedSources := make([]string, 0, len(sources))
 	for _, source := range sources {
@@ -264,6 +307,21 @@ resource "opnsense_interfaces_vip" "egress" {
   description = "Dedicated egress NAT acceptance"
   interface   = "wan"
   network     = %[2]q
+}
+
+
+resource "opnsense_firewall_nat" "routed_public" {
+  disable_nat = true
+  sequence    = 900000
+  interface   = "wan"
+  protocol    = "any"
+
+  source = {
+    net = "198.51.100.112/29"
+  }
+
+  description = "Do not NAT routed public subnet"
+  depends_on  = [opnsense_firewall_nat_settings.egress]
 }
 
 resource "opnsense_firewall_nat" "egress" {
