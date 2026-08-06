@@ -34,9 +34,12 @@ func TestAccBindMultipleListenerAddresses(t *testing.T) {
 					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "port", "53531"),
 					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "listen_ipv4.#", "2"),
 					resource.TestCheckTypeSetElemAttr("opnsense_bind_settings.test", "listen_ipv4.*", "192.0.2.2"),
-					resource.TestCheckTypeSetElemAttr("opnsense_bind_settings.test", "listen_ipv4.*", "198.51.100.2"),
-					checkBindSocketListeners("tcp", 53531, []string{"192.0.2.2", "198.51.100.2"}),
-					checkBindSocketListeners("udp", 53531, []string{"192.0.2.2", "198.51.100.2"}),
+					resource.TestCheckTypeSetElemAttr("opnsense_bind_settings.test", "listen_ipv4.*", "198.51.100.231"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.public", "mode", "ipalias"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.public", "interface", "wan"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.public", "network", "198.51.100.231/32"),
+					checkBindSocketListeners("tcp", 53531, []string{"192.0.2.2", "198.51.100.231"}),
+					checkBindSocketListeners("udp", 53531, []string{"192.0.2.2", "198.51.100.231"}),
 				),
 			},
 			{
@@ -56,7 +59,7 @@ func TestAccBindMultipleListenerAddresses(t *testing.T) {
 func testAccBindMultipleListenerConfig(enabled bool) string {
 	addresses := `["127.0.0.1"]`
 	if enabled {
-		addresses = `["192.0.2.2", "198.51.100.2"]`
+		addresses = `["192.0.2.2", "198.51.100.231"]`
 	}
 	return fmt.Sprintf(`
 resource "opnsense_interfaces_loopback" "dns_a" {
@@ -80,25 +83,11 @@ resource "opnsense_interfaces_assignment" "dns_a" {
   }
 }
 
-resource "opnsense_interfaces_loopback" "dns_b" {
-  description = "DNS frontend B"
-}
-
-resource "opnsense_interfaces_assignment" "dns_b" {
-  device          = format("lo%%d", opnsense_interfaces_loopback.dns_b.device_id)
-  description     = "DNS frontend B"
-  enabled         = true
-  allow_readdress = true
-
-  ipv4 = {
-    mode    = "static"
-    address = "198.51.100.2"
-    prefix  = 30
-  }
-
-  ipv6 = {
-    mode = "none"
-  }
+resource "opnsense_interfaces_vip" "public" {
+  mode        = "ipalias"
+  interface   = "wan"
+  network     = "198.51.100.231/32"
+  description = "DNS public frontend"
 }
 
 resource "opnsense_bind_settings" "test" {
@@ -110,7 +99,7 @@ resource "opnsense_bind_settings" "test" {
 
   depends_on = [
     opnsense_interfaces_assignment.dns_a,
-    opnsense_interfaces_assignment.dns_b,
+    opnsense_interfaces_vip.public,
   ]
 }
 `, enabled, addresses)
