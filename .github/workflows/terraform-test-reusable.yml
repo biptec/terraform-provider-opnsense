@@ -13,8 +13,8 @@ permissions:
 
 env:
   OPNSENSE_SSH_PORT: 8022
-  OPNSENSE_BIND_PLUGIN_COMMIT: b2f14288db6d73ad576da62813b2e48c4e460abd
-  OPNSENSE_API_EXTENSIONS_PLUGIN_COMMIT: ced75ef387166354aeaed512c05f7461e6d483b3
+  OPNSENSE_BIND_PLUGIN_COMMIT: 543df91c2687137b553b9e71dab15e4b15a9466e
+  OPNSENSE_API_EXTENSIONS_PLUGIN_COMMIT: 543df91c2687137b553b9e71dab15e4b15a9466e
   OPNSENSE_WEB_PORT: 8443
   QEMU_GA_SOCKET: /tmp/qemu-virtserialport.sock
   TERRAFORM_PLUGIN_URI: "registry.terraform.io/biptec/opnsense"
@@ -72,7 +72,7 @@ jobs:
           # "other". Every internal/service/<pkg> directory MUST be assigned
           # to a shard — the check below fails the run otherwise.
           SHARDS = {
-              "bind": ["bind"],
+              "bind": ["bind", "dns"],
               "firewall": ["firewall"],
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
@@ -240,7 +240,7 @@ jobs:
           sys.exit(1)
           EOF
       - name: Install os-bind candidate
-        if: contains(matrix.packages, './internal/service/bind/')
+        if: contains(matrix.packages, './internal/service/bind/') || contains(matrix.packages, './internal/service/dns/')
         run: python3 scripts/install-bind-plugin.py
 
       - name: Install os-api-extensions candidate

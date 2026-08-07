@@ -50,13 +50,17 @@ type settingsResourceModel struct {
 func settingsAttributesResource() map[string]schema.Attribute {
 	uuidSet := []validator.Set{setvalidator.ValueStringsAre(validators.IsUUIDv4())}
 	ipSet := []validator.Set{setvalidator.ValueStringsAre(validators.IPAddress())}
+	listenerSet := []validator.Set{
+		setvalidator.SizeAtLeast(1),
+		setvalidator.ValueStringsAre(validators.IPAddress()),
+	}
 	return map[string]schema.Attribute{
 		"id":                            schema.StringAttribute{Computed: true, MarkdownDescription: "Always `bind_settings`.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 		"enabled":                       schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether BIND is enabled."},
 		"disable_ipv6":                  schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Disable IPv6 support in BIND."},
 		"enable_rpz":                    schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Enable response policy zones."},
-		"listen_ipv4":                   schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "IPv4 addresses on which BIND listens."},
-		"listen_ipv6":                   schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "IPv6 addresses on which BIND listens."},
+		"listen_ipv4":                   schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: listenerSet, MarkdownDescription: "Non-empty IPv4 listener set required by os-bind. Use 0.0.0.0 for any IPv4 address."},
+		"listen_ipv6":                   schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: listenerSet, MarkdownDescription: "Non-empty IPv6 listener set required by os-bind. Use ::1 when BIND runs with IPv6 disabled."},
 		"query_source":                  schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv4 source address for recursive queries."},
 		"query_source_ipv6":             schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv6 source address for recursive queries."},
 		"transfer_source":               schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv4 source address for zone transfers."},
