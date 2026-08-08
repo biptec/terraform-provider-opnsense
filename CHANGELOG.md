@@ -5,6 +5,7 @@
 ### Added
 
 - Guarded DNS service cutover resource that coordinates BIND, Unbound, and the dnsmasq DNS port with runtime verification and rollback.
+- BIND primary-domain transfer attachment resource for downstream states to own TSIG/NOTIFY integration without owning the primary zone.
 
 ### Changed
 
