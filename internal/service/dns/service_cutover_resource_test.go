@@ -30,6 +30,7 @@ func TestClassifyServiceState(t *testing.T) {
 		{name: "none", bind: "0", unbound: "0", dnsmasq: "1", port: "0", want: "none"},
 		{name: "both services", bind: "1", unbound: "1", dnsmasq: "1", port: "0", want: "conflict"},
 		{name: "dnsmasq owns dns", bind: "0", unbound: "1", dnsmasq: "1", port: "53", want: "conflict"},
+		{name: "dnsmasq nonstandard port does not own dns", bind: "0", unbound: "1", dnsmasq: "1", port: "53053", want: "unbound"},
 		{name: "disabled dnsmasq port ignored", bind: "0", unbound: "1", dnsmasq: "0", port: "53", want: "unbound"},
 		{name: "invalid dnsmasq port", bind: "0", unbound: "0", dnsmasq: "1", port: "invalid", want: "conflict"},
 	}

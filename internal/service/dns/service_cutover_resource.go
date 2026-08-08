@@ -291,7 +291,7 @@ func classifyServiceState(snapshot serviceSnapshot) string {
 	unboundEnabled := tools.StringToBool(snapshot.Unbound.General.Enabled)
 	dnsmasqEnabled := tools.StringToBool(snapshot.Dnsmasq.IsEnabled)
 	dnsmasqPort := dnsmasqPort(snapshot.Dnsmasq.DNS_Port)
-	dnsmasqOwnsDNS := dnsmasqEnabled && dnsmasqPort != 0
+	dnsmasqOwnsDNS := dnsmasqEnabled && (dnsmasqPort == 53 || dnsmasqPort < 0)
 
 	switch {
 	case bindEnabled && !unboundEnabled && !dnsmasqOwnsDNS:
