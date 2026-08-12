@@ -12,6 +12,10 @@
 - BIND listener sets reject explicit empty values because os-bind requires at least one IPv4 and one IPv6 configuration value; use `::1` with IPv6 execution disabled.
 - Provider acceptance CI pins the current BIND and API extensions plugin commit and runs DNS cutover tests in the BIND shard.
 
+### Fixed
+
+- Interface assignment creation now waits for newly registered devices to appear in OPNsense assignment options, preventing fresh loopback deployments from requiring a second apply.
+
 ## v0.25.0 - 2026-07-28
 
 First release maintained by the current project team after the upstream v0.24.0 baseline.

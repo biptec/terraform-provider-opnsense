@@ -2,11 +2,14 @@ package interfaces
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	"github.com/biptec/opnsense-go/pkg/errs"
+	opninterfaces "github.com/biptec/opnsense-go/pkg/interfaces"
 	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,8 +21,18 @@ var _ resource.ResourceWithConfigure = &assignmentResource{}
 var _ resource.ResourceWithImportState = &assignmentResource{}
 var _ resource.ResourceWithModifyPlan = &assignmentResource{}
 
+const (
+	assignmentDeviceReadyTimeout      = 30 * time.Second
+	assignmentDeviceReadyPollInterval = 250 * time.Millisecond
+)
+
 type assignmentResource struct {
-	client opnsense.Client
+	client    opnsense.Client
+	apiClient *api.Client
+}
+
+type assignmentDeviceOptions struct {
+	Device map[string]json.RawMessage `json:"if"`
 }
 
 func newAssignmentResource() resource.Resource { return &assignmentResource{} }
@@ -41,6 +54,7 @@ func (r *assignmentResource) Configure(_ context.Context, req resource.Configure
 		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *api.Client, got %T.", req.ProviderData))
 		return
 	}
+	r.apiClient = apiClient
 	r.client = opnsense.NewClient(apiClient)
 }
 
@@ -56,6 +70,11 @@ func (r *assignmentResource) Create(ctx context.Context, req resource.CreateRequ
 		resp.Diagnostics.AddError("Invalid Interface Assignment", err.Error())
 		return
 	}
+	if err := waitForAssignableDevice(ctx, r.apiClient, assignment.Device.String(), assignmentDeviceReadyTimeout, assignmentDeviceReadyPollInterval); err != nil {
+		resp.Diagnostics.AddError("Interface Device Not Ready", err.Error())
+		return
+	}
+
 	id, err := r.client.Interfaces().AddAssignmentResolved(ctx, assignment)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Create Interface Assignment", err.Error())
@@ -73,6 +92,50 @@ func (r *assignmentResource) Create(ctx context.Context, req resource.CreateRequ
 	state := convertAssignmentStructToResourceSchema(created, id, data.AllowReaddress)
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 	tflog.Trace(ctx, "created interface assignment", map[string]any{"id": id})
+}
+
+func waitForAssignableDevice(ctx context.Context, client *api.Client, device string, timeout, interval time.Duration) error {
+	if client == nil {
+		return fmt.Errorf("OPNsense API client is not configured")
+	}
+	if device == "" {
+		return fmt.Errorf("interface device must not be empty")
+	}
+	if timeout <= 0 {
+		return fmt.Errorf("interface device readiness timeout must be positive")
+	}
+	if interval <= 0 {
+		return fmt.Errorf("interface device readiness interval must be positive")
+	}
+
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	var lastErr error
+	for {
+		options, err := api.Get(client, ctx, opninterfaces.AssignmentOpts, &assignmentDeviceOptions{}, "")
+		if err == nil {
+			if _, ok := options.Device[device]; ok {
+				return nil
+			}
+			lastErr = nil
+		} else {
+			lastErr = err
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-deadline.C:
+			if lastErr != nil {
+				return fmt.Errorf("interface device %q did not become assignable within %s: last readiness check failed: %w", device, timeout, lastErr)
+			}
+			return fmt.Errorf("interface device %q did not become assignable within %s", device, timeout)
+		case <-ticker.C:
+		}
+	}
 }
 
 func (r *assignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
