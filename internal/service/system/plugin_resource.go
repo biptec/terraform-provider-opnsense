@@ -188,18 +188,30 @@ func (r *pluginResource) waitForPlugin(ctx context.Context, name string, install
 	defer cancel()
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
+	doneMismatches := 0
 
 	for {
 		plugin, err := r.findPlugin(operationCtx, name)
 		if err == nil {
 			actualInstalled := plugin != nil && firmwareFlag(plugin.Installed)
 			lockMatches := locked == nil || (plugin != nil && firmwareFlag(plugin.Locked) == *locked)
+			status, statusErr := r.client.Core().FirmwareUpgradeStatus(operationCtx)
 			if actualInstalled == installed && lockMatches {
 				running, runningErr := r.client.Core().FirmwareRunning(operationCtx)
-				status, statusErr := r.client.Core().FirmwareUpgradeStatus(operationCtx)
 				if firmwareOperationComplete(running, runningErr, status, statusErr) {
 					return plugin, nil
 				}
+			} else if locked == nil && statusErr == nil && status != nil && strings.EqualFold(strings.TrimSpace(status.Status), "done") {
+				doneMismatches++
+				if doneMismatches >= 2 {
+					logTail := strings.TrimSpace(status.Log)
+					if len(logTail) > 2048 {
+						logTail = logTail[len(logTail)-2048:]
+					}
+					return nil, fmt.Errorf("firmware operation completed but plugin %q did not reach installed=%t; firmware log tail: %s", name, installed, logTail)
+				}
+			} else {
+				doneMismatches = 0
 			}
 		}
 
