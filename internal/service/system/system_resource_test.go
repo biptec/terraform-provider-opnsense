@@ -131,12 +131,12 @@ func TestAccPluginResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { systemPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		CheckDestroy:             checkPluginUninstalled("os-dmidecode"),
+		CheckDestroy:             checkPluginUninstalled("os-acme-client"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPluginConfig(false, false),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("opnsense_plugin.test", "id", "os-dmidecode"),
+					resource.TestCheckResourceAttr("opnsense_plugin.test", "id", "os-acme-client"),
 					resource.TestCheckResourceAttr("opnsense_plugin.test", "installed", "true"),
 					resource.TestCheckResourceAttrSet("opnsense_plugin.test", "version"),
 				),
@@ -144,7 +144,7 @@ func TestAccPluginResource(t *testing.T) {
 			{
 				ResourceName:            "opnsense_plugin.test",
 				ImportState:             true,
-				ImportStateId:           "os-dmidecode",
+				ImportStateId:           "os-acme-client",
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"uninstall_on_destroy"},
 			},
@@ -241,7 +241,7 @@ resource "opnsense_ntp_settings" "test" {
 func testAccPluginConfig(locked, uninstall bool) string {
 	return fmt.Sprintf(`
 resource "opnsense_plugin" "test" {
-  name                 = "os-dmidecode"
+  name                 = "os-acme-client"
   locked               = %[1]t
   uninstall_on_destroy = %[2]t
 }
