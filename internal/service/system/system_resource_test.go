@@ -14,7 +14,6 @@ import (
 	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/biptec/terraform-provider-opnsense/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 var originalWebgui apiextensions.WebguiSettings
