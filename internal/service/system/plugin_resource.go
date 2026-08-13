@@ -196,7 +196,8 @@ func (r *pluginResource) waitForPlugin(ctx context.Context, name string, install
 			lockMatches := locked == nil || (plugin != nil && firmwareFlag(plugin.Locked) == *locked)
 			if actualInstalled == installed && lockMatches {
 				running, runningErr := r.client.Core().FirmwareRunning(operationCtx)
-				if runningErr == nil && running != nil && strings.EqualFold(running.Status, "ready") {
+				status, statusErr := r.client.Core().FirmwareUpgradeStatus(operationCtx)
+				if firmwareOperationComplete(running, runningErr, status, statusErr) {
 					return plugin, nil
 				}
 			}
