@@ -255,18 +255,3 @@ func hclStringSet(values []string) string {
 	}
 	return "[" + strings.Join(quoted, ", ") + "]"
 }
-
-func checkPluginUninstalled(name string) resource.TestCheckFunc {
-	return func(_ *terraform.State) error {
-		info, err := systemClient().Core().FirmwareInfo(context.Background())
-		if err != nil {
-			return err
-		}
-		for _, plugin := range info.Plugins {
-			if plugin.Name == name && plugin.Installed == "1" {
-				return fmt.Errorf("plugin %s remains installed", name)
-			}
-		}
-		return nil
-	}
-}
