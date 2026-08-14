@@ -39,7 +39,7 @@ func TestSettingsListenerAddressesRoundTrip(t *testing.T) {
 		HTTPVersions:    stringSet("h1", "h2"),
 	}
 	general := &apicaddy.GeneralSettings{}
-	applySettingsModel(general, model)
+	applySettingsModel(general, model, types.StringNull(), types.StringNull())
 	if general.ListenAddresses.String() != "10.0.0.2,192.0.2.10" {
 		t.Fatalf("unexpected API listen addresses: %q", general.ListenAddresses.String())
 	}
@@ -281,5 +281,72 @@ func TestInternalCertificateUsesExistingCA(t *testing.T) {
 	cert := certBody["cert"].(map[string]any)
 	if cert["caref"] != "ca-ref" || cert["country"] != "NL" || cert["lifetime"] != "3650" || cert["altnames_dns"] != "app.example.test" {
 		t.Fatalf("unexpected certificate request: %#v", cert)
+	}
+}
+
+func TestSettingsDNSCredentialsAreWriteOnly(t *testing.T) {
+	s := settingsResourceSchema()
+	for _, name := range []string{"dns_api_key", "dns_rfc2136_key"} {
+		attribute := s.Attributes[name]
+		if !attribute.IsWriteOnly() || !attribute.IsSensitive() {
+			t.Fatalf("%s must be sensitive and write-only", name)
+		}
+		if attribute.IsComputed() {
+			t.Fatalf("%s must not be computed", name)
+		}
+	}
+	dataSource := settingsDataSourceSchema()
+	for _, name := range []string{"dns_api_key", "dns_rfc2136_key", "dns_credentials_version"} {
+		if _, ok := dataSource.Attributes[name]; ok {
+			t.Fatalf("data source must not expose %s", name)
+		}
+	}
+}
+
+func TestSettingsRFC2136SecretsDoNotEnterState(t *testing.T) {
+	remote := &apicaddy.SettingsResponse{Caddy: apicaddy.Settings{General: apicaddy.GeneralSettings{
+		DNSProvider: api.SelectedMap("rfc2136"), DNSRFC2136Server: "192.0.2.53", DNSRFC2136Port: "53",
+		DNSRFC2136KeyName: "_acme-challenge.test.invalid", DNSRFC2136KeyAlgorithm: api.SelectedMap("hmac-sha256"),
+		DNSRFC2136Key: "not-for-state", DNSAPIKey: "also-not-for-state",
+	}}}
+	state, err := settingsStructToSchema(remote)
+	if err != nil {
+		t.Fatalf("settingsStructToSchema() error = %v", err)
+	}
+	if !state.DNSRFC2136Key.IsNull() || !state.DNSAPIKey.IsNull() {
+		t.Fatal("DNS credentials must be null in Terraform state model")
+	}
+	if !state.DNSRFC2136KeyConfigured.ValueBool() || !state.DNSAPIKeyConfigured.ValueBool() {
+		t.Fatal("credential presence flags were not preserved")
+	}
+	if state.DNSRFC2136Server.ValueString() != "192.0.2.53" || state.DNSRFC2136KeyName.ValueString() == "" {
+		t.Fatal("non-secret RFC2136 settings did not round-trip")
+	}
+}
+
+func TestApplySettingsRFC2136Credential(t *testing.T) {
+	model := &settingsResourceModel{
+		DNSProvider: types.StringValue("rfc2136"), DNSRFC2136Server: types.StringValue("192.0.2.53"),
+		DNSRFC2136Port: types.Int64Value(53), DNSRFC2136KeyName: types.StringValue("_acme-challenge.test.invalid"),
+		DNSRFC2136KeyAlgorithm: types.StringValue("hmac-sha256"), DNSPropagationTimeoutDisabled: types.BoolValue(false),
+		DNSPropagationTimeout: types.Int64Value(0), DNSPropagationDelay: types.Int64Value(0), DNSPropagationResolvers: types.StringValue(""),
+		ListenAddresses: stringSet(), HTTPVersions: stringSet(), RunAsUser: types.StringValue("root"),
+	}
+	general := &apicaddy.GeneralSettings{DNSAPIKey: "old-cloudflare"}
+	applySettingsModel(general, model, types.StringNull(), types.StringValue("test-secret"))
+	if general.DNSProvider.String() != "rfc2136" || general.DNSRFC2136Key != "test-secret" {
+		t.Fatal("RFC2136 provider or credential was not applied")
+	}
+	if general.DNSAPIKey != "" {
+		t.Fatal("inactive Cloudflare credential was not cleared")
+	}
+
+	model.DNSProvider = types.StringValue("cloudflare")
+	applySettingsModel(general, model, types.StringValue("cloudflare-secret"), types.StringNull())
+	if general.DNSAPIKey != "cloudflare-secret" {
+		t.Fatal("Cloudflare credential was not applied")
+	}
+	if general.DNSRFC2136Key != "" || general.DNSRFC2136Server != "" {
+		t.Fatal("inactive RFC2136 credential or server was not cleared")
 	}
 }

@@ -37,8 +37,22 @@ resource "opnsense_caddy_settings" "main" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `acme_email` (String) Email address used by public ACME issuers such as Let's Encrypt and ZeroSSL. Defaults to `""`.
 - `auto_https` (String) Global automatic HTTPS mode: empty for enabled, `off`, `disable_redirects`, `disable_certs`, or `ignore_loaded_certs`. Defaults to enabled.
+- `dns_api_key` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only Cloudflare API credential. The value is never stored in Terraform plan or state. Increment `dns_credentials_version` whenever it changes.
+- `dns_credentials_version` (Number) Stateful rotation marker for write-only DNS credentials. Increment whenever `dns_api_key` or `dns_rfc2136_key` changes.
+- `dns_propagation_delay` (Number) Delay in seconds before DNS propagation checks. `0` means no explicit delay.
+- `dns_propagation_resolvers` (String) Optional DNS resolver address used for propagation checks.
+- `dns_propagation_timeout` (Number) DNS propagation timeout in seconds. `0` keeps the Caddy default.
+- `dns_propagation_timeout_disabled` (Boolean) Disable the DNS challenge propagation timeout.
+- `dns_provider` (String) DNS provider used for Caddy DNS operations: empty, `cloudflare`, or `rfc2136`.
+- `dns_rfc2136_key` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only Base64 TSIG secret. The value is never stored in Terraform plan or state. Increment `dns_credentials_version` whenever it changes.
+- `dns_rfc2136_key_algorithm` (String) RFC2136 TSIG HMAC algorithm. Defaults to `hmac-sha256`.
+- `dns_rfc2136_key_name` (String) TSIG key name authorized for RFC2136 updates.
+- `dns_rfc2136_port` (Number) Authoritative DNS server port used for RFC2136 updates. Defaults to `53`.
+- `dns_rfc2136_server` (String) Authoritative DNS server address used for RFC2136 updates.
 - `enable_layer4` (Boolean) Whether to enable Layer 4 routing. Defaults to `false`.
 - `enabled` (Boolean) Whether to enable Caddy. Defaults to `false`.
 - `grace_period` (Number) Grace period in seconds for closing connections during reload. Defaults to `10`.
@@ -52,6 +66,8 @@ resource "opnsense_caddy_settings" "main" {
 
 ### Read-Only
 
+- `dns_api_key_configured` (Boolean) Whether OPNsense currently has a Cloudflare DNS API credential configured.
+- `dns_rfc2136_key_configured` (Boolean) Whether OPNsense currently has an RFC2136 TSIG secret configured.
 - `id` (String) Always `caddy_settings`.
 
 ## Import
