@@ -191,3 +191,32 @@ func TestBindListenerSetsRejectEmptyValues(t *testing.T) {
 		t.Fatalf("forwarders rejected an optional empty set: %v", response.Diagnostics)
 	}
 }
+
+func TestPrimaryDomainUpdateKeysCanBeOwnedAdditively(t *testing.T) {
+	attribute, ok := primaryDomainResourceSchema().Attributes["update_key_ids"].(rschema.SetAttribute)
+	if !ok {
+		t.Fatalf("update_key_ids schema type = %T, want SetAttribute", primaryDomainResourceSchema().Attributes["update_key_ids"])
+	}
+	if attribute.Default != nil {
+		t.Fatal("update_key_ids must not force a default when additive attachment resources own memberships")
+	}
+	if !attribute.IsOptional() || !attribute.IsComputed() {
+		t.Fatal("update_key_ids must remain Optional+Computed so omitted configuration preserves remote memberships")
+	}
+}
+
+func TestPrimaryDomainUpdateKeyAttachmentPreservesOtherKeys(t *testing.T) {
+	domain := &apibind.PrimaryDomain{UpdateKeys: api.SelectedMapList{"key-b", "key-a"}}
+	addUpdateKey(domain, "key-c")
+	if got := domain.UpdateKeys.String(); got != "key-a,key-b,key-c" {
+		t.Fatalf("addUpdateKey() = %q, want sorted additive membership", got)
+	}
+	addUpdateKey(domain, "key-b")
+	if got := domain.UpdateKeys.String(); got != "key-a,key-b,key-c" {
+		t.Fatalf("duplicate add changed membership: %q", got)
+	}
+	removeUpdateKey(domain, "key-b")
+	if got := domain.UpdateKeys.String(); got != "key-a,key-c" {
+		t.Fatalf("removeUpdateKey() removed unrelated memberships: %q", got)
+	}
+}

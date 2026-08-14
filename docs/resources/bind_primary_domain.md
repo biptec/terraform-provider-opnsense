@@ -79,7 +79,7 @@ resource "opnsense_bind_primary_domain" "public" {
 - `retry` (Number)
 - `transfer_key_id` (String) Optional TSIG key UUID used for authenticated AXFR/IXFR and also-notify. The key secret remains owned by opnsense_bind_tsig_key.
 - `ttl` (Number) Default zone TTL in seconds.
-- `update_key_ids` (Set of String) TSIG key UUIDs allowed to perform RFC2136 updates.
+- `update_key_ids` (Set of String) TSIG key UUIDs allowed to perform RFC2136 updates. Omit this attribute when memberships are owned additively by opnsense_bind_primary_domain_update_key resources; configure it explicitly only when this resource owns the complete set.
 - `update_policy` (String) RFC2136 update policy. `self_txt` allows each TSIG key to update only the TXT owner matching the key name and is recommended for ACME DNS-01. The `zonesub_*` policies grant broader zone-wide access.
 
 ### Read-Only
