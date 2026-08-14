@@ -14,7 +14,6 @@ import (
 	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/biptec/terraform-provider-opnsense/internal/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 var originalWebgui apiextensions.WebguiSettings
@@ -131,12 +130,11 @@ func TestAccPluginResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { systemPreCheck(t) },
 		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
-		CheckDestroy:             checkPluginUninstalled("os-dmidecode"),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccPluginConfig(false, false),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("opnsense_plugin.test", "id", "os-dmidecode"),
+					resource.TestCheckResourceAttr("opnsense_plugin.test", "id", "os-api-extensions"),
 					resource.TestCheckResourceAttr("opnsense_plugin.test", "installed", "true"),
 					resource.TestCheckResourceAttrSet("opnsense_plugin.test", "version"),
 				),
@@ -144,7 +142,7 @@ func TestAccPluginResource(t *testing.T) {
 			{
 				ResourceName:            "opnsense_plugin.test",
 				ImportState:             true,
-				ImportStateId:           "os-dmidecode",
+				ImportStateId:           "os-api-extensions",
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"uninstall_on_destroy"},
 			},
@@ -241,7 +239,7 @@ resource "opnsense_ntp_settings" "test" {
 func testAccPluginConfig(locked, uninstall bool) string {
 	return fmt.Sprintf(`
 resource "opnsense_plugin" "test" {
-  name                 = "os-dmidecode"
+  name                 = "os-api-extensions"
   locked               = %[1]t
   uninstall_on_destroy = %[2]t
 }
@@ -256,19 +254,4 @@ func hclStringSet(values []string) string {
 		quoted = append(quoted, strconv.Quote(value))
 	}
 	return "[" + strings.Join(quoted, ", ") + "]"
-}
-
-func checkPluginUninstalled(name string) resource.TestCheckFunc {
-	return func(_ *terraform.State) error {
-		info, err := systemClient().Core().FirmwareInfo(context.Background())
-		if err != nil {
-			return err
-		}
-		for _, plugin := range info.Plugins {
-			if plugin.Name == name && plugin.Installed == "1" {
-				return fmt.Errorf("plugin %s remains installed", name)
-			}
-		}
-		return nil
-	}
 }

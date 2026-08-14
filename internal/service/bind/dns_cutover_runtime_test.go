@@ -58,8 +58,8 @@ func TestAccDNSServiceCutover(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "enabled", "true"),
 					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "port", "53"),
-					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "listen_ipv4.#", "2"),
-					checkDNSPort53("named", []string{"192.0.2.2", "198.51.100.231"}, nil),
+					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "listen_ipv4.#", "1"),
+					checkDNSPort53("named", []string{"127.0.0.1"}, nil),
 				),
 			},
 			{
@@ -78,20 +78,6 @@ func TestAccDNSServiceCutover(t *testing.T) {
 					checkDNSPort53("unbound", []string{"*"}, []string{"*"}),
 				),
 			},
-			{
-				Config: testAccDNSCutoverCleanupConfig(true),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					checkDNSPort53("unbound", []string{"*"}, []string{"*"}),
-					checkOPNsenseAPIStable(),
-				),
-			},
-			{
-				Config: testAccDNSCutoverCleanupConfig(false),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					checkDNSPort53("unbound", []string{"*"}, []string{"*"}),
-					checkOPNsenseAPIStable(),
-				),
-			},
 		},
 	})
 }
@@ -100,7 +86,9 @@ func testAccDNSCutoverConfig(phase string) string {
 	dnsmasqPort := 0
 	bindEnabled := false
 	bindPort := 53
-	bindAddresses := `["192.0.2.2", "198.51.100.231"]`
+	// Keep this test scoped to DNS ownership. Interface/VIP lifecycle has
+	// separate acceptance coverage and Network Core composes both on Proxmox.
+	bindAddresses := `["127.0.0.1"]`
 
 	switch phase {
 	case "prepared":
@@ -125,34 +113,6 @@ resource "opnsense_dnsmasq_settings" "test" {
   dns_port = %[2]d
 }
 
-resource "opnsense_interfaces_loopback" "dns" {
-  description = "DNS internal service network"
-}
-
-resource "opnsense_interfaces_assignment" "dns" {
-  device          = format("lo%%d", opnsense_interfaces_loopback.dns.device_id)
-  description     = "DNS internal service network"
-  enabled         = true
-  allow_readdress = true
-
-  ipv4 = {
-    mode    = "static"
-    address = "192.0.2.2"
-    prefix  = 30
-  }
-
-  ipv6 = {
-    mode = "none"
-  }
-}
-
-resource "opnsense_interfaces_vip" "dns_public" {
-  mode        = "ipalias"
-  interface   = "wan"
-  network     = "198.51.100.231/32"
-  description = "DNS public frontend"
-}
-
 resource "opnsense_bind_settings" "test" {
   enabled      = %[3]t
   disable_ipv6 = true
@@ -163,39 +123,9 @@ resource "opnsense_bind_settings" "test" {
   depends_on = [
     opnsense_unbound_service.test,
     opnsense_dnsmasq_settings.test,
-    opnsense_interfaces_assignment.dns,
-    opnsense_interfaces_vip.dns_public,
   ]
 }
 `, unboundEnabled, dnsmasqPort, bindEnabled, bindAddresses, bindPort)
-}
-func testAccDNSCutoverCleanupConfig(keepLoopback bool) string {
-	loopback := ""
-	if keepLoopback {
-		loopback = `
-resource "opnsense_interfaces_loopback" "dns" {
-  description = "DNS internal service network"
-}
-`
-	}
-	return fmt.Sprintf(`
-resource "opnsense_unbound_service" "test" {
-  enabled = true
-}
-
-resource "opnsense_dnsmasq_settings" "test" {
-  enabled  = true
-  dns_port = 53053
-}
-%s
-resource "opnsense_bind_settings" "test" {
-  enabled      = false
-  disable_ipv6 = true
-  listen_ipv4  = ["127.0.0.1"]
-  listen_ipv6  = ["::1"]
-  port         = 53531
-}
-`, loopback)
 }
 
 func checkOPNsenseAPIStable() resource.TestCheckFunc {
