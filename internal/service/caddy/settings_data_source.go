@@ -23,7 +23,7 @@ func (d *settingsDataSource) Read(ctx context.Context, _ datasource.ReadRequest,
 		resp.Diagnostics.AddError("Unable to Read Caddy Settings", err.Error())
 		return
 	}
-	state, err := settingsStructToSchema(remote)
+	state, err := settingsStructToDataSource(remote)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Decode Caddy Settings", err.Error())
 		return
