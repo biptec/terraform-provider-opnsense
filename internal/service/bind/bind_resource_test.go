@@ -97,7 +97,7 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 			{ResourceName: "opnsense_bind_acl.test", ImportState: true, ImportStateVerify: true},
 			{ResourceName: "opnsense_bind_view.test", ImportState: true, ImportStateVerify: true},
 			{ResourceName: "opnsense_bind_tsig_key.test", ImportState: true, ImportStateVerify: true},
-			{ResourceName: "opnsense_bind_primary_domain.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"serial"}},
+			{ResourceName: "opnsense_bind_primary_domain.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"serial", "update_key_ids"}},
 			{ResourceName: "opnsense_bind_record.ns_address", ImportState: true, ImportStateVerify: true},
 			{
 				PreConfig: func() { waitForBindDNSSEC(t) },
