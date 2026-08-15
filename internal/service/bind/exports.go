@@ -17,6 +17,7 @@ func Resources(context.Context) []func() resource.Resource {
 		newPrimaryDomainTransferResource,
 		newSecondaryDomainResource,
 		newForwardDomainResource,
+		newInViewDomainResource,
 		newRecordResource,
 	}
 }
@@ -31,6 +32,7 @@ func DataSources(context.Context) []func() datasource.DataSource {
 		newPrimaryDomainDataSource,
 		newSecondaryDomainDataSource,
 		newForwardDomainDataSource,
+		newInViewDomainDataSource,
 		newRecordDataSource,
 		newDNSSECStatusDataSource,
 	}

@@ -32,4 +32,6 @@ jobs:
   opnsense-image:
     needs: delete-cache
     uses: ./.github/workflows/build-opnsense-image-reusable.yml
+    secrets:
+      OPNSENSE_IMAGE_READ_TOKEN: ${{ secrets.OPNSENSE_IMAGE_READ_TOKEN }}
 

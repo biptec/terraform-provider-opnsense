@@ -7,6 +7,10 @@ on:
         description: 'Go packages to test (e.g. ./... or ./internal/service/firewall/...)'
         type: string
         default: './...'
+    secrets:
+      OPNSENSE_IMAGE_READ_TOKEN:
+        description: 'Token allowed to read the private network-core OPNsense release asset'
+        required: true
 
 permissions:
   contents: read
@@ -50,6 +54,8 @@ jobs:
 
   opnsense-image:
     uses: ./.github/workflows/build-opnsense-image-reusable.yml
+    secrets:
+      OPNSENSE_IMAGE_READ_TOKEN: ${{ secrets.OPNSENSE_IMAGE_READ_TOKEN }}
 
   plan:
     runs-on: ubuntu-latest

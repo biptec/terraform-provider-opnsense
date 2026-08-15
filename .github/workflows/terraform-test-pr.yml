@@ -68,5 +68,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.packages != ''
     uses: ./.github/workflows/terraform-test-reusable.yml
+    secrets:
+      OPNSENSE_IMAGE_READ_TOKEN: ${{ secrets.OPNSENSE_IMAGE_READ_TOKEN }}
     with:
       packages: ${{ needs.detect-changes.outputs.packages }}
