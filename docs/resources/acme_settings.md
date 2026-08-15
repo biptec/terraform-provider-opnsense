@@ -3,12 +3,12 @@
 page_title: "opnsense_acme_settings Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages native OPNsense os-acme-client global settings. This singleton must be imported with ID acmeclient_settings before use.
+  Manages native OPNsense os-acme-client global settings. The singleton is adopted declaratively on create; import with ID acmeclient_settings is also supported.
 ---
 
 # opnsense_acme_settings (Resource)
 
-Manages native OPNsense os-acme-client global settings. This singleton must be imported with ID `acmeclient_settings` before use.
+Manages native OPNsense os-acme-client global settings. The singleton is adopted declaratively on create; import with ID `acmeclient_settings` is also supported.
 
 
 

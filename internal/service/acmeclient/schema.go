@@ -25,7 +25,7 @@ type settingsResourceModel struct {
 
 func settingsResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Manages native OPNsense os-acme-client global settings. This singleton must be imported with ID `acmeclient_settings` before use.",
+		MarkdownDescription: "Manages native OPNsense os-acme-client global settings. The singleton is adopted declaratively on create; import with ID `acmeclient_settings` is also supported.",
 		Attributes: map[string]schema.Attribute{
 			"id":           schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"enabled":      schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true)},
