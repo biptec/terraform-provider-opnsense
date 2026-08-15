@@ -89,12 +89,49 @@ func TestBindSettingsRoundTrip(t *testing.T) {
 
 func TestBindSecretsAreSensitive(t *testing.T) {
 	tsig := tsigKeyResourceSchema().Attributes["secret"]
-	if !tsig.IsSensitive() {
-		t.Fatal("TSIG secret must be sensitive")
+	if !tsig.IsSensitive() || !tsig.IsWriteOnly() || tsig.IsComputed() {
+		t.Fatal("TSIG secret must be sensitive, write-only, and non-computed")
+	}
+	if _, ok := tsigKeyDataSourceSchema().Attributes["secret"]; ok {
+		t.Fatal("TSIG data source must not expose secret")
 	}
 	secondary := secondaryDomainResourceSchema().Attributes["transfer_key"]
 	if !secondary.IsSensitive() {
 		t.Fatal("secondary transfer key must be sensitive")
+	}
+}
+
+func TestTsigKeyRemoteSecretDoesNotEnterState(t *testing.T) {
+	remote := &apibind.TsigKey{
+		Enabled: "1", Name: "_acme-challenge.web.test.invalid",
+		Algorithm: api.SelectedMap("hmac-sha256"), Secret: "must-not-enter-state",
+	}
+	state := tsigKeyAPIToModel(remote)
+	if !state.Secret.IsNull() {
+		t.Fatal("remote TSIG secret must be null in Terraform state model")
+	}
+	if !state.SecretConfigured.ValueBool() {
+		t.Fatal("secret_configured must report the remote credential presence")
+	}
+	data, err := tsigKeyAPIToDataSourceModel(remote)
+	if err != nil {
+		t.Fatalf("tsigKeyAPIToDataSourceModel() error = %v", err)
+	}
+	if !data.SecretConfigured.ValueBool() {
+		t.Fatal("TSIG metadata data source lost credential presence flag")
+	}
+}
+
+func TestApplyTsigKeyModelPreservesOrRotatesSecret(t *testing.T) {
+	remote := &apibind.TsigKey{Enabled: "1", Name: "old", Algorithm: api.SelectedMap("hmac-sha256"), Secret: "old-secret"}
+	plan := &tsigKeyResourceModel{Enabled: types.BoolValue(true), Name: types.StringValue("new"), Algorithm: types.StringValue("hmac-sha512")}
+	applyTsigKeyModel(remote, plan, types.StringNull())
+	if remote.Secret != "old-secret" || remote.Name != "new" || remote.Algorithm.String() != "hmac-sha512" {
+		t.Fatalf("metadata update failed to preserve secret: %+v", remote)
+	}
+	applyTsigKeyModel(remote, plan, types.StringValue("new-secret"))
+	if remote.Secret != "new-secret" {
+		t.Fatal("write-only TSIG rotation secret was not applied")
 	}
 }
 

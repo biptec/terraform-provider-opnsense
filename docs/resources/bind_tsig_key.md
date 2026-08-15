@@ -3,12 +3,12 @@
 page_title: "opnsense_bind_tsig_key Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret is stored as sensitive Terraform state.
+  Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret is write-only and is never stored in Terraform/OpenTofu plan or state.
 ---
 
 # opnsense_bind_tsig_key (Resource)
 
-Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret is stored as sensitive Terraform state.
+Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret is write-only and is never stored in Terraform/OpenTofu plan or state.
 
 ## Example Usage
 
@@ -19,9 +19,10 @@ variable "acme_tsig_secret" {
 }
 
 resource "opnsense_bind_tsig_key" "acme" {
-  name      = "acme-dns01"
+  name      = "_acme-challenge.web.example.host.acme.example.net"
   algorithm = "hmac-sha256"
-  secret    = var.acme_tsig_secret
+  secret         = var.acme_tsig_secret
+  secret_version = 1
 }
 ```
 
@@ -30,14 +31,18 @@ resource "opnsense_bind_tsig_key" "acme" {
 
 ### Required
 
-- `name` (String) Unique TSIG identity.
-- `secret` (String, Sensitive) Base64-encoded TSIG secret. Supply it from a secret manager and protect the Terraform state.
+- `name` (String) Unique TSIG identity. For update_policy=self_txt this must equal the exact TXT owner the key is allowed to update.
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `algorithm` (String) TSIG HMAC algorithm.
 - `enabled` (Boolean) Whether the key is enabled.
+- `secret` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only Base64 TSIG secret. Required when creating a key. It is never stored in Terraform/OpenTofu plan or state. Increment secret_version whenever the secret changes.
+- `secret_version` (Number) Stateful rotation marker for the write-only secret. Increment whenever secret changes so Terraform/OpenTofu schedules an update.
 
 ### Read-Only
 
 - `id` (String) UUID of the TSIG key.
+- `secret_configured` (Boolean) Whether OPNsense currently has a non-empty TSIG secret configured. The secret value itself is never returned to state.

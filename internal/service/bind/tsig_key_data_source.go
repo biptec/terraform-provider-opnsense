@@ -2,6 +2,7 @@ package bind
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -19,5 +20,5 @@ func (d *tsigKeyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 	resp.Schema = tsigKeyDataSourceSchema()
 }
 func (d *tsigKeyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	readDataSource(ctx, req, resp, "BIND TSIG Key", d.client.Bind().GetTsigKey, tsigKeyAPIToModel, func(m *tsigKeyResourceModel) string { return m.ID.ValueString() }, func(m *tsigKeyResourceModel, id string) { m.ID = types.StringValue(id) })
+	readDataSource(ctx, req, resp, "BIND TSIG Key", d.client.Bind().GetTsigKey, tsigKeyAPIToDataSourceModel, func(m *tsigKeyDataSourceModel) string { return m.ID.ValueString() }, func(m *tsigKeyDataSourceModel, id string) { m.ID = types.StringValue(id) })
 }

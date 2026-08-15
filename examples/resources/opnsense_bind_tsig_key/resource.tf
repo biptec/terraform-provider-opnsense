@@ -4,7 +4,8 @@ variable "acme_tsig_secret" {
 }
 
 resource "opnsense_bind_tsig_key" "acme" {
-  name      = "acme-dns01"
+  name      = "_acme-challenge.web.example.host.acme.example.net"
   algorithm = "hmac-sha256"
-  secret    = var.acme_tsig_secret
+  secret         = var.acme_tsig_secret
+  secret_version = 1
 }
