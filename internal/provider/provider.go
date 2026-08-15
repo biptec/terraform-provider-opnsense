@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/biptec/opnsense-go/pkg/api"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/acmeclient"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/bind"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/caddy"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/diagnostics"
@@ -294,6 +295,7 @@ func (p *opnsenseProvider) Configure(ctx context.Context, req provider.Configure
 
 func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Resource {
 	controllers := [][]func() resource.Resource{
+		acmeclient.Resources(ctx),
 		bind.Resources(ctx),
 		caddy.Resources(ctx),
 		diagnostics.Resources(ctx),
