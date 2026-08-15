@@ -25,9 +25,6 @@ func (r *settingsResource) Metadata(_ context.Context, req resource.MetadataRequ
 func (r *settingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = settingsResourceSchema()
 }
-func (r *settingsResource) Create(_ context.Context, _ resource.CreateRequest, resp *resource.CreateResponse) {
-	resp.Diagnostics.AddError("Cannot Create Singleton Resource", "Native ACME settings already exist. Import with ID acmeclient_settings before managing them.")
-}
 
 func settingsState(remote *apiacme.SettingsResponse) *settingsResourceModel {
 	s := remote.AcmeClient.Settings
@@ -39,7 +36,67 @@ func settingsState(remote *apiacme.SettingsResponse) *settingsResourceModel {
 	if logLevel == "" {
 		logLevel = "normal"
 	}
-	return &settingsResourceModel{ID: types.StringValue("acmeclient_settings"), Enabled: types.BoolValue(stringBool(s.Enabled)), AutoRenewal: types.BoolValue(stringBool(s.AutoRenewal)), Environment: types.StringValue(env), LogLevel: types.StringValue(logLevel), ShowIntro: types.BoolValue(stringBool(s.ShowIntro))}
+	return &settingsResourceModel{
+		ID: types.StringValue("acmeclient_settings"), Enabled: types.BoolValue(stringBool(s.Enabled)),
+		AutoRenewal: types.BoolValue(stringBool(s.AutoRenewal)), Environment: types.StringValue(env),
+		LogLevel: types.StringValue(logLevel), ShowIntro: types.BoolValue(stringBool(s.ShowIntro)),
+	}
+}
+
+func (r *settingsResource) apply(ctx context.Context, plan *settingsResourceModel) (*settingsResourceModel, error) {
+	remote, err := r.client.Acmeclient().SettingsGet(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read native settings: %w", err)
+	}
+	s := &remote.AcmeClient.Settings
+	s.Enabled = boolString(plan.Enabled.ValueBool())
+	s.AutoRenewal = boolString(plan.AutoRenewal.ValueBool())
+	s.Environment = api.SelectedMap(plan.Environment.ValueString())
+	s.LogLevel = api.SelectedMap(plan.LogLevel.ValueString())
+	s.ShowIntro = boolString(plan.ShowIntro.ValueBool())
+	result, err := r.client.Acmeclient().SettingsSet(ctx, &remote.AcmeClient)
+	if err != nil {
+		return nil, fmt.Errorf("save native settings: %w", err)
+	}
+	if result.Result != "saved" {
+		return nil, fmt.Errorf("settings result=%q validations=%v", result.Result, result.Validations)
+	}
+	check, err := r.client.Acmeclient().ServiceConfigtest(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("configtest: %w", err)
+	}
+	if strings.Contains(strings.ToUpper(check.Result), "ALERT") {
+		return nil, fmt.Errorf("configtest failed: %s", check.Result)
+	}
+	reconfigured, err := r.client.Acmeclient().ServiceReconfigure(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("reconfigure: %w", err)
+	}
+	if reconfigured.Status != "" && !strings.EqualFold(reconfigured.Status, "ok") {
+		return nil, fmt.Errorf("reconfigure status=%q result=%q", reconfigured.Status, reconfigured.Result)
+	}
+	if _, err = r.client.Acmeclient().SettingsFetchCronIntegration(ctx); err != nil {
+		return nil, fmt.Errorf("cron integration: %w", err)
+	}
+	updated, err := r.client.Acmeclient().SettingsGet(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read updated settings: %w", err)
+	}
+	return settingsState(updated), nil
+}
+
+func (r *settingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan settingsResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state, err := r.apply(ctx, &plan)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Manage ACME Settings", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 func (r *settingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var old settingsResourceModel
@@ -60,54 +117,12 @@ func (r *settingsResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	remote, err := r.client.Acmeclient().SettingsGet(ctx)
+	state, err := r.apply(ctx, &plan)
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to Read ACME Settings", err.Error())
+		resp.Diagnostics.AddError("Unable to Manage ACME Settings", err.Error())
 		return
 	}
-	s := &remote.AcmeClient.Settings
-	s.Enabled = boolString(plan.Enabled.ValueBool())
-	s.AutoRenewal = boolString(plan.AutoRenewal.ValueBool())
-	s.Environment = api.SelectedMap(plan.Environment.ValueString())
-	s.LogLevel = api.SelectedMap(plan.LogLevel.ValueString())
-	s.ShowIntro = boolString(plan.ShowIntro.ValueBool())
-	result, err := r.client.Acmeclient().SettingsSet(ctx, &remote.AcmeClient)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Update ACME Settings", err.Error())
-		return
-	}
-	if result.Result != "saved" {
-		resp.Diagnostics.AddError("Unable to Update ACME Settings", fmt.Sprintf("settings result=%q validations=%v", result.Result, result.Validations))
-		return
-	}
-	check, err := r.client.Acmeclient().ServiceConfigtest(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Validate ACME Configuration", err.Error())
-		return
-	}
-	if strings.Contains(strings.ToUpper(check.Result), "ALERT") {
-		resp.Diagnostics.AddError("Invalid ACME Configuration", check.Result)
-		return
-	}
-	reconfigured, err := r.client.Acmeclient().ServiceReconfigure(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Reconfigure ACME Client", err.Error())
-		return
-	}
-	if reconfigured.Status != "" && !strings.EqualFold(reconfigured.Status, "ok") {
-		resp.Diagnostics.AddError("Unable to Reconfigure ACME Client", fmt.Sprintf("status=%q result=%q", reconfigured.Status, reconfigured.Result))
-		return
-	}
-	if _, err = r.client.Acmeclient().SettingsFetchCronIntegration(ctx); err != nil {
-		resp.Diagnostics.AddError("Unable to Reconcile ACME Renewal Cron", err.Error())
-		return
-	}
-	updated, err := r.client.Acmeclient().SettingsGet(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("ACME Settings Updated but Read Failed", err.Error())
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, settingsState(updated))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 func (r *settingsResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.Diagnostics.AddWarning("Singleton Resource Removed From State Only", "Native ACME settings remain unchanged in OPNsense.")
