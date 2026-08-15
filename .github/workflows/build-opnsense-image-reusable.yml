@@ -1,14 +1,20 @@
 name: Build OPNsense Image (reusable)
 
 on:
-  workflow_call: {}
+  workflow_call:
+    secrets:
+      OPNSENSE_IMAGE_READ_TOKEN:
+        description: 'Token allowed to read the private network-core OPNsense release asset'
+        required: true
 
 permissions:
   contents: read
 
 env:
   OPNSENSE_VERSION: "26.7.1"
-  OPNSENSE_URL: "https://github.com/biptec/opnsense-proxmox/releases/download/v26.7.1-3/OPNsense-26.7.1-68853ea868-amd64.qcow2.bz2"
+  OPNSENSE_RELEASE_REPOSITORY: "biptec/network-core"
+  OPNSENSE_RELEASE_TAG: "v26.7.1-3"
+  OPNSENSE_ASSET_NAME: "OPNsense-26.7.1-68853ea868-amd64.qcow2.bz2"
   OPNSENSE_SHA256: "3ae58689188074fbd254ad25a04ea8fa8e2a632658671b7f2fb84136756b9445"
 
 jobs:
@@ -27,10 +33,15 @@ jobs:
 
       - name: Download and verify OPNsense image
         if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.OPNSENSE_IMAGE_READ_TOKEN }}
         run: |
+          test -n "$GH_TOKEN" || { echo "OPNSENSE_IMAGE_READ_TOKEN is required" >&2; exit 1; }
           mkdir -p opnsense-images
-          curl --fail --location --retry 5 --retry-all-errors \
-            "$OPNSENSE_URL" -o opnsense-images/opnsense.qcow2.bz2
+          gh release download "$OPNSENSE_RELEASE_TAG" \
+            --repo "$OPNSENSE_RELEASE_REPOSITORY" \
+            --pattern "$OPNSENSE_ASSET_NAME" \
+            --output opnsense-images/opnsense.qcow2.bz2
           echo "$OPNSENSE_SHA256  opnsense-images/opnsense.qcow2.bz2" | sha256sum -c -
 
       - name: Verify cached OPNsense image

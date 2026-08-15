@@ -18,5 +18,7 @@ permissions:
 jobs:
   test:
     uses: ./.github/workflows/terraform-test-reusable.yml
+    secrets:
+      OPNSENSE_IMAGE_READ_TOKEN: ${{ secrets.OPNSENSE_IMAGE_READ_TOKEN }}
     with:
       packages: './...'
