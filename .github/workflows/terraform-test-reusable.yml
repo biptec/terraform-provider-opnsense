@@ -83,7 +83,7 @@ jobs:
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
               "system": ["system"],
-              "other": ["caddy", "diagnostics", "dnsmasq", "interfaces", "kea",
+              "other": ["acmeclient", "caddy", "diagnostics", "dnsmasq", "interfaces", "kea",
                         "openvpn", "quagga", "routes", "routing", "trust", "wireguard"],
           }
           # Non-service packages, tested with "other" on full-suite runs.
