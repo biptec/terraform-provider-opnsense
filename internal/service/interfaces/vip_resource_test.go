@@ -58,3 +58,56 @@ resource "opnsense_interfaces_vip" "test" {
 }
 `, mode, description, interfaceName, network)
 }
+
+func TestAccInterfacesVipIPAliasSharedCARPVHID(t *testing.T) {
+	requireInterfaceLab(t)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccPreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccVipSharedCARPVHIDConfig(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.carp", "mode", "carp"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.carp", "vhid", "221"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.alias", "mode", "ipalias"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.alias", "vhid", "221"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.alias", "network", "10.0.2.225/32"),
+					resource.TestCheckResourceAttrSet("opnsense_interfaces_vip.alias", "id"),
+				),
+			},
+			{
+				ResourceName:      "opnsense_interfaces_vip.alias",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccVipSharedCARPVHIDConfig() string {
+	return fmt.Sprintf(`
+resource "opnsense_interfaces_vip" "carp" {
+  mode               = "carp"
+  description        = "TF acceptance CARP parent"
+  interface          = %[1]q
+  network            = "10.0.2.224/24"
+  password           = "tfacc-shared-vhid"
+  vhid               = 221
+  advertisement_base = 1
+  advertisement_skew = 0
+  no_sync            = true
+}
+
+resource "opnsense_interfaces_vip" "alias" {
+  mode        = "ipalias"
+  description = "TF acceptance shared CARP alias"
+  interface   = %[1]q
+  network     = "10.0.2.225/32"
+  vhid        = 221
+  no_sync     = true
+
+  depends_on = [opnsense_interfaces_vip.carp]
+}
+`, managementInterface())
+}
