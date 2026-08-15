@@ -82,12 +82,14 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 					resource.TestCheckResourceAttrSet("opnsense_bind_primary_domain.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_bind_primary_domain.test", "dnssec", "true"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_primary_domain.test", "transfer_key_id"),
+					resource.TestCheckResourceAttrSet("opnsense_bind_primary_domain_update_key.test", "id"),
 					resource.TestCheckResourceAttr("opnsense_bind_primary_domain.test", "also_notify.#", "1"),
 					resource.TestCheckTypeSetElemAttr("opnsense_bind_primary_domain.test", "also_notify.*", "192.0.2.54"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_record.ns_address", "id"),
 					resource.TestCheckResourceAttrSet("opnsense_bind_record.ns", "id"),
 					resource.TestCheckResourceAttr("data.opnsense_bind_primary_domain.test", "domain_name", "tfacc-bind.invalid"),
 					resource.TestCheckResourceAttrSet("data.opnsense_bind_primary_domain.test", "transfer_key_id"),
+					resource.TestCheckResourceAttr("data.opnsense_bind_primary_domain.test", "update_key_ids.#", "1"),
 					resource.TestCheckTypeSetElemAttr("data.opnsense_bind_primary_domain.test", "also_notify.*", "192.0.2.54"),
 					checkBindPrimaryTransferRuntime(),
 				),
@@ -95,7 +97,7 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 			{ResourceName: "opnsense_bind_acl.test", ImportState: true, ImportStateVerify: true},
 			{ResourceName: "opnsense_bind_view.test", ImportState: true, ImportStateVerify: true},
 			{ResourceName: "opnsense_bind_tsig_key.test", ImportState: true, ImportStateVerify: true},
-			{ResourceName: "opnsense_bind_primary_domain.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"serial"}},
+			{ResourceName: "opnsense_bind_primary_domain.test", ImportState: true, ImportStateVerify: true, ImportStateVerifyIgnore: []string{"serial", "update_key_ids"}},
 			{ResourceName: "opnsense_bind_record.ns_address", ImportState: true, ImportStateVerify: true},
 			{
 				PreConfig: func() { waitForBindDNSSEC(t) },
@@ -281,7 +283,6 @@ resource "opnsense_bind_primary_domain" "test" {
   domain_name      = "tfacc-bind.invalid"
   transfer_key_id  = opnsense_bind_tsig_key.test.id
   also_notify      = ["192.0.2.54"]
-  update_key_ids   = [opnsense_bind_tsig_key.test.id]
   update_policy    = "self_txt"
   dnssec           = true
   ttl              = 60
@@ -291,6 +292,11 @@ resource "opnsense_bind_primary_domain" "test" {
   negative_ttl     = 60
   mail_admin       = "hostmaster@tfacc-bind.invalid"
   dns_server       = "ns.tfacc-bind.invalid"
+}
+
+resource "opnsense_bind_primary_domain_update_key" "test" {
+  domain_id     = opnsense_bind_primary_domain.test.id
+  update_key_id = opnsense_bind_tsig_key.test.id
 }
 
 resource "opnsense_bind_record" "ns_address" {
@@ -309,6 +315,8 @@ resource "opnsense_bind_record" "ns" {
 
 data "opnsense_bind_primary_domain" "test" {
   id = opnsense_bind_primary_domain.test.id
+
+  depends_on = [opnsense_bind_primary_domain_update_key.test]
 }
 %s`, dnssec)
 }

@@ -15,6 +15,7 @@ func Resources(context.Context) []func() resource.Resource {
 		newTsigKeyResource,
 		newPrimaryDomainResource,
 		newPrimaryDomainTransferResource,
+		newPrimaryDomainUpdateKeyResource,
 		newSecondaryDomainResource,
 		newForwardDomainResource,
 		newInViewDomainResource,

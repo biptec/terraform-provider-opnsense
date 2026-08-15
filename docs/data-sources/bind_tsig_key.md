@@ -3,12 +3,12 @@
 page_title: "opnsense_bind_tsig_key Data Source - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Reads a BIND TSIG key.
+  Reads BIND TSIG key metadata without exposing the secret.
 ---
 
 # opnsense_bind_tsig_key (Data Source)
 
-Reads a BIND TSIG key.
+Reads BIND TSIG key metadata without exposing the secret.
 
 ## Example Usage
 
@@ -27,4 +27,4 @@ data "opnsense_bind_tsig_key" "acme" {
 - `enabled` (Boolean)
 - `id` (String) The ID of this resource.
 - `name` (String)
-- `secret` (String, Sensitive)
+- `secret_configured` (Boolean)
