@@ -4,6 +4,9 @@
 
 ### Added
 
+- OPNsense Core HA synchronization resource/data source for pfsync and optional XMLRPC configuration synchronization.
+- HAProxy settings, service status/configtest, and L4/SNI frontend, backend, server, healthcheck, ACL, and action resources/data sources.
+- Shared CARP VHID support for IP Alias virtual IPs so additional service addresses can fail over with a parent CARP VIP.
 - Guarded DNS service cutover resource that coordinates BIND, Unbound, and the dnsmasq DNS port with runtime verification and rollback.
 - BIND primary-domain transfer attachment resource for downstream states to own TSIG/NOTIFY integration without owning the primary zone.
 

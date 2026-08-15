@@ -101,7 +101,7 @@ This provider is actively expanding to cover the OPNsense API. The tables below 
 | `Captiveportal/Settings`         | ❌        | ❌           |
 | `Captiveportal/Service/Template` | ❌        | ❌           |
 | `Captiveportal/Settings/Zone`    | ❌        | ❌           |
-| `Core/Hasync`                    | ❌        | ❌           |
+| `Core/Hasync`                    | ✅        | ✅           |
 | `Core/Snapshots`                 | ❌        | ❌           |
 | `Core/Tunables`                  | ❌        | ❌           |
 | `Core/Firmware/Plugin`           | ✅        |               |
@@ -223,19 +223,19 @@ The following is a non-exhaustive list of the plugin APIs OPNsense supports. The
 | `ApiExtensions/SSH`             | ✅        |               |
 | `ApiExtensions/NTP`             | ✅        |               |
 | `Haproxy/Maintenance`          | ❌        | ❌           |
-| `Haproxy/Settings`             | ❌        | ❌           |
-| `Haproxy/Settings/Acl`         | ❌        | ❌           |
-| `Haproxy/Settings/Action`      | ❌        | ❌           |
-| `Haproxy/Settings/Backend`     | ❌        | ❌           |
+| `Haproxy/Settings`             | ✅        | ✅           |
+| `Haproxy/Settings/Acl`         | ✅        | ✅           |
+| `Haproxy/Settings/Action`      | ✅        | ✅           |
+| `Haproxy/Settings/Backend`     | ✅        | ✅           |
 | `Haproxy/Settings/Cpu`         | ❌        | ❌           |
 | `Haproxy/Settings/Errorfile`   | ❌        | ❌           |
 | `Haproxy/Settings/Fcgi`        | ❌        | ❌           |
-| `Haproxy/Settings/Frontend`    | ❌        | ❌           |
+| `Haproxy/Settings/Frontend`    | ✅        | ✅           |
 | `Haproxy/Settings/Group`       | ❌        | ❌           |
-| `Haproxy/Settings/Healthcheck` | ❌        | ❌           |
+| `Haproxy/Settings/Healthcheck` | ✅        | ✅           |
 | `Haproxy/Settings/Lua`         | ❌        | ❌           |
 | `Haproxy/Settings/Mapfile`     | ❌        | ❌           |
-| `Haproxy/Settings/Server`      | ❌        | ❌           |
+| `Haproxy/Settings/Server`      | ✅        | ✅           |
 | `Haproxy/Settings/User`        | ❌        | ❌           |
 | `Quagga/General`               | ❌        | ❌           |
 | `Quagga/Bfd`                   | ❌        | ❌           |

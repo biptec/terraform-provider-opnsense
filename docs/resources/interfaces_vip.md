@@ -48,7 +48,7 @@ resource "opnsense_interfaces_vip" "ipalias_example_vip" {
 - `password` (String, Sensitive) CARP password.
 - `peer_ipv4` (String) Optional CARP IPv4 peer.
 - `peer_ipv6` (String) Optional CARP IPv6 peer.
-- `vhid` (Number) CARP VHID.
+- `vhid` (Number) CARP VHID. IP Alias entries may also set this to attach the alias to an existing CARP VHID group.
 
 ### Read-Only
 

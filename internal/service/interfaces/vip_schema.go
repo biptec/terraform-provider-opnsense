@@ -64,7 +64,7 @@ func vipResourceSchema() schema.Schema {
 			"no_expand":          schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Do not expand the virtual IP into automatic firewall rules."},
 			"no_bind":            schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Do not bind services to the virtual IP."},
 			"password":           schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "CARP password."},
-			"vhid":               schema.Int64Attribute{Optional: true, Validators: []validator.Int64{int64validator.Between(1, 255)}, MarkdownDescription: "CARP VHID."},
+			"vhid":               schema.Int64Attribute{Optional: true, Validators: []validator.Int64{int64validator.Between(1, 255)}, MarkdownDescription: "CARP VHID. IP Alias entries may also set this to attach the alias to an existing CARP VHID group."},
 			"advertisement_base": schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(1), Validators: []validator.Int64{int64validator.AtLeast(1)}, MarkdownDescription: "CARP advertisement base interval."},
 			"advertisement_skew": schema.Int64Attribute{Optional: true, Computed: true, Default: int64default.StaticInt64(0), Validators: []validator.Int64{int64validator.Between(0, 254)}, MarkdownDescription: "CARP advertisement skew."},
 			"peer_ipv4":          schema.StringAttribute{Optional: true, Validators: []validator.String{validators.IpOrCIDR()}, MarkdownDescription: "Optional CARP IPv4 peer."},
@@ -105,12 +105,18 @@ func vipDataSourceSchema() dschema.Schema {
 
 func convertVipSchemaToStruct(d *vipResourceModel) (*apiinterfaces.Vip, error) {
 	mode := d.Mode.ValueString()
+	passwordSet := !d.Password.IsNull() && d.Password.ValueString() != ""
 	if mode == "carp" {
-		if d.Password.IsNull() || d.Password.ValueString() == "" || d.VHID.IsNull() {
+		if !passwordSet || d.VHID.IsNull() {
 			return nil, fmt.Errorf("carp mode requires password and vhid")
 		}
-	} else if (!d.Password.IsNull() && d.Password.ValueString() != "") || !d.VHID.IsNull() {
-		return nil, fmt.Errorf("password and vhid may only be set in carp mode")
+	} else {
+		if passwordSet {
+			return nil, fmt.Errorf("password may only be set in carp mode")
+		}
+		if mode != "ipalias" && !d.VHID.IsNull() {
+			return nil, fmt.Errorf("vhid may only be set in carp or ipalias mode")
+		}
 	}
 	return &apiinterfaces.Vip{
 		Mode: api.SelectedMap(mode), Interface: api.SelectedMap(d.Interface.ValueString()),

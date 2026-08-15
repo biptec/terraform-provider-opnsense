@@ -32,6 +32,7 @@ env:
   OPNSENSE_TEST_ROUTE_GATEWAY: "CI_GATEWAY"
   OPNSENSE_TEST_ROUTE_GATEWAY_IP: "10.0.2.2"
   OPNSENSE_CADDY_PLUGIN_COMMIT: 31f701ca97ecce69771e46f37e6561430a8e4254
+  OPNSENSE_HAPROXY_PLUGIN_COMMIT: c0f339b1080588327283b02ffd2aaab5d06a10d3
 
 jobs:
   build:
@@ -83,7 +84,7 @@ jobs:
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
               "system": ["system"],
-              "other": ["acmeclient", "caddy", "diagnostics", "dnsmasq", "interfaces", "kea",
+              "other": ["acmeclient", "caddy", "core", "diagnostics", "dnsmasq", "haproxy", "interfaces", "kea",
                         "openvpn", "quagga", "routes", "routing", "trust", "wireguard"],
           }
           # Non-service packages, tested with "other" on full-suite runs.
@@ -260,6 +261,10 @@ jobs:
       - name: Install os-caddy candidate
         if: contains(matrix.packages, './internal/service/caddy/')
         run: python3 scripts/install-caddy-plugin.py
+
+      - name: Install os-haproxy candidate
+        if: contains(matrix.packages, './internal/service/haproxy/')
+        run: python3 scripts/install-haproxy-plugin.py
 
       - name: Setup env vars for tests
         run: |
