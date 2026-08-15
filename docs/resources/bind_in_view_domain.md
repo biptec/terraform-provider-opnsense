@@ -3,12 +3,12 @@
 page_title: "opnsense_bind_in_view_domain Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Shares an existing primary or secondary BIND zone from an earlier view using BIND in-view.
+  Shares an existing primary or secondary BIND zone from an earlier view using BIND in-view. Zone options, including allow-query, remain owned by the source zone, so its ACLs must permit clients of every referencing view.
 ---
 
 # opnsense_bind_in_view_domain (Resource)
 
-Shares an existing primary or secondary BIND zone from an earlier view using BIND in-view.
+Shares an existing primary or secondary BIND zone from an earlier view using BIND in-view. Zone options, including allow-query, remain owned by the source zone, so its ACLs must permit clients of every referencing view.
 
 
 

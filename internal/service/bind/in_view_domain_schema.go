@@ -23,7 +23,7 @@ type inViewDomainResourceModel struct {
 }
 
 func inViewDomainResourceSchema() schema.Schema {
-	return schema.Schema{MarkdownDescription: "Shares an existing primary or secondary BIND zone from an earlier view using BIND in-view.", Attributes: map[string]schema.Attribute{
+	return schema.Schema{MarkdownDescription: "Shares an existing primary or secondary BIND zone from an earlier view using BIND in-view. Zone options, including allow-query, remain owned by the source zone, so its ACLs must permit clients of every referencing view.", Attributes: map[string]schema.Attribute{
 		"id":             schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 		"view_id":        schema.StringAttribute{Required: true, Validators: []validator.String{validators.IsUUIDv4()}, MarkdownDescription: "Target view UUID. The target view must be ordered after source_view_id."},
 		"domain_name":    schema.StringAttribute{Required: true, MarkdownDescription: "Zone name shared from the source view."},
