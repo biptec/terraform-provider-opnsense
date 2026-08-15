@@ -37,7 +37,7 @@ type tsigKeyDataSourceModel struct {
 
 func tsigKeyResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret is write-only and is never stored in Terraform/OpenTofu plan or state.",
+		MarkdownDescription: "Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret resource attribute is write-only and is never stored in Terraform/OpenTofu plan or state. Use an ephemeral input variable when the source value must also be excluded from saved plan artifacts.",
 		Version:             1,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -61,7 +61,7 @@ func tsigKeyResourceSchema() schema.Schema {
 			},
 			"secret": schema.StringAttribute{
 				Optional: true, Sensitive: true, WriteOnly: true,
-				MarkdownDescription: "Write-only Base64 TSIG secret. Required when creating a key. It is never stored in Terraform/OpenTofu plan or state. Increment secret_version whenever the secret changes.",
+				MarkdownDescription: "Write-only Base64 TSIG secret. Required when creating a key. The resource attribute is never stored in Terraform/OpenTofu plan or state; supply it through an ephemeral variable to keep the source value out of saved plans too. Increment secret_version whenever the secret changes.",
 			},
 			"secret_version": schema.Int64Attribute{
 				Optional: true, Computed: true, Default: int64default.StaticInt64(0),

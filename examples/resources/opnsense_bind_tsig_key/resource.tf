@@ -1,6 +1,7 @@
 variable "acme_tsig_secret" {
   type      = string
   sensitive = true
+  ephemeral = true
 }
 
 resource "opnsense_bind_tsig_key" "acme" {

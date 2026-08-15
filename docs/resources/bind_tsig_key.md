@@ -3,12 +3,12 @@
 page_title: "opnsense_bind_tsig_key Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret is write-only and is never stored in Terraform/OpenTofu plan or state.
+  Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret resource attribute is write-only and is never stored in Terraform/OpenTofu plan or state. Use an ephemeral input variable when the source value must also be excluded from saved plan artifacts.
 ---
 
 # opnsense_bind_tsig_key (Resource)
 
-Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret is write-only and is never stored in Terraform/OpenTofu plan or state.
+Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. The secret resource attribute is write-only and is never stored in Terraform/OpenTofu plan or state. Use an ephemeral input variable when the source value must also be excluded from saved plan artifacts.
 
 ## Example Usage
 
@@ -16,6 +16,7 @@ Manages a BIND TSIG key for RFC2136 dynamic updates or authenticated transfers. 
 variable "acme_tsig_secret" {
   type      = string
   sensitive = true
+  ephemeral = true
 }
 
 resource "opnsense_bind_tsig_key" "acme" {
@@ -39,7 +40,7 @@ resource "opnsense_bind_tsig_key" "acme" {
 
 - `algorithm` (String) TSIG HMAC algorithm.
 - `enabled` (Boolean) Whether the key is enabled.
-- `secret` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only Base64 TSIG secret. Required when creating a key. It is never stored in Terraform/OpenTofu plan or state. Increment secret_version whenever the secret changes.
+- `secret` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only Base64 TSIG secret. Required when creating a key. The resource attribute is never stored in Terraform/OpenTofu plan or state; supply it through an ephemeral variable to keep the source value out of saved plans too. Increment secret_version whenever the secret changes.
 - `secret_version` (Number) Stateful rotation marker for the write-only secret. Increment whenever secret changes so Terraform/OpenTofu schedules an update.
 
 ### Read-Only
