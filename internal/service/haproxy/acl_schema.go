@@ -4,11 +4,14 @@ import (
 	"github.com/biptec/opnsense-go/pkg/api"
 	apihaproxy "github.com/biptec/opnsense-go/pkg/haproxy"
 	"github.com/biptec/terraform-provider-opnsense/internal/tools"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -37,7 +40,7 @@ func aclResourceSchema() schema.Schema {
 		"negate":     schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether to negate the ACL. Defaults to `false`."}, "case_sensitive": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether matching is case-sensitive. Defaults to `false`."},
 		"ssl_fc_sni": schema.StringAttribute{Optional: true, MarkdownDescription: "Exact SNI value for the `ssl_fc_sni` expression."}, "ssl_sni": schema.StringAttribute{Optional: true, MarkdownDescription: "Exact ClientHello SNI value for the `ssl_sni` expression."},
 		"ssl_sni_sub": schema.StringAttribute{Optional: true, MarkdownDescription: "Substring for `ssl_sni_sub`."}, "ssl_sni_beg": schema.StringAttribute{Optional: true, MarkdownDescription: "Prefix for `ssl_sni_beg`."}, "ssl_sni_end": schema.StringAttribute{Optional: true, MarkdownDescription: "Suffix for `ssl_sni_end`."}, "ssl_sni_reg": schema.StringAttribute{Optional: true, MarkdownDescription: "Regular expression for `ssl_sni_reg`."},
-		"ssl_hello_type": schema.StringAttribute{Optional: true, MarkdownDescription: "TLS hello type used by the `ssl_hello_type` expression."}, "custom_acl": schema.StringAttribute{Optional: true, MarkdownDescription: "Raw custom ACL expression."}, "value": schema.StringAttribute{Optional: true, MarkdownDescription: "Generic expression value used by applicable ACL types."},
+		"ssl_hello_type": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("x1"), Validators: []validator.String{stringvalidator.OneOf("x0", "x1", "x2")}, MarkdownDescription: "TLS hello type used by the `ssl_hello_type` expression. Defaults to `x1` (client hello), matching OPNsense."}, "custom_acl": schema.StringAttribute{Optional: true, MarkdownDescription: "Raw custom ACL expression."}, "value": schema.StringAttribute{Optional: true, MarkdownDescription: "Generic expression value used by applicable ACL types."},
 		"id": schema.StringAttribute{Computed: true, MarkdownDescription: "UUID of the HAProxy ACL.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 	}}
 }

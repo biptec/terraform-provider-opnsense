@@ -24,13 +24,13 @@ Manages an OPNsense HAProxy health check.
 - `check_port` (Number) Optional dedicated check port.
 - `description` (String) Optional description.
 - `force_ssl` (Boolean) Whether to force SSL for the health check. Defaults to `false`.
-- `http_host` (String) Optional Host header for HTTP checks.
-- `http_method` (String) Optional HTTP method for HTTP checks.
-- `http_uri` (String) Optional URI for HTTP checks.
+- `http_host` (String) Host header for HTTP checks. Defaults to `localhost`, matching OPNsense.
+- `http_method` (String) HTTP method for HTTP checks. Defaults to `options`, matching OPNsense.
+- `http_uri` (String) URI for HTTP checks. Defaults to `/`, matching OPNsense.
 - `interval` (String) Health-check interval. Defaults to `2s`.
 - `ssl` (String) TLS preference for the check. Defaults to `nopref`.
 - `ssl_sni` (String) Optional SNI name sent by an SSL health check.
-- `tcp_match_type` (String) Optional TCP response match type.
+- `tcp_match_type` (String) TCP response match type. Defaults to `string`, matching OPNsense.
 - `tcp_match_value` (String) Optional expected TCP response value.
 - `tcp_send_value` (String) Optional value to send during a TCP check.
 - `type` (String) Health-check type. Use `tcp` for L4 services. Defaults to `http`.

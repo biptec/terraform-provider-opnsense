@@ -118,3 +118,29 @@ func TestHAProxyAPIToModelRoundTrip(t *testing.T) {
 		t.Fatalf("unexpected actions: %s", tools.SetToString(frontend.LinkedActions, ","))
 	}
 }
+
+func TestHAProxyUpstreamDefaultsRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	acl, err := aclAPIToModel(&apihaproxy.ACL{
+		Name: "client_hello", Expression: api.SelectedMap("ssl_sni"), SSLHelloType: api.SelectedMap("x1"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if acl.SSLHelloType.ValueString() != "x1" {
+		t.Fatalf("unexpected ssl_hello_type default: %q", acl.SSLHelloType.ValueString())
+	}
+
+	check, err := healthcheckAPIToModel(&apihaproxy.Healthcheck{
+		Name: "tcp_check", Type: api.SelectedMap("tcp"), Interval: "2s", SSL: api.SelectedMap("nopref"),
+		HTTPMethod: api.SelectedMap("options"), HTTPURI: "/", HTTPHost: "localhost", TCPMatchType: api.SelectedMap("string"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if check.HTTPMethod.ValueString() != "options" || check.HTTPURI.ValueString() != "/" ||
+		check.HTTPHost.ValueString() != "localhost" || check.TCPMatchType.ValueString() != "string" {
+		t.Fatalf("unexpected OPNsense health-check defaults: %+v", check)
+	}
+}

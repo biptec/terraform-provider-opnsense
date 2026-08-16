@@ -27,7 +27,7 @@ Manages an OPNsense HAProxy ACL. The `ssl_sni*` expressions are suitable for SNI
 - `description` (String) Optional description.
 - `negate` (Boolean) Whether to negate the ACL. Defaults to `false`.
 - `ssl_fc_sni` (String) Exact SNI value for the `ssl_fc_sni` expression.
-- `ssl_hello_type` (String) TLS hello type used by the `ssl_hello_type` expression.
+- `ssl_hello_type` (String) TLS hello type used by the `ssl_hello_type` expression. Defaults to `x1` (client hello), matching OPNsense.
 - `ssl_sni` (String) Exact ClientHello SNI value for the `ssl_sni` expression.
 - `ssl_sni_beg` (String) Prefix for `ssl_sni_beg`.
 - `ssl_sni_end` (String) Suffix for `ssl_sni_end`.
