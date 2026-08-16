@@ -22,3 +22,46 @@ func TestAccCoreHasyncDataSource(t *testing.T) {
 		}},
 	})
 }
+
+func TestAccCoreHasyncResource(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctest.AccPreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCoreHasyncConfig(true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_core_hasync.test", "id", "core_hasync"),
+					resource.TestCheckResourceAttr("opnsense_core_hasync.test", "disable_preempt", "true"),
+					resource.TestCheckResourceAttr("opnsense_core_hasync.test", "pfsync_version", "1400"),
+				),
+			},
+			{
+				Config: testAccCoreHasyncConfig(false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_core_hasync.test", "disable_preempt", "false"),
+					resource.TestCheckResourceAttr("opnsense_core_hasync.test", "pfsync_version", "1400"),
+				),
+			},
+		},
+	})
+}
+
+func testAccCoreHasyncConfig(disablePreempt bool) string {
+	value := "false"
+	if disablePreempt {
+		value = "true"
+	}
+	return `
+import {
+  to = opnsense_core_hasync.test
+  id = "core_hasync"
+}
+
+resource "opnsense_core_hasync" "test" {
+  disable_preempt = ` + value + `
+  pfsync_version  = "1400"
+  pfsync_defer    = false
+}
+`
+}
