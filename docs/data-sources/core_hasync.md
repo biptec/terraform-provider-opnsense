@@ -20,7 +20,7 @@ Reads OPNsense High Availability synchronization settings.
 - `disable_preempt` (Boolean)
 - `disconnect_ppps` (Boolean)
 - `id` (String) The ID of this resource.
-- `password` (String, Sensitive)
+- `password_configured` (Boolean)
 - `pfsync_defer` (Boolean)
 - `pfsync_interface` (String)
 - `pfsync_peer_ip` (String)

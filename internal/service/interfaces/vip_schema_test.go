@@ -3,13 +3,15 @@ package interfaces
 import (
 	"testing"
 
+	"github.com/biptec/opnsense-go/pkg/api"
+	apiinterfaces "github.com/biptec/opnsense-go/pkg/interfaces"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func TestConvertVipCARP(t *testing.T) {
 	t.Parallel()
 	model := vipResourceModel{Mode: types.StringValue("carp"), Interface: types.StringValue("lan"), Network: types.StringValue("192.0.2.10/24"), Gateway: types.StringNull(), NoExpand: types.BoolValue(false), NoBind: types.BoolValue(false), Password: types.StringValue("secret"), VHID: types.Int64Value(10), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(20), PeerIPv4: types.StringNull(), PeerIPv6: types.StringNull(), NoSync: types.BoolValue(false), Description: types.StringValue("HA VIP")}
-	got, err := convertVipSchemaToStruct(&model)
+	got, err := convertVipSchemaToStruct(&model, types.StringValue("secret"))
 	if err != nil {
 		t.Fatalf("convertVipSchemaToStruct() error = %v", err)
 	}
@@ -21,7 +23,7 @@ func TestConvertVipCARP(t *testing.T) {
 func TestConvertVipRequiresCARPCredentials(t *testing.T) {
 	t.Parallel()
 	model := vipResourceModel{Mode: types.StringValue("carp"), Interface: types.StringValue("lan"), Network: types.StringValue("192.0.2.10/24"), Password: types.StringNull(), VHID: types.Int64Null(), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(0)}
-	if _, err := convertVipSchemaToStruct(&model); err == nil {
+	if _, err := convertVipSchemaToStruct(&model, types.StringNull()); err == nil {
 		t.Fatal("expected CARP validation error")
 	}
 }
@@ -45,7 +47,7 @@ func TestVipFallbackStateResolvesComputedUnknowns(t *testing.T) {
 func TestConvertVipIPAliasWithVHID(t *testing.T) {
 	t.Parallel()
 	model := vipResourceModel{Mode: types.StringValue("ipalias"), Interface: types.StringValue("wan"), Network: types.StringValue("192.0.2.11/24"), Password: types.StringNull(), VHID: types.Int64Value(10), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(0), NoExpand: types.BoolValue(false), NoBind: types.BoolValue(false), NoSync: types.BoolValue(false)}
-	got, err := convertVipSchemaToStruct(&model)
+	got, err := convertVipSchemaToStruct(&model, types.StringNull())
 	if err != nil {
 		t.Fatalf("convertVipSchemaToStruct() error = %v", err)
 	}
@@ -57,7 +59,7 @@ func TestConvertVipIPAliasWithVHID(t *testing.T) {
 func TestConvertVipRejectsPasswordOnIPAlias(t *testing.T) {
 	t.Parallel()
 	model := vipResourceModel{Mode: types.StringValue("ipalias"), Interface: types.StringValue("wan"), Network: types.StringValue("192.0.2.11/24"), Password: types.StringValue("secret"), VHID: types.Int64Value(10), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(0)}
-	if _, err := convertVipSchemaToStruct(&model); err == nil {
+	if _, err := convertVipSchemaToStruct(&model, types.StringValue("secret")); err == nil {
 		t.Fatal("expected password validation error")
 	}
 }
@@ -65,7 +67,46 @@ func TestConvertVipRejectsPasswordOnIPAlias(t *testing.T) {
 func TestConvertVipRejectsVHIDOnProxyARP(t *testing.T) {
 	t.Parallel()
 	model := vipResourceModel{Mode: types.StringValue("proxyarp"), Interface: types.StringValue("wan"), Network: types.StringValue("192.0.2.11/32"), Password: types.StringNull(), VHID: types.Int64Value(10), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(0)}
-	if _, err := convertVipSchemaToStruct(&model); err == nil {
+	if _, err := convertVipSchemaToStruct(&model, types.StringNull()); err == nil {
 		t.Fatal("expected vhid validation error")
+	}
+}
+
+func TestVipPasswordIsWriteOnly(t *testing.T) {
+	t.Parallel()
+	schema := vipResourceSchema()
+	password := schema.Attributes["password"]
+	if !password.IsSensitive() || !password.IsWriteOnly() || password.IsComputed() {
+		t.Fatal("CARP password must be sensitive write-only and not computed")
+	}
+	if schema.Version != 1 {
+		t.Fatalf("VIP schema version = %d, want 1", schema.Version)
+	}
+	if _, ok := schema.Attributes["password_version"]; !ok {
+		t.Fatal("password_version attribute missing")
+	}
+	if _, ok := schema.Attributes["password_configured"]; !ok {
+		t.Fatal("password_configured attribute missing")
+	}
+	if _, ok := vipDataSourceSchema().Attributes["password"]; ok {
+		t.Fatal("VIP data source must not expose password")
+	}
+	legacy := vipResourceSchemaV0()
+	if legacy.Attributes["password"].IsWriteOnly() {
+		t.Fatal("legacy VIP schema must describe the old stateful password for migration")
+	}
+}
+
+func TestConvertVipStructDoesNotReturnPassword(t *testing.T) {
+	t.Parallel()
+	model, err := convertVipStructToSchema(&apiinterfaces.Vip{
+		Mode: api.SelectedMap("carp"), Interface: api.SelectedMap("wan"), Network: "192.0.2.10/24",
+		Password: "remote-secret", VHID: "10", AdvertisementBase: "1", AdvertisementSkew: "0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !model.Password.IsNull() || !model.PasswordConfigured.ValueBool() {
+		t.Fatalf("password leaked into model or configured flag missing: %+v", model)
 	}
 }

@@ -29,7 +29,7 @@ Reads an OPNsense virtual IP.
 - `no_bind` (Boolean)
 - `no_expand` (Boolean)
 - `no_sync` (Boolean)
-- `password` (String, Sensitive)
+- `password_configured` (Boolean)
 - `peer_ipv4` (String)
 - `peer_ipv6` (String)
 - `vhid` (Number)

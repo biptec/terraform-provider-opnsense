@@ -8,6 +8,7 @@ import (
 	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -38,17 +39,9 @@ func (r *hasyncResource) Configure(_ context.Context, req resource.ConfigureRequ
 func (r *hasyncResource) Create(_ context.Context, _ resource.CreateRequest, resp *resource.CreateResponse) {
 	resp.Diagnostics.AddError("Cannot Create Singleton Resource", "OPNsense HA settings already exist. Import them first with: terraform import opnsense_core_hasync.<name> core_hasync")
 }
-func (r *hasyncResource) Read(ctx context.Context, _ resource.ReadRequest, resp *resource.ReadResponse) {
-	remote, err := r.client.Core().HasyncGet(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Read OPNsense HA Settings", err.Error())
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, hasyncAPIToModel(&remote.Hasync))...)
-}
-func (r *hasyncResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan hasyncModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+func (r *hasyncResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var old hasyncModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &old)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -57,7 +50,34 @@ func (r *hasyncResource) Update(ctx context.Context, req resource.UpdateRequest,
 		resp.Diagnostics.AddError("Unable to Read OPNsense HA Settings", err.Error())
 		return
 	}
-	applyHasyncModel(&remote.Hasync, &plan)
+	state := hasyncAPIToModel(&remote.Hasync)
+	state.PasswordVersion = old.PasswordVersion
+	if state.PasswordVersion.IsNull() || state.PasswordVersion.IsUnknown() {
+		state.PasswordVersion = types.Int64Value(0)
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+func (r *hasyncResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, old hasyncModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &old)...)
+	var password types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("password"), &password)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !plan.PasswordVersion.IsUnknown() && !old.PasswordVersion.IsUnknown() && !plan.PasswordVersion.IsNull() && !old.PasswordVersion.IsNull() && plan.PasswordVersion.ValueInt64() != old.PasswordVersion.ValueInt64() {
+		if password.IsNull() || password.IsUnknown() || password.ValueString() == "" {
+			resp.Diagnostics.AddError("Missing Rotated XMLRPC Password", "password_version changed but no write-only password was supplied. Provide the new password together with the incremented password_version.")
+			return
+		}
+	}
+	remote, err := r.client.Core().HasyncGet(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read OPNsense HA Settings", err.Error())
+		return
+	}
+	applyHasyncModel(&remote.Hasync, &plan, password)
 	result, err := r.client.Core().HasyncSet(ctx, &remote.Hasync)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Update OPNsense HA Settings", err.Error())
@@ -76,7 +96,9 @@ func (r *hasyncResource) Update(ctx context.Context, req resource.UpdateRequest,
 		resp.Diagnostics.AddError("OPNsense HA Settings Updated but Read Failed", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, hasyncAPIToModel(&updated.Hasync))...)
+	state := hasyncAPIToModel(&updated.Hasync)
+	state.PasswordVersion = plan.PasswordVersion
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 func (r *hasyncResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.Diagnostics.AddWarning("Singleton Resource Removed From State Only", "OPNsense HA settings remain unchanged. Re-import with ID `core_hasync` to manage them again.")
@@ -87,5 +109,6 @@ func (r *hasyncResource) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("password_version"), int64(0))...)
 	tflog.Info(ctx, "imported OPNsense HA settings")
 }

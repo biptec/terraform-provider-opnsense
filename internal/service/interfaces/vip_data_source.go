@@ -49,7 +49,7 @@ func (d *vipDataSource) Configure(ctx context.Context, req datasource.ConfigureR
 }
 
 func (d *vipDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data *vipResourceModel
+	var data *vipDataSourceModel
 
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -67,12 +67,7 @@ func (d *vipDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	}
 
 	// Convert OPNsense struct to TF schema
-	resourceModel, err := convertVipStructToSchema(resource)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to read vip, got error: %s", err))
-		return
-	}
+	resourceModel := convertVipStructToDataSourceSchema(resource)
 
 	// ID cannot be added by convert... func, have to add here
 	resourceModel.Id = data.Id

@@ -23,7 +23,7 @@ func TestHasyncAPIToModel(t *testing.T) {
 	if got.PfsyncInterface.ValueString() != "opt9" || got.PfsyncVersion.ValueString() != "1400" || got.PfsyncPeerIP.ValueString() != "10.0.0.2" {
 		t.Fatalf("unexpected pfsync conversion: %+v", got)
 	}
-	if got.ID.ValueString() != hasyncID || got.Password.ValueString() != "secret" {
+	if got.ID.ValueString() != hasyncID || !got.Password.IsNull() || !got.PasswordConfigured.ValueBool() {
 		t.Fatalf("unexpected singleton/credential conversion: %+v", got)
 	}
 	values := map[string]bool{}
@@ -48,11 +48,29 @@ func TestApplyHasyncModelPreservesUnsetPassword(t *testing.T) {
 		Username: types.StringValue("ha-sync"), Password: types.StringNull(),
 		SyncItems: types.SetValueMust(types.StringType, []attr.Value{types.StringValue("nat"), types.StringValue("rules")}),
 	}
-	applyHasyncModel(&remote, model)
+	applyHasyncModel(&remote, model, types.StringNull())
 	if remote.Password != "existing-secret" {
 		t.Fatalf("password overwritten: %q", remote.Password)
 	}
 	if remote.PfsyncInterface.String() != "opt9" || remote.SyncItems.String() != "nat,rules" {
 		t.Fatalf("unexpected API overlay: %+v", remote)
+	}
+}
+
+func TestHasyncPasswordIsWriteOnly(t *testing.T) {
+	t.Parallel()
+	schema := hasyncResourceSchema()
+	password := schema.Attributes["password"]
+	if !password.IsSensitive() || !password.IsWriteOnly() || password.IsComputed() {
+		t.Fatal("HAsync password must be sensitive write-only and not computed")
+	}
+	if _, ok := schema.Attributes["password_version"]; !ok {
+		t.Fatal("password_version attribute missing")
+	}
+	if _, ok := schema.Attributes["password_configured"]; !ok {
+		t.Fatal("password_configured attribute missing")
+	}
+	if _, ok := hasyncDataSourceSchema().Attributes["password"]; ok {
+		t.Fatal("HAsync data source must not expose password")
 	}
 }

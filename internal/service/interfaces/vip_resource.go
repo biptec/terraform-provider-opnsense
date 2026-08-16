@@ -18,6 +18,7 @@ import (
 var _ resource.Resource = &vipResource{}
 var _ resource.ResourceWithConfigure = &vipResource{}
 var _ resource.ResourceWithImportState = &vipResource{}
+var _ resource.ResourceWithUpgradeState = &vipResource{}
 
 func newVipResource() resource.Resource {
 	return &vipResource{}
@@ -26,6 +27,26 @@ func newVipResource() resource.Resource {
 // vipResource defines the resource implementation.
 type vipResource struct {
 	client opnsense.Client
+}
+
+type vipResourceModelV0 struct {
+	Mode              types.String `tfsdk:"mode"`
+	Interface         types.String `tfsdk:"interface"`
+	Network           types.String `tfsdk:"network"`
+	Gateway           types.String `tfsdk:"gateway"`
+	NoExpand          types.Bool   `tfsdk:"no_expand"`
+	NoBind            types.Bool   `tfsdk:"no_bind"`
+	Password          types.String `tfsdk:"password"`
+	VHID              types.Int64  `tfsdk:"vhid"`
+	AdvertisementBase types.Int64  `tfsdk:"advertisement_base"`
+	AdvertisementSkew types.Int64  `tfsdk:"advertisement_skew"`
+	PeerIPv4          types.String `tfsdk:"peer_ipv4"`
+	PeerIPv6          types.String `tfsdk:"peer_ipv6"`
+	NoSync            types.Bool   `tfsdk:"no_sync"`
+	Address           types.String `tfsdk:"address"`
+	VHIDText          types.String `tfsdk:"vhid_text"`
+	Description       types.String `tfsdk:"description"`
+	Id                types.String `tfsdk:"id"`
 }
 
 func (r *vipResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -64,8 +85,10 @@ func (r *vipResource) readState(ctx context.Context, id string, prior *vipResour
 		return nil, err
 	}
 	state.Id = types.StringValue(id)
-	if prior != nil && state.Password.IsNull() && !prior.Password.IsNull() && !prior.Password.IsUnknown() {
-		state.Password = prior.Password
+	if prior != nil && !prior.PasswordVersion.IsNull() && !prior.PasswordVersion.IsUnknown() {
+		state.PasswordVersion = prior.PasswordVersion
+	} else {
+		state.PasswordVersion = types.Int64Value(0)
 	}
 	return state, nil
 }
@@ -78,6 +101,13 @@ func vipFallbackState(data *vipResourceModel, id string) *vipResourceModel {
 	if data.VHIDText.IsUnknown() {
 		data.VHIDText = types.StringNull()
 	}
+	data.Password = types.StringNull()
+	if data.PasswordVersion.IsNull() || data.PasswordVersion.IsUnknown() {
+		data.PasswordVersion = types.Int64Value(0)
+	}
+	if data.PasswordConfigured.IsUnknown() {
+		data.PasswordConfigured = types.BoolValue(data.Mode.ValueString() == "carp")
+	}
 	return data
 }
 
@@ -88,7 +118,12 @@ func (r *vipResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	vip, err := convertVipSchemaToStruct(data)
+	var password types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("password"), &password)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	vip, err := convertVipSchemaToStruct(data, password)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse vip, got error: %s", err))
 		return
@@ -139,25 +174,42 @@ func (r *vipResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 }
 
 func (r *vipResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data *vipResourceModel
+	var data, old vipResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &old)...)
+	var password types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("password"), &password)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	vip, err := convertVipSchemaToStruct(data)
+	if data.Mode.ValueString() == "carp" && !data.PasswordVersion.IsNull() && !data.PasswordVersion.IsUnknown() && !old.PasswordVersion.IsNull() && !old.PasswordVersion.IsUnknown() && data.PasswordVersion.ValueInt64() != old.PasswordVersion.ValueInt64() {
+		if password.IsNull() || password.IsUnknown() || password.ValueString() == "" {
+			resp.Diagnostics.AddError("Missing Rotated CARP Password", "password_version changed but no write-only password was supplied. Provide the new password together with the incremented password_version.")
+			return
+		}
+	}
+	id := data.Id.ValueString()
+	remote, err := r.client.Interfaces().GetVip(ctx, id)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read vip before update, got error: %s", err))
+		return
+	}
+	effectivePassword := password
+	if data.Mode.ValueString() == "carp" && (password.IsNull() || password.IsUnknown() || password.ValueString() == "") {
+		effectivePassword = types.StringValue(remote.Password)
+	}
+	vip, err := convertVipSchemaToStruct(&data, effectivePassword)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse vip, got error: %s", err))
 		return
 	}
-	id := data.Id.ValueString()
 	if err := r.client.Interfaces().UpdateVip(ctx, id, vip); err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update vip, got error: %s", err))
 		return
 	}
-	state, err := r.readState(ctx, id, data)
+	state, err := r.readState(ctx, id, &data)
 	if err != nil {
-		resp.Diagnostics.Append(resp.State.Set(ctx, vipFallbackState(data, id))...)
+		resp.Diagnostics.Append(resp.State.Set(ctx, vipFallbackState(&data, id))...)
 		resp.Diagnostics.AddError("VIP Updated but Read Failed", err.Error())
 		return
 	}
@@ -185,4 +237,30 @@ func (r *vipResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 
 func (r *vipResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("password_version"), int64(0))...)
+}
+
+func (r *vipResource) UpgradeState(context.Context) map[int64]resource.StateUpgrader {
+	prior := vipResourceSchemaV0()
+	return map[int64]resource.StateUpgrader{
+		0: {
+			PriorSchema: &prior,
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var old vipResourceModelV0
+				resp.Diagnostics.Append(req.State.Get(ctx, &old)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				configured := !old.Password.IsNull() && !old.Password.IsUnknown() && old.Password.ValueString() != ""
+				resp.Diagnostics.Append(resp.State.Set(ctx, &vipResourceModel{
+					Mode: old.Mode, Interface: old.Interface, Network: old.Network, Gateway: old.Gateway,
+					NoExpand: old.NoExpand, NoBind: old.NoBind, Password: types.StringNull(),
+					PasswordVersion: types.Int64Value(0), PasswordConfigured: types.BoolValue(configured),
+					VHID: old.VHID, AdvertisementBase: old.AdvertisementBase, AdvertisementSkew: old.AdvertisementSkew,
+					PeerIPv4: old.PeerIPv4, PeerIPv6: old.PeerIPv6, NoSync: old.NoSync, Address: old.Address,
+					VHIDText: old.VHIDText, Description: old.Description, Id: old.Id,
+				})...)
+			},
+		},
+	}
 }

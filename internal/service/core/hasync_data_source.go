@@ -38,5 +38,5 @@ func (d *hasyncDataSource) Read(ctx context.Context, _ datasource.ReadRequest, r
 		resp.Diagnostics.AddError("Unable to Read OPNsense HA Settings", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, hasyncAPIToModel(&remote.Hasync))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, hasyncAPIToDataSourceModel(&remote.Hasync))...)
 }

@@ -70,6 +70,9 @@ func TestAccInterfacesVipIPAliasSharedCARPVHID(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.carp", "mode", "carp"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.carp", "vhid", "221"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.carp", "password_version", "1"),
+					resource.TestCheckResourceAttr("opnsense_interfaces_vip.carp", "password_configured", "true"),
+					resource.TestCheckNoResourceAttr("opnsense_interfaces_vip.carp", "password"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.alias", "mode", "ipalias"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.alias", "vhid", "221"),
 					resource.TestCheckResourceAttr("opnsense_interfaces_vip.alias", "network", "10.0.2.225/32"),
@@ -93,6 +96,7 @@ resource "opnsense_interfaces_vip" "carp" {
   interface          = %[1]q
   network            = "10.0.2.224/24"
   password           = "tfacc-shared-vhid"
+  password_version   = 1
   vhid               = 221
   advertisement_base = 1
   advertisement_skew = 0

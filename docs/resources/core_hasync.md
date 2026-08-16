@@ -17,9 +17,12 @@ Manages OPNsense High Availability synchronization settings, including pfsync st
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `disable_preempt` (Boolean) When enabled, a recovering preferred CARP node does not preempt an already active master.
 - `disconnect_ppps` (Boolean) When enabled, PPP-type interfaces are disconnected while this node is a CARP backup.
-- `password` (String, Sensitive) Password used for XMLRPC configuration synchronization.
+- `password` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only password used for XMLRPC configuration synchronization. The value is never stored in Terraform/OpenTofu plan or state. Increment password_version whenever it changes.
+- `password_version` (Number) Stateful rotation marker for the write-only XMLRPC password. Increment whenever the password changes.
 - `pfsync_defer` (Boolean) When enabled, transmission of the first packet in a state is deferred until the peer acknowledges insertion.
 - `pfsync_interface` (String) Logical interface used to synchronize firewall states with pfsync. An empty value disables pfsync.
 - `pfsync_peer_ip` (String) Optional unicast IPv4 peer used for pfsync state synchronization.
@@ -32,3 +35,4 @@ Manages OPNsense High Availability synchronization settings, including pfsync st
 ### Read-Only
 
 - `id` (String) Fixed singleton identifier `core_hasync`.
+- `password_configured` (Boolean) Whether OPNsense currently has a non-empty XMLRPC password configured. The password value itself is never returned to state.
