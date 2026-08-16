@@ -9,10 +9,12 @@ import (
 	"github.com/biptec/terraform-provider-opnsense/internal/service/acmeclient"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/bind"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/caddy"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/core"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/diagnostics"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/dns"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/dnsmasq"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/firewall"
+	"github.com/biptec/terraform-provider-opnsense/internal/service/haproxy"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/interfaces"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/ipsec"
 	"github.com/biptec/terraform-provider-opnsense/internal/service/kea"
@@ -298,10 +300,12 @@ func (p *opnsenseProvider) Resources(ctx context.Context) []func() resource.Reso
 		acmeclient.Resources(ctx),
 		bind.Resources(ctx),
 		caddy.Resources(ctx),
+		core.Resources(ctx),
 		diagnostics.Resources(ctx),
 		dns.Resources(ctx),
 		dnsmasq.Resources(ctx),
 		firewall.Resources(ctx),
+		haproxy.Resources(ctx),
 		interfaces.Resources(ctx),
 		ipsec.Resources(ctx),
 		kea.Resources(ctx),
@@ -326,9 +330,11 @@ func (p *opnsenseProvider) DataSources(ctx context.Context) []func() datasource.
 	controllers := [][]func() datasource.DataSource{
 		bind.DataSources(ctx),
 		caddy.DataSources(ctx),
+		core.DataSources(ctx),
 		diagnostics.DataSources(ctx),
 		dnsmasq.DataSources(ctx),
 		firewall.DataSources(ctx),
+		haproxy.DataSources(ctx),
 		interfaces.DataSources(ctx),
 		ipsec.DataSources(ctx),
 		kea.DataSources(ctx),

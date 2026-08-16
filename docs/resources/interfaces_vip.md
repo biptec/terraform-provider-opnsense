@@ -36,6 +36,8 @@ resource "opnsense_interfaces_vip" "ipalias_example_vip" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `advertisement_base` (Number) CARP advertisement base interval.
 - `advertisement_skew` (Number) CARP advertisement skew.
 - `description` (String) Optional description.
@@ -45,15 +47,17 @@ resource "opnsense_interfaces_vip" "ipalias_example_vip" {
 - `no_bind` (Boolean) Do not bind services to the virtual IP.
 - `no_expand` (Boolean) Do not expand the virtual IP into automatic firewall rules.
 - `no_sync` (Boolean) Exclude this virtual IP from XMLRPC synchronization.
-- `password` (String, Sensitive) CARP password.
+- `password` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only CARP password. Required when creating a CARP VIP. The value is never stored in Terraform/OpenTofu plan or state. Increment password_version whenever it changes.
+- `password_version` (Number) Stateful rotation marker for the write-only CARP password. Increment whenever the password changes.
 - `peer_ipv4` (String) Optional CARP IPv4 peer.
 - `peer_ipv6` (String) Optional CARP IPv6 peer.
-- `vhid` (Number) CARP VHID.
+- `vhid` (Number) CARP VHID. IP Alias entries may also set this to attach the alias to an existing CARP VHID group.
 
 ### Read-Only
 
 - `address` (String) Address rendered by OPNsense.
 - `id` (String) UUID of the virtual IP.
+- `password_configured` (Boolean) Whether OPNsense currently has a non-empty CARP password configured. The password value itself is never returned to state.
 - `vhid_text` (String) VHID label rendered by OPNsense.
 
 ## Import
