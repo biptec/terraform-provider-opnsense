@@ -29,6 +29,8 @@ Manages an OPNsense HAProxy backend.
 - `enabled` (Boolean) Whether to enable the backend. Defaults to `true`.
 - `health_check` (String) UUID of the HAProxy health check.
 - `health_check_enabled` (Boolean) Whether to enable backend health checks. Defaults to `true`.
+- `health_check_fall` (Number) Consecutive failed checks required before marking a server down.
+- `health_check_rise` (Number) Consecutive successful checks required before marking a server up.
 - `linked_servers` (Set of String) HAProxy server UUIDs in this backend.
 - `mode` (String) Backend mode: `http` or `tcp`. Use `tcp` for TLS passthrough. Defaults to `http`.
 

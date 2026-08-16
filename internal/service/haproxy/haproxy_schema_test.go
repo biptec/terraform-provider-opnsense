@@ -81,12 +81,12 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 	backend, err := backendModelToAPI(&backendModel{
 		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint_backend"), Mode: types.StringValue("tcp"),
 		Algorithm: types.StringValue("roundrobin"), LinkedServers: stringSet("server-id"), HealthCheckEnabled: types.BoolValue(true),
-		HealthCheck: types.StringValue("check-id"),
+		HealthCheck: types.StringValue("check-id"), HealthCheckFall: types.Int64Value(3), HealthCheckRise: types.Int64Value(2),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if backend.Mode.String() != "tcp" || backend.LinkedServers.String() != "server-id" || backend.HealthCheck.String() != "check-id" {
+	if backend.Mode.String() != "tcp" || backend.LinkedServers.String() != "server-id" || backend.HealthCheck.String() != "check-id" || backend.HealthCheckFall != "3" || backend.HealthCheckRise != "2" {
 		t.Fatalf("unexpected backend: %+v", backend)
 	}
 
