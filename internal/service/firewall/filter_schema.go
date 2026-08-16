@@ -1241,7 +1241,7 @@ func convertFilterSchemaToStruct(d *filterResourceModel) (*firewall.Filter, erro
 		result.Direction = api.SelectedMap(d.Filter.Direction.ValueString())
 		result.IPProtocol = api.SelectedMap(d.Filter.IPProtocol.ValueString())
 		result.Protocol = api.SelectedMap(d.Filter.Protocol.ValueString())
-		result.Log = tools.BoolToString(d.Filter.Log.ValueBool())
+		result.Log = api.BoolString(tools.BoolToString(d.Filter.Log.ValueBool()))
 		result.Schedule = api.SelectedMap(d.Filter.Schedule.ValueString())
 
 		// ICMP Type
@@ -1366,7 +1366,7 @@ func convertFilterStructToSchema(d *firewall.Filter) (*filterResourceModel, erro
 		Direction:    types.StringValue(d.Direction.String()),
 		IPProtocol:   types.StringValue(d.IPProtocol.String()),
 		Protocol:     types.StringValue(d.Protocol.String()),
-		Log:          types.BoolValue(tools.StringToBool(d.Log)),
+		Log:          types.BoolValue(d.Log.Bool()),
 		Schedule:     types.StringValue(d.Schedule.String()),
 		Source: &firewallLocation{
 			Net:    types.StringValue(d.SourceNet),
