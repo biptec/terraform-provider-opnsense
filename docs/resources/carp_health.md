@@ -3,12 +3,12 @@
 page_title: "opnsense_carp_health Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages global CARP L2 health-monitor settings through os-api-extensions. Failed checks demote every local CARP VHID through OPNsense's native carp_service_status mechanism.
+  Manages CARP L2 health-monitor settings through os-api-extensions. Health checks may demote all local CARP VHIDs or only a selected VHID.
 ---
 
 # opnsense_carp_health (Resource)
 
-Manages global CARP L2 health-monitor settings through `os-api-extensions`. Failed checks demote every local CARP VHID through OPNsense's native `carp_service_status` mechanism.
+Manages CARP L2 health-monitor settings through `os-api-extensions`. Health checks may demote all local CARP VHIDs or only a selected VHID.
 
 
 
@@ -18,7 +18,7 @@ Manages global CARP L2 health-monitor settings through `os-api-extensions`. Fail
 ### Optional
 
 - `enabled` (Boolean) Enable CARP L2 health monitoring.
-- `failure_threshold` (Number) Consecutive failed probes required before global CARP demotion.
+- `failure_threshold` (Number) Consecutive failed probes required before CARP demotion.
 - `interval` (Number) Probe interval in seconds.
 - `recovery_threshold` (Number) Consecutive successful probes required before CARP promotion is allowed again.
 

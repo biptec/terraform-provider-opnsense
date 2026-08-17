@@ -14,6 +14,13 @@ func Resources(ctx context.Context) []func() resource.Resource {
 		newBGPNeighborResource,
 		newBGPPrefixListResource,
 		newBGPRouteMapResource,
+		newFrrGeneralResource,
+		newOspfSettingsResource,
+		newOspfNetworkResource,
+		newOspfInterfaceResource,
+		newOspf6SettingsResource,
+		newOspf6NetworkResource,
+		newOspf6InterfaceResource,
 	}
 }
 
@@ -24,5 +31,12 @@ func DataSources(ctx context.Context) []func() datasource.DataSource {
 		newBGPNeighborDataSource,
 		newBGPPrefixListDataSource,
 		newBGPRouteMapDataSource,
+		newFrrGeneralDataSource,
+		newOspfSettingsDataSource,
+		newOspfNetworkDataSource,
+		newOspfInterfaceDataSource,
+		newOspf6SettingsDataSource,
+		newOspf6NetworkDataSource,
+		newOspf6InterfaceDataSource,
 	}
 }

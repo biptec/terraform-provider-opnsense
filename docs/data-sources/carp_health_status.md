@@ -3,12 +3,12 @@
 page_title: "opnsense_carp_health_status Data Source - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Reads runtime CARP health-monitor status from os-api-extensions.
+  Reads runtime CARP health-monitor status from os-api-extensions, including global and per-VHID control state.
 ---
 
 # opnsense_carp_health_status (Data Source)
 
-Reads runtime CARP health-monitor status from `os-api-extensions`.
+Reads runtime CARP health-monitor status from `os-api-extensions`, including global and per-VHID control state.
 
 
 
@@ -19,24 +19,66 @@ Reads runtime CARP health-monitor status from `os-api-extensions`.
 
 - `checks` (Attributes List) (see [below for nested schema](#nestedatt--checks))
 - `config_signature` (String)
+- `control_ok` (Boolean)
 - `enabled` (Boolean)
+- `global` (Attributes) (see [below for nested schema](#nestedatt--global))
 - `healthy` (Boolean)
 - `id` (String) The ID of this resource.
+- `probe_healthy` (Boolean)
 - `ready` (Boolean)
 - `running` (Boolean)
 - `status` (String)
 - `timestamp` (Number)
+- `vhids` (Attributes List) (see [below for nested schema](#nestedatt--vhids))
 
 <a id="nestedatt--checks"></a>
 ### Nested Schema for `checks`
 
 Read-Only:
 
+- `carp_state` (String)
+- `configured_advskew` (Number)
+- `control_ok` (Boolean)
+- `current_advskew` (Number)
 - `device` (String)
 - `failures` (Number)
 - `healthy` (Boolean)
 - `interface` (String)
 - `name` (String)
+- `scope` (String)
 - `successes` (Number)
 - `target` (String)
 - `uuid` (String)
+- `vhid` (Number)
+
+
+<a id="nestedatt--global"></a>
+### Nested Schema for `global`
+
+Read-Only:
+
+- `active` (Boolean)
+- `check_count` (Number)
+- `healthy` (Boolean)
+- `ready` (Boolean)
+
+
+<a id="nestedatt--vhids"></a>
+### Nested Schema for `vhids`
+
+Read-Only:
+
+- `carp_state` (String)
+- `checks` (List of String)
+- `configured_advskew` (Number)
+- `control_ok` (Boolean)
+- `current_advskew` (Number)
+- `desired_demoted` (Boolean)
+- `device` (String)
+- `error` (String)
+- `healthy` (Boolean)
+- `interface` (String)
+- `key` (String)
+- `ready` (Boolean)
+- `retired` (Boolean)
+- `vhid` (Number)
