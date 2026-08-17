@@ -23,6 +23,8 @@ Manages one CARP L2 health check through `os-api-extensions`. Automatic scope di
 
 ### Optional
 
+- `backup_ipv4_default_gateway` (String) Optional IPv4 peer next hop used whenever this check's CARP target has remained BACKUP for a full monitor cycle, even while the probe is healthy.
+- `backup_ipv6_default_gateway` (String) Optional IPv6 peer next hop used whenever this check's CARP target has remained BACKUP for a full monitor cycle, even while the probe is healthy.
 - `enabled` (Boolean) Enable this health check.
 - `failure_advskew` (Number) advskew enforced while this check is unhealthy. Use 254 for a hard local-segment failure; lower values can provide softer preference changes.
 - `fallback_ipv4_default_gateway` (String) Optional IPv4 peer next hop for default/Internet traffic after this health check has failed and its CARP target has remained BACKUP for a full monitor cycle.

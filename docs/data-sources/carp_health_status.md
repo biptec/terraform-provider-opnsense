@@ -75,6 +75,7 @@ Read-Only:
 - `managed` (Boolean)
 - `retired` (Boolean)
 - `route_type` (String)
+- `trigger` (String)
 
 
 <a id="nestedatt--checks--vhid_states"></a>
@@ -129,6 +130,7 @@ Read-Only:
 - `managed` (Boolean)
 - `retired` (Boolean)
 - `route_type` (String)
+- `trigger` (String)
 
 
 <a id="nestedatt--vhids"></a>

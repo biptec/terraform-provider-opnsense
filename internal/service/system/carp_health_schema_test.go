@@ -116,6 +116,38 @@ func TestCarpHealthCheckVHIDGroupAndFallbackRoundTrip(t *testing.T) {
 	}
 }
 
+func TestCarpHealthCheckBackupDefaultRoundTrip(t *testing.T) {
+	model := &carpHealthCheckResourceModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("wan-owner"),
+		Interface: types.StringValue("wan"), Target: types.StringValue("192.0.2.1"),
+		Scope: types.StringValue("vhid"), VHID: types.Int64Value(51), FailureAdvSkew: types.Int64Value(254),
+		BackupIPv4DefaultGateway: types.StringValue("10.16.224.6"), BackupIPv6DefaultGateway: types.StringValue("2001:db8:2::2"),
+	}
+	remote, err := carpHealthCheckToAPI(model)
+	if err != nil {
+		t.Fatalf("carpHealthCheckToAPI(): %v", err)
+	}
+	if remote.BackupIPv4DefaultGateway != "10.16.224.6" || remote.BackupIPv6DefaultGateway != "2001:db8:2::2" {
+		t.Fatalf("unexpected BACKUP API check: %#v", remote)
+	}
+	state := carpHealthCheckFromAPI(remote, "11111111-2222-4333-8444-555555555555")
+	if state.BackupIPv4DefaultGateway.ValueString() != "10.16.224.6" || state.BackupIPv6DefaultGateway.ValueString() != "2001:db8:2::2" {
+		t.Fatalf("unexpected BACKUP Terraform state: %#v", state)
+	}
+}
+
+func TestCarpHealthCheckRejectsFallbackAndBackupDefaultTogether(t *testing.T) {
+	model := &carpHealthCheckResourceModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("bad-default"),
+		Interface: types.StringValue("wan"), Target: types.StringValue("192.0.2.1"),
+		Scope: types.StringValue("vhid"), VHID: types.Int64Value(51),
+		FallbackIPv4DefaultGateway: types.StringValue("10.16.224.6"), BackupIPv4DefaultGateway: types.StringValue("10.16.224.7"),
+	}
+	if _, err := carpHealthCheckToAPI(model); err == nil {
+		t.Fatal("fallback and BACKUP default gateways were accepted together")
+	}
+}
+
 func TestCarpHealthCheckVHIDScopeRejectsZero(t *testing.T) {
 	model := &carpHealthCheckResourceModel{
 		Enabled: types.BoolValue(true), Name: types.StringValue("bad-vhid"),
@@ -201,7 +233,7 @@ func TestCarpHealthStatusRuntimeLists(t *testing.T) {
 	}
 
 	routes, diagnostics := carpHealthStatusRouteList(t.Context(), []apiextensions.CarpHealthRouteStatus{{
-		Key: "inet:network:0.0.0.0/1", CheckUUID: "check-1", Check: "wan-fallback", Family: "inet", RouteType: "network",
+		Key: "inet:network:backup:0.0.0.0/1", CheckUUID: "check-1", Check: "wan-owner", Family: "inet", RouteType: "network", Trigger: "backup",
 		Destination: "0.0.0.0/1", Gateway: "10.16.224.5", DesiredInstalled: true,
 		Installed: true, Managed: true, ControlOK: true,
 	}})

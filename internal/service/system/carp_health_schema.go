@@ -42,6 +42,8 @@ type carpHealthCheckResourceModel struct {
 	FallbackIPv6Gateway        types.String `tfsdk:"fallback_ipv6_gateway"`
 	FallbackIPv4DefaultGateway types.String `tfsdk:"fallback_ipv4_default_gateway"`
 	FallbackIPv6DefaultGateway types.String `tfsdk:"fallback_ipv6_default_gateway"`
+	BackupIPv4DefaultGateway   types.String `tfsdk:"backup_ipv4_default_gateway"`
+	BackupIPv6DefaultGateway   types.String `tfsdk:"backup_ipv6_default_gateway"`
 	ID                         types.String `tfsdk:"id"`
 }
 
@@ -92,6 +94,8 @@ func carpHealthCheckResourceSchema() schema.Schema {
 			"fallback_ipv6_gateway":         schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv6Address()}, MarkdownDescription: "IPv6 peer next hop for the fallback host route. Configure together with fallback_ipv6_target."},
 			"fallback_ipv4_default_gateway": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv4Address()}, MarkdownDescription: "Optional IPv4 peer next hop for default/Internet traffic after this health check has failed and its CARP target has remained BACKUP for a full monitor cycle."},
 			"fallback_ipv6_default_gateway": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv6Address()}, MarkdownDescription: "Optional IPv6 peer next hop for default/Internet traffic after this health check has failed and its CARP target has remained BACKUP for a full monitor cycle."},
+			"backup_ipv4_default_gateway":   schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv4Address()}, MarkdownDescription: "Optional IPv4 peer next hop used whenever this check's CARP target has remained BACKUP for a full monitor cycle, even while the probe is healthy."},
+			"backup_ipv6_default_gateway":   schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv6Address()}, MarkdownDescription: "Optional IPv6 peer next hop used whenever this check's CARP target has remained BACKUP for a full monitor cycle, even while the probe is healthy."},
 			"id":                            schema.StringAttribute{Computed: true, MarkdownDescription: "UUID of the health check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 		},
 	}

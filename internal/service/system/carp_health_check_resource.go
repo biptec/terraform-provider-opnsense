@@ -167,9 +167,20 @@ func validateCarpHealthCheckConfiguration(data *carpHealthCheckResourceModel) er
 	if err := validateFallbackPair(data.FallbackIPv6Target, data.FallbackIPv6Gateway, "IPv6"); err != nil {
 		return err
 	}
-	if scope == "global" && (!data.FallbackIPv4DefaultGateway.IsUnknown() && data.FallbackIPv4DefaultGateway.ValueString() != "" ||
-		!data.FallbackIPv6DefaultGateway.IsUnknown() && data.FallbackIPv6DefaultGateway.ValueString() != "") {
-		return fmt.Errorf("fallback default routing requires a CARP-scoped health check")
+	hasConditionalDefault := (!data.FallbackIPv4DefaultGateway.IsUnknown() && data.FallbackIPv4DefaultGateway.ValueString() != "") ||
+		(!data.FallbackIPv6DefaultGateway.IsUnknown() && data.FallbackIPv6DefaultGateway.ValueString() != "") ||
+		(!data.BackupIPv4DefaultGateway.IsUnknown() && data.BackupIPv4DefaultGateway.ValueString() != "") ||
+		(!data.BackupIPv6DefaultGateway.IsUnknown() && data.BackupIPv6DefaultGateway.ValueString() != "")
+	if scope == "global" && hasConditionalDefault {
+		return fmt.Errorf("conditional default routing requires a CARP-scoped health check")
+	}
+	if !data.FallbackIPv4DefaultGateway.IsUnknown() && !data.BackupIPv4DefaultGateway.IsUnknown() &&
+		data.FallbackIPv4DefaultGateway.ValueString() != "" && data.BackupIPv4DefaultGateway.ValueString() != "" {
+		return fmt.Errorf("IPv4 fallback and BACKUP default gateways are mutually exclusive")
+	}
+	if !data.FallbackIPv6DefaultGateway.IsUnknown() && !data.BackupIPv6DefaultGateway.IsUnknown() &&
+		data.FallbackIPv6DefaultGateway.ValueString() != "" && data.BackupIPv6DefaultGateway.ValueString() != "" {
+		return fmt.Errorf("IPv6 fallback and BACKUP default gateways are mutually exclusive")
 	}
 	return nil
 }
@@ -241,6 +252,14 @@ func carpHealthCheckToAPI(data *carpHealthCheckResourceModel) (*apiextensions.Ca
 	if err != nil {
 		return nil, fmt.Errorf("fallback_ipv6_default_gateway: %w", err)
 	}
+	backupIPv4DefaultGateway, err := normalizeOptionalIP(data.BackupIPv4DefaultGateway.ValueString(), 4)
+	if err != nil {
+		return nil, fmt.Errorf("backup_ipv4_default_gateway: %w", err)
+	}
+	backupIPv6DefaultGateway, err := normalizeOptionalIP(data.BackupIPv6DefaultGateway.ValueString(), 6)
+	if err != nil {
+		return nil, fmt.Errorf("backup_ipv6_default_gateway: %w", err)
+	}
 	return &apiextensions.CarpHealthCheck{
 		Enabled: api.BoolString(tools.BoolToString(data.Enabled.ValueBool())), Name: data.Name.ValueString(),
 		Interface: api.SelectedMap(data.Interface.ValueString()), Target: target.String(),
@@ -249,6 +268,7 @@ func carpHealthCheckToAPI(data *carpHealthCheckResourceModel) (*apiextensions.Ca
 		FallbackIPv4Target: fallbackIPv4Target, FallbackIPv4Gateway: fallbackIPv4Gateway,
 		FallbackIPv6Target: fallbackIPv6Target, FallbackIPv6Gateway: fallbackIPv6Gateway,
 		FallbackIPv4DefaultGateway: fallbackIPv4DefaultGateway, FallbackIPv6DefaultGateway: fallbackIPv6DefaultGateway,
+		BackupIPv4DefaultGateway: backupIPv4DefaultGateway, BackupIPv6DefaultGateway: backupIPv6DefaultGateway,
 	}, nil
 }
 
@@ -285,6 +305,7 @@ func carpHealthCheckFromAPI(data *apiextensions.CarpHealthCheck, id string) *car
 		FallbackIPv4Target: types.StringValue(data.FallbackIPv4Target), FallbackIPv4Gateway: types.StringValue(data.FallbackIPv4Gateway),
 		FallbackIPv6Target: types.StringValue(data.FallbackIPv6Target), FallbackIPv6Gateway: types.StringValue(data.FallbackIPv6Gateway),
 		FallbackIPv4DefaultGateway: types.StringValue(data.FallbackIPv4DefaultGateway), FallbackIPv6DefaultGateway: types.StringValue(data.FallbackIPv6DefaultGateway),
+		BackupIPv4DefaultGateway: types.StringValue(data.BackupIPv4DefaultGateway), BackupIPv6DefaultGateway: types.StringValue(data.BackupIPv6DefaultGateway),
 		ID: types.StringValue(id),
 	}
 }
