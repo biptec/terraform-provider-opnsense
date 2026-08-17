@@ -342,6 +342,7 @@ func (p *opnsenseProvider) DataSources(ctx context.Context) []func() datasource.
 		quagga.DataSources(ctx),
 		routes.DataSources(ctx),
 		routing.DataSources(ctx),
+		system.DataSources(ctx),
 		trust.DataSources(ctx),
 		unbound.DataSources(ctx),
 		wireguard.DataSources(ctx),
