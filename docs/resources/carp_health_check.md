@@ -25,8 +25,10 @@ Manages one CARP L2 health check through `os-api-extensions`. Automatic scope di
 
 - `enabled` (Boolean) Enable this health check.
 - `failure_advskew` (Number) advskew enforced while this check is unhealthy. Use 254 for a hard local-segment failure; lower values can provide softer preference changes.
+- `fallback_ipv4_default_gateway` (String) Optional IPv4 peer next hop for default/Internet traffic after this health check has failed and its CARP target has remained BACKUP for a full monitor cycle.
 - `fallback_ipv4_gateway` (String) IPv4 peer next hop for the fallback host route. Configure together with fallback_ipv4_target.
 - `fallback_ipv4_target` (String) Optional IPv4 host route destination installed while unhealthy. Configure together with fallback_ipv4_gateway.
+- `fallback_ipv6_default_gateway` (String) Optional IPv6 peer next hop for default/Internet traffic after this health check has failed and its CARP target has remained BACKUP for a full monitor cycle.
 - `fallback_ipv6_gateway` (String) IPv6 peer next hop for the fallback host route. Configure together with fallback_ipv6_target.
 - `fallback_ipv6_target` (String) Optional IPv6 host route destination installed while unhealthy. Configure together with fallback_ipv6_gateway.
 - `scope` (String) CARP target scope. `interface` automatically discovers CARP on the probe interface; `all_carp` discovers all configured CARP; `vhid` and `vhid_group` are explicit overrides; `global` preserves legacy global demotion.

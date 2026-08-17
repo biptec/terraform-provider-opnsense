@@ -94,13 +94,15 @@ func TestCarpHealthCheckVHIDGroupAndFallbackRoundTrip(t *testing.T) {
 		VHIDTargets:        stringSetValue([]string{"opt3:52", "opt2:51"}),
 		FallbackIPv4Target: types.StringValue("192.0.2.2"), FallbackIPv4Gateway: types.StringValue("10.16.224.5"),
 		FallbackIPv6Target: types.StringValue("2001:db8:1::2"), FallbackIPv6Gateway: types.StringValue("2001:db8:2::1"),
+		FallbackIPv4DefaultGateway: types.StringValue("10.16.224.6"), FallbackIPv6DefaultGateway: types.StringValue("2001:db8:2::2"),
 	}
 	remote, err := carpHealthCheckToAPI(model)
 	if err != nil {
 		t.Fatalf("carpHealthCheckToAPI(): %v", err)
 	}
 	if remote.Scope.String() != "vhid_group" || remote.VHID != "0" || remote.FailureAdvSkew != "200" || len(remote.VHIDTargets) != 2 ||
-		remote.VHIDTargets[0] != "opt2:51" || remote.VHIDTargets[1] != "opt3:52" || remote.FallbackIPv4Gateway != "10.16.224.5" || remote.FallbackIPv6Target != "2001:db8:1::2" {
+		remote.VHIDTargets[0] != "opt2:51" || remote.VHIDTargets[1] != "opt3:52" || remote.FallbackIPv4Gateway != "10.16.224.5" || remote.FallbackIPv6Target != "2001:db8:1::2" ||
+		remote.FallbackIPv4DefaultGateway != "10.16.224.6" || remote.FallbackIPv6DefaultGateway != "2001:db8:2::2" {
 		t.Fatalf("unexpected grouped API check: %#v", remote)
 	}
 	state := carpHealthCheckFromAPI(remote, "11111111-2222-4333-8444-555555555555")
@@ -108,7 +110,8 @@ func TestCarpHealthCheckVHIDGroupAndFallbackRoundTrip(t *testing.T) {
 	if err != nil || len(targets) != 2 || targets[0] != "opt2:51" || targets[1] != "opt3:52" {
 		t.Fatalf("unexpected grouped Terraform targets: %v, err=%v", targets, err)
 	}
-	if state.FallbackIPv4Target.ValueString() != "192.0.2.2" || state.FallbackIPv6Gateway.ValueString() != "2001:db8:2::1" {
+	if state.FallbackIPv4Target.ValueString() != "192.0.2.2" || state.FallbackIPv6Gateway.ValueString() != "2001:db8:2::1" ||
+		state.FallbackIPv4DefaultGateway.ValueString() != "10.16.224.6" || state.FallbackIPv6DefaultGateway.ValueString() != "2001:db8:2::2" {
 		t.Fatalf("unexpected grouped Terraform state: %#v", state)
 	}
 }
@@ -156,6 +159,17 @@ func TestCarpHealthCheckFallbackRequiresPair(t *testing.T) {
 	}
 }
 
+func TestCarpHealthCheckGlobalScopeRejectsDefaultFallback(t *testing.T) {
+	model := &carpHealthCheckResourceModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("bad-default"),
+		Interface: types.StringValue("wan"), Target: types.StringValue("192.0.2.1"), Scope: types.StringValue("global"),
+		FallbackIPv4DefaultGateway: types.StringValue("10.16.224.6"),
+	}
+	if _, err := carpHealthCheckToAPI(model); err == nil {
+		t.Fatal("global scope accepted fallback default routing")
+	}
+}
+
 func TestCarpHealthCheckLegacyScopeDefaultsGlobal(t *testing.T) {
 	remote := &apiextensions.CarpHealthCheck{Enabled: "1", Name: "legacy", Interface: api.SelectedMap("opt2"), Target: "192.0.2.2"}
 	state := carpHealthCheckFromAPI(remote, "11111111-2222-4333-8444-555555555555")
@@ -187,8 +201,8 @@ func TestCarpHealthStatusRuntimeLists(t *testing.T) {
 	}
 
 	routes, diagnostics := carpHealthStatusRouteList(t.Context(), []apiextensions.CarpHealthRouteStatus{{
-		Key: "inet:192.0.2.2", CheckUUID: "check-1", Check: "wan-fallback", Family: "inet",
-		Destination: "192.0.2.2", Gateway: "10.16.224.5", DesiredInstalled: true,
+		Key: "inet:network:0.0.0.0/1", CheckUUID: "check-1", Check: "wan-fallback", Family: "inet", RouteType: "network",
+		Destination: "0.0.0.0/1", Gateway: "10.16.224.5", DesiredInstalled: true,
 		Installed: true, Managed: true, ControlOK: true,
 	}})
 	if diagnostics.HasError() || len(routes.Elements()) != 1 {

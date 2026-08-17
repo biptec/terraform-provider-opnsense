@@ -167,6 +167,10 @@ func validateCarpHealthCheckConfiguration(data *carpHealthCheckResourceModel) er
 	if err := validateFallbackPair(data.FallbackIPv6Target, data.FallbackIPv6Gateway, "IPv6"); err != nil {
 		return err
 	}
+	if scope == "global" && (!data.FallbackIPv4DefaultGateway.IsUnknown() && data.FallbackIPv4DefaultGateway.ValueString() != "" ||
+		!data.FallbackIPv6DefaultGateway.IsUnknown() && data.FallbackIPv6DefaultGateway.ValueString() != "") {
+		return fmt.Errorf("fallback default routing requires a CARP-scoped health check")
+	}
 	return nil
 }
 
@@ -229,6 +233,14 @@ func carpHealthCheckToAPI(data *carpHealthCheckResourceModel) (*apiextensions.Ca
 	if err != nil {
 		return nil, fmt.Errorf("fallback_ipv6_gateway: %w", err)
 	}
+	fallbackIPv4DefaultGateway, err := normalizeOptionalIP(data.FallbackIPv4DefaultGateway.ValueString(), 4)
+	if err != nil {
+		return nil, fmt.Errorf("fallback_ipv4_default_gateway: %w", err)
+	}
+	fallbackIPv6DefaultGateway, err := normalizeOptionalIP(data.FallbackIPv6DefaultGateway.ValueString(), 6)
+	if err != nil {
+		return nil, fmt.Errorf("fallback_ipv6_default_gateway: %w", err)
+	}
 	return &apiextensions.CarpHealthCheck{
 		Enabled: api.BoolString(tools.BoolToString(data.Enabled.ValueBool())), Name: data.Name.ValueString(),
 		Interface: api.SelectedMap(data.Interface.ValueString()), Target: target.String(),
@@ -236,6 +248,7 @@ func carpHealthCheckToAPI(data *carpHealthCheckResourceModel) (*apiextensions.Ca
 		VHIDTargets:        api.SelectedMapList(vhidTargets),
 		FallbackIPv4Target: fallbackIPv4Target, FallbackIPv4Gateway: fallbackIPv4Gateway,
 		FallbackIPv6Target: fallbackIPv6Target, FallbackIPv6Gateway: fallbackIPv6Gateway,
+		FallbackIPv4DefaultGateway: fallbackIPv4DefaultGateway, FallbackIPv6DefaultGateway: fallbackIPv6DefaultGateway,
 	}, nil
 }
 
@@ -271,6 +284,7 @@ func carpHealthCheckFromAPI(data *apiextensions.CarpHealthCheck, id string) *car
 		VHIDTargets:        tools.StringSliceToSet([]string(data.VHIDTargets)),
 		FallbackIPv4Target: types.StringValue(data.FallbackIPv4Target), FallbackIPv4Gateway: types.StringValue(data.FallbackIPv4Gateway),
 		FallbackIPv6Target: types.StringValue(data.FallbackIPv6Target), FallbackIPv6Gateway: types.StringValue(data.FallbackIPv6Gateway),
+		FallbackIPv4DefaultGateway: types.StringValue(data.FallbackIPv4DefaultGateway), FallbackIPv6DefaultGateway: types.StringValue(data.FallbackIPv6DefaultGateway),
 		ID: types.StringValue(id),
 	}
 }
