@@ -116,8 +116,35 @@ func carpHealthCheckToAPI(data *carpHealthCheckResourceModel) (*apiextensions.Ca
 	if err != nil || !target.Is4() {
 		return nil, fmt.Errorf("target must be an IPv4 address")
 	}
-	return &apiextensions.CarpHealthCheck{Enabled: api.BoolString(tools.BoolToString(data.Enabled.ValueBool())), Name: data.Name.ValueString(), Interface: api.SelectedMap(data.Interface.ValueString()), Target: target.String()}, nil
+	scope := data.Scope.ValueString()
+	if scope == "" {
+		scope = "global"
+	}
+	vhid := data.VHID.ValueInt64()
+	if scope == "vhid" && (vhid < 1 || vhid > 255) {
+		return nil, fmt.Errorf("vhid must be between 1 and 255 when scope is vhid")
+	}
+	if scope == "global" {
+		vhid = 0
+	}
+	return &apiextensions.CarpHealthCheck{
+		Enabled: api.BoolString(tools.BoolToString(data.Enabled.ValueBool())), Name: data.Name.ValueString(),
+		Interface: api.SelectedMap(data.Interface.ValueString()), Target: target.String(),
+		Scope: api.SelectedMap(scope), VHID: tools.Int64ToString(vhid),
+	}, nil
 }
 func carpHealthCheckFromAPI(data *apiextensions.CarpHealthCheck, id string) *carpHealthCheckResourceModel {
-	return &carpHealthCheckResourceModel{Enabled: types.BoolValue(data.Enabled.Bool()), Name: types.StringValue(data.Name), Interface: types.StringValue(data.Interface.String()), Target: types.StringValue(data.Target), ID: types.StringValue(id)}
+	scope := data.Scope.String()
+	if scope == "" {
+		scope = "global"
+	}
+	vhid := int64(0)
+	if data.VHID != "" {
+		vhid = tools.StringToInt64(data.VHID)
+	}
+	return &carpHealthCheckResourceModel{
+		Enabled: types.BoolValue(data.Enabled.Bool()), Name: types.StringValue(data.Name),
+		Interface: types.StringValue(data.Interface.String()), Target: types.StringValue(data.Target),
+		Scope: types.StringValue(scope), VHID: types.Int64Value(vhid), ID: types.StringValue(id),
+	}
 }

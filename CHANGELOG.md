@@ -5,6 +5,8 @@
 ### Added
 
 - OPNsense Core HA synchronization resource/data source for pfsync and optional XMLRPC configuration synchronization.
+- Core system tunable resource/data source backed by the native OPNsense tunables API.
+- FRR general, OSPFv2, and OSPFv3 settings, network, and interface resources/data sources.
 - HAProxy settings, service status/configtest, and L4/SNI frontend, backend, server, healthcheck, ACL, and action resources/data sources.
 - Shared CARP VHID support for IP Alias virtual IPs so additional service addresses can fail over with a parent CARP VIP.
 - Guarded DNS service cutover resource that coordinates BIND, Unbound, and the dnsmasq DNS port with runtime verification and rollback.
@@ -12,6 +14,7 @@
 
 ### Changed
 
+- CARP health checks support global or per-VHID demotion scope, and runtime status exposes probe health, control health, CARP state, and per-VHID advskew details.
 - BIND listener sets reject explicit empty values because os-bind requires at least one IPv4 and one IPv6 configuration value; use `::1` with IPv6 execution disabled.
 - Provider acceptance CI pins the current BIND and API extensions plugin commit and runs DNS cutover tests in the BIND shard.
 

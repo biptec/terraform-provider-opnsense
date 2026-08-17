@@ -64,3 +64,51 @@ func TestCarpHealthActionValidation(t *testing.T) {
 		t.Fatal("failed reconfigure result accepted")
 	}
 }
+
+func TestCarpHealthCheckVHIDScopeRoundTrip(t *testing.T) {
+	model := &carpHealthCheckResourceModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("leaf-vhid-51"),
+		Interface: types.StringValue("opt2"), Target: types.StringValue("192.0.2.2"),
+		Scope: types.StringValue("vhid"), VHID: types.Int64Value(51),
+	}
+	remote, err := carpHealthCheckToAPI(model)
+	if err != nil {
+		t.Fatalf("carpHealthCheckToAPI(): %v", err)
+	}
+	if remote.Scope.String() != "vhid" || remote.VHID != "51" {
+		t.Fatalf("unexpected scoped API check: %#v", remote)
+	}
+	state := carpHealthCheckFromAPI(remote, "11111111-2222-4333-8444-555555555555")
+	if state.Scope.ValueString() != "vhid" || state.VHID.ValueInt64() != 51 {
+		t.Fatalf("unexpected scoped Terraform state: %#v", state)
+	}
+}
+
+func TestCarpHealthCheckVHIDScopeRejectsZero(t *testing.T) {
+	model := &carpHealthCheckResourceModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("bad-vhid"),
+		Interface: types.StringValue("opt2"), Target: types.StringValue("192.0.2.2"),
+		Scope: types.StringValue("vhid"), VHID: types.Int64Value(0),
+	}
+	if _, err := carpHealthCheckToAPI(model); err == nil {
+		t.Fatal("scope=vhid accepted vhid=0")
+	}
+}
+
+func TestCarpHealthCheckLegacyScopeDefaultsGlobal(t *testing.T) {
+	remote := &apiextensions.CarpHealthCheck{Enabled: "1", Name: "legacy", Interface: api.SelectedMap("opt2"), Target: "192.0.2.2"}
+	state := carpHealthCheckFromAPI(remote, "11111111-2222-4333-8444-555555555555")
+	if state.Scope.ValueString() != "global" || state.VHID.ValueInt64() != 0 {
+		t.Fatalf("legacy check did not normalize to global scope: %#v", state)
+	}
+}
+
+func TestNullableAdvSkew(t *testing.T) {
+	if got := nullableInt(nil); !got.IsNull() {
+		t.Fatalf("nil advskew must remain null, got %v", got)
+	}
+	value := 100
+	if got := nullableInt(&value); got.IsNull() || got.ValueInt64() != 100 {
+		t.Fatalf("advskew conversion failed: %v", got)
+	}
+}

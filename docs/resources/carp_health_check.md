@@ -3,12 +3,12 @@
 page_title: "opnsense_carp_health_check Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages one CARP L2 health check through os-api-extensions. The probe uses ARP with source IPv4 0.0.0.0, so the same check works while the node is CARP MASTER or BACKUP and does not require a node-specific IPv4 address.
+  Manages one CARP L2 health check through os-api-extensions. The ARP probe uses source IPv4 0.0.0.0, so the same check works while the node is CARP MASTER or BACKUP.
 ---
 
 # opnsense_carp_health_check (Resource)
 
-Manages one CARP L2 health check through `os-api-extensions`. The probe uses ARP with source IPv4 0.0.0.0, so the same check works while the node is CARP MASTER or BACKUP and does not require a node-specific IPv4 address.
+Manages one CARP L2 health check through `os-api-extensions`. The ARP probe uses source IPv4 0.0.0.0, so the same check works while the node is CARP MASTER or BACKUP.
 
 
 
@@ -24,6 +24,8 @@ Manages one CARP L2 health check through `os-api-extensions`. The probe uses ARP
 ### Optional
 
 - `enabled` (Boolean) Enable this health check.
+- `scope` (String) CARP demotion scope: `global` or `vhid`.
+- `vhid` (Number) CARP VHID when `scope = "vhid"`; zero is the inactive value for global scope.
 
 ### Read-Only
 
