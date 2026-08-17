@@ -3,12 +3,12 @@
 page_title: "opnsense_carp_health_status Data Source - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Reads runtime CARP health-monitor status from os-api-extensions, including global and per-VHID control state.
+  Reads runtime CARP health-monitor status from os-api-extensions, including resolved automatic targets, per-VHID control state, and managed fallback routes.
 ---
 
 # opnsense_carp_health_status (Data Source)
 
-Reads runtime CARP health-monitor status from `os-api-extensions`, including global and per-VHID control state.
+Reads runtime CARP health-monitor status from `os-api-extensions`, including resolved automatic targets, per-VHID control state, and managed fallback routes.
 
 
 
@@ -26,6 +26,7 @@ Reads runtime CARP health-monitor status from `os-api-extensions`, including glo
 - `id` (String) The ID of this resource.
 - `probe_healthy` (Boolean)
 - `ready` (Boolean)
+- `routes` (Attributes List) (see [below for nested schema](#nestedatt--routes))
 - `running` (Boolean)
 - `status` (String)
 - `timestamp` (Number)
@@ -38,10 +39,13 @@ Read-Only:
 
 - `carp_state` (String)
 - `configured_advskew` (Number)
+- `configured_vhid_targets` (Set of String)
 - `control_ok` (Boolean)
 - `current_advskew` (Number)
 - `device` (String)
+- `failure_advskew` (Number)
 - `failures` (Number)
+- `fallback_routes` (Attributes List) (see [below for nested schema](#nestedatt--checks--fallback_routes))
 - `healthy` (Boolean)
 - `interface` (String)
 - `name` (String)
@@ -50,6 +54,49 @@ Read-Only:
 - `target` (String)
 - `uuid` (String)
 - `vhid` (Number)
+- `vhid_states` (Attributes List) (see [below for nested schema](#nestedatt--checks--vhid_states))
+- `vhid_targets` (Set of String)
+
+<a id="nestedatt--checks--fallback_routes"></a>
+### Nested Schema for `checks.fallback_routes`
+
+Read-Only:
+
+- `check` (String)
+- `check_uuid` (String)
+- `control_ok` (Boolean)
+- `desired_installed` (Boolean)
+- `destination` (String)
+- `error` (String)
+- `family` (String)
+- `gateway` (String)
+- `installed` (Boolean)
+- `key` (String)
+- `managed` (Boolean)
+- `retired` (Boolean)
+
+
+<a id="nestedatt--checks--vhid_states"></a>
+### Nested Schema for `checks.vhid_states`
+
+Read-Only:
+
+- `carp_state` (String)
+- `checks` (List of String)
+- `configured_advskew` (Number)
+- `control_ok` (Boolean)
+- `current_advskew` (Number)
+- `desired_advskew` (Number)
+- `desired_demoted` (Boolean)
+- `device` (String)
+- `error` (String)
+- `healthy` (Boolean)
+- `interface` (String)
+- `key` (String)
+- `ready` (Boolean)
+- `retired` (Boolean)
+- `vhid` (Number)
+
 
 
 <a id="nestedatt--global"></a>
@@ -63,6 +110,25 @@ Read-Only:
 - `ready` (Boolean)
 
 
+<a id="nestedatt--routes"></a>
+### Nested Schema for `routes`
+
+Read-Only:
+
+- `check` (String)
+- `check_uuid` (String)
+- `control_ok` (Boolean)
+- `desired_installed` (Boolean)
+- `destination` (String)
+- `error` (String)
+- `family` (String)
+- `gateway` (String)
+- `installed` (Boolean)
+- `key` (String)
+- `managed` (Boolean)
+- `retired` (Boolean)
+
+
 <a id="nestedatt--vhids"></a>
 ### Nested Schema for `vhids`
 
@@ -73,6 +139,7 @@ Read-Only:
 - `configured_advskew` (Number)
 - `control_ok` (Boolean)
 - `current_advskew` (Number)
+- `desired_advskew` (Number)
 - `desired_demoted` (Boolean)
 - `device` (String)
 - `error` (String)

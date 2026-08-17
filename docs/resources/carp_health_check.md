@@ -3,12 +3,12 @@
 page_title: "opnsense_carp_health_check Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages one CARP L2 health check through os-api-extensions. The ARP probe uses source IPv4 0.0.0.0, so the same check works while the node is CARP MASTER or BACKUP.
+  Manages one CARP L2 health check through os-api-extensions. Automatic scope discovery is preferred; explicit VHID targeting remains available for exceptions.
 ---
 
 # opnsense_carp_health_check (Resource)
 
-Manages one CARP L2 health check through `os-api-extensions`. The ARP probe uses source IPv4 0.0.0.0, so the same check works while the node is CARP MASTER or BACKUP.
+Manages one CARP L2 health check through `os-api-extensions`. Automatic scope discovery is preferred; explicit VHID targeting remains available for exceptions.
 
 
 
@@ -17,15 +17,21 @@ Manages one CARP L2 health check through `os-api-extensions`. The ARP probe uses
 
 ### Required
 
-- `interface` (String) Friendly OPNsense logical interface, for example `opt2`.
+- `interface` (String) Friendly OPNsense logical interface used for the ARP probe, for example `opt2`.
 - `name` (String) Stable check name.
 - `target` (String) IPv4 address that must answer ARP on the selected L2 segment.
 
 ### Optional
 
 - `enabled` (Boolean) Enable this health check.
-- `scope` (String) CARP demotion scope: `global` or `vhid`.
-- `vhid` (Number) CARP VHID when `scope = "vhid"`; zero is the inactive value for global scope.
+- `failure_advskew` (Number) advskew enforced while this check is unhealthy. Use 254 for a hard local-segment failure; lower values can provide softer preference changes.
+- `fallback_ipv4_gateway` (String) IPv4 peer next hop for the fallback host route. Configure together with fallback_ipv4_target.
+- `fallback_ipv4_target` (String) Optional IPv4 host route destination installed while unhealthy. Configure together with fallback_ipv4_gateway.
+- `fallback_ipv6_gateway` (String) IPv6 peer next hop for the fallback host route. Configure together with fallback_ipv6_target.
+- `fallback_ipv6_target` (String) Optional IPv6 host route destination installed while unhealthy. Configure together with fallback_ipv6_gateway.
+- `scope` (String) CARP target scope. `interface` automatically discovers CARP on the probe interface; `all_carp` discovers all configured CARP; `vhid` and `vhid_group` are explicit overrides; `global` preserves legacy global demotion.
+- `vhid` (Number) Explicit CARP VHID when `scope = "vhid"`. Keep zero for every other scope.
+- `vhid_targets` (Set of String) Explicit `interface:VHID` targets when `scope = "vhid_group"`. Empty for automatic and single-VHID scopes.
 
 ### Read-Only
 
