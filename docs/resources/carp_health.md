@@ -3,12 +3,12 @@
 page_title: "opnsense_carp_health Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages CARP L2 health-monitor settings through os-api-extensions. Health checks may demote all local CARP VHIDs or only a selected VHID.
+  Manages CARP L2 health-monitor settings through os-api-extensions. Health checks can automatically discover CARP targets or explicitly select VHIDs.
 ---
 
 # opnsense_carp_health (Resource)
 
-Manages CARP L2 health-monitor settings through `os-api-extensions`. Health checks may demote all local CARP VHIDs or only a selected VHID.
+Manages CARP L2 health-monitor settings through `os-api-extensions`. Health checks can automatically discover CARP targets or explicitly select VHIDs.
 
 
 
