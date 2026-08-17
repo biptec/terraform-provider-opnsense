@@ -49,6 +49,7 @@ type carpHealthStatusRouteModel struct {
 	CheckUUID        types.String `tfsdk:"check_uuid"`
 	Check            types.String `tfsdk:"check"`
 	Family           types.String `tfsdk:"family"`
+	RouteType        types.String `tfsdk:"route_type"`
 	Destination      types.String `tfsdk:"destination"`
 	Gateway          types.String `tfsdk:"gateway"`
 	DesiredInstalled types.Bool   `tfsdk:"desired_installed"`
@@ -100,7 +101,7 @@ var carpHealthStatusGlobalTypes = map[string]attr.Type{
 }
 var carpHealthStatusRouteTypes = map[string]attr.Type{
 	"key": types.StringType, "check_uuid": types.StringType, "check": types.StringType,
-	"family": types.StringType, "destination": types.StringType, "gateway": types.StringType,
+	"family": types.StringType, "route_type": types.StringType, "destination": types.StringType, "gateway": types.StringType,
 	"desired_installed": types.BoolType, "installed": types.BoolType, "managed": types.BoolType,
 	"control_ok": types.BoolType, "retired": types.BoolType, "error": types.StringType,
 }
@@ -167,7 +168,7 @@ func carpHealthRouteSchemaAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"key": schema.StringAttribute{Computed: true}, "check_uuid": schema.StringAttribute{Computed: true},
 		"check": schema.StringAttribute{Computed: true}, "family": schema.StringAttribute{Computed: true},
-		"destination": schema.StringAttribute{Computed: true}, "gateway": schema.StringAttribute{Computed: true},
+		"route_type": schema.StringAttribute{Computed: true}, "destination": schema.StringAttribute{Computed: true}, "gateway": schema.StringAttribute{Computed: true},
 		"desired_installed": schema.BoolAttribute{Computed: true}, "installed": schema.BoolAttribute{Computed: true},
 		"managed": schema.BoolAttribute{Computed: true}, "control_ok": schema.BoolAttribute{Computed: true},
 		"retired": schema.BoolAttribute{Computed: true}, "error": schema.StringAttribute{Computed: true},
@@ -272,7 +273,7 @@ func carpHealthStatusRouteList(ctx context.Context, items []apiextensions.CarpHe
 	for _, item := range items {
 		models = append(models, carpHealthStatusRouteModel{
 			Key: types.StringValue(item.Key), CheckUUID: types.StringValue(item.CheckUUID), Check: types.StringValue(item.Check),
-			Family: types.StringValue(item.Family), Destination: types.StringValue(item.Destination), Gateway: types.StringValue(item.Gateway),
+			Family: types.StringValue(item.Family), RouteType: types.StringValue(item.RouteType), Destination: types.StringValue(item.Destination), Gateway: types.StringValue(item.Gateway),
 			DesiredInstalled: types.BoolValue(item.DesiredInstalled), Installed: types.BoolValue(item.Installed), Managed: types.BoolValue(item.Managed),
 			ControlOK: types.BoolValue(item.ControlOK), Retired: types.BoolValue(item.Retired), Error: types.StringValue(item.Error),
 		})

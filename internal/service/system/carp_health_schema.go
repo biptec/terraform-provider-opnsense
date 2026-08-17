@@ -28,19 +28,21 @@ type carpHealthResourceModel struct {
 }
 
 type carpHealthCheckResourceModel struct {
-	Enabled             types.Bool   `tfsdk:"enabled"`
-	Name                types.String `tfsdk:"name"`
-	Interface           types.String `tfsdk:"interface"`
-	Target              types.String `tfsdk:"target"`
-	Scope               types.String `tfsdk:"scope"`
-	VHID                types.Int64  `tfsdk:"vhid"`
-	FailureAdvSkew      types.Int64  `tfsdk:"failure_advskew"`
-	VHIDTargets         types.Set    `tfsdk:"vhid_targets"`
-	FallbackIPv4Target  types.String `tfsdk:"fallback_ipv4_target"`
-	FallbackIPv4Gateway types.String `tfsdk:"fallback_ipv4_gateway"`
-	FallbackIPv6Target  types.String `tfsdk:"fallback_ipv6_target"`
-	FallbackIPv6Gateway types.String `tfsdk:"fallback_ipv6_gateway"`
-	ID                  types.String `tfsdk:"id"`
+	Enabled                    types.Bool   `tfsdk:"enabled"`
+	Name                       types.String `tfsdk:"name"`
+	Interface                  types.String `tfsdk:"interface"`
+	Target                     types.String `tfsdk:"target"`
+	Scope                      types.String `tfsdk:"scope"`
+	VHID                       types.Int64  `tfsdk:"vhid"`
+	FailureAdvSkew             types.Int64  `tfsdk:"failure_advskew"`
+	VHIDTargets                types.Set    `tfsdk:"vhid_targets"`
+	FallbackIPv4Target         types.String `tfsdk:"fallback_ipv4_target"`
+	FallbackIPv4Gateway        types.String `tfsdk:"fallback_ipv4_gateway"`
+	FallbackIPv6Target         types.String `tfsdk:"fallback_ipv6_target"`
+	FallbackIPv6Gateway        types.String `tfsdk:"fallback_ipv6_gateway"`
+	FallbackIPv4DefaultGateway types.String `tfsdk:"fallback_ipv4_default_gateway"`
+	FallbackIPv6DefaultGateway types.String `tfsdk:"fallback_ipv6_default_gateway"`
+	ID                         types.String `tfsdk:"id"`
 }
 
 func carpHealthResourceSchema() schema.Schema {
@@ -84,11 +86,13 @@ func carpHealthCheckResourceSchema() schema.Schema {
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(vhidTargetPattern, "must use logical-interface:VHID with VHID between 1 and 255"))},
 				MarkdownDescription: "Explicit `interface:VHID` targets when `scope = \"vhid_group\"`. Empty for automatic and single-VHID scopes.",
 			},
-			"fallback_ipv4_target":  schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv4Address()}, MarkdownDescription: "Optional IPv4 host route destination installed while unhealthy. Configure together with fallback_ipv4_gateway."},
-			"fallback_ipv4_gateway": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv4Address()}, MarkdownDescription: "IPv4 peer next hop for the fallback host route. Configure together with fallback_ipv4_target."},
-			"fallback_ipv6_target":  schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv6Address()}, MarkdownDescription: "Optional IPv6 host route destination installed while unhealthy. Configure together with fallback_ipv6_gateway."},
-			"fallback_ipv6_gateway": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv6Address()}, MarkdownDescription: "IPv6 peer next hop for the fallback host route. Configure together with fallback_ipv6_target."},
-			"id":                    schema.StringAttribute{Computed: true, MarkdownDescription: "UUID of the health check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
+			"fallback_ipv4_target":          schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv4Address()}, MarkdownDescription: "Optional IPv4 host route destination installed while unhealthy. Configure together with fallback_ipv4_gateway."},
+			"fallback_ipv4_gateway":         schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv4Address()}, MarkdownDescription: "IPv4 peer next hop for the fallback host route. Configure together with fallback_ipv4_target."},
+			"fallback_ipv6_target":          schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv6Address()}, MarkdownDescription: "Optional IPv6 host route destination installed while unhealthy. Configure together with fallback_ipv6_gateway."},
+			"fallback_ipv6_gateway":         schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv6Address()}, MarkdownDescription: "IPv6 peer next hop for the fallback host route. Configure together with fallback_ipv6_target."},
+			"fallback_ipv4_default_gateway": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv4Address()}, MarkdownDescription: "Optional IPv4 peer next hop for default/Internet traffic after this health check has failed and its CARP target has remained BACKUP for a full monitor cycle."},
+			"fallback_ipv6_default_gateway": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString(""), Validators: []validator.String{validators.IPv6Address()}, MarkdownDescription: "Optional IPv6 peer next hop for default/Internet traffic after this health check has failed and its CARP target has remained BACKUP for a full monitor cycle."},
+			"id":                            schema.StringAttribute{Computed: true, MarkdownDescription: "UUID of the health check.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 		},
 	}
 }
