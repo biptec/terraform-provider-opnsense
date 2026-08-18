@@ -52,6 +52,7 @@ resource "opnsense_interfaces_vip" "ipalias_example_vip" {
 - `peer_ipv4` (String) Optional CARP IPv4 peer.
 - `peer_ipv6` (String) Optional CARP IPv6 peer.
 - `vhid` (Number) CARP VHID. IP Alias entries may also set this to attach the alias to an existing CARP VHID group.
+- `virtual_mac` (String) Optional unicast virtual MAC used by this CARP VHID. Requires an OPNsense image with custom CARP VMAC support.
 
 ### Read-Only
 

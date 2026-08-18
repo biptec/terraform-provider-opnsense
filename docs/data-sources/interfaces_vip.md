@@ -34,4 +34,5 @@ Reads an OPNsense virtual IP.
 - `peer_ipv6` (String)
 - `vhid` (Number)
 - `vhid_text` (String)
+- `virtual_mac` (String)
 
