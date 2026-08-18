@@ -3,12 +3,12 @@
 page_title: "opnsense_core_hasync Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages OPNsense High Availability synchronization settings, including pfsync state replication and optional XMLRPC configuration synchronization.
+  Manages OPNsense High Availability synchronization settings, including pfsync state replication and optional XMLRPC configuration synchronization. On first apply the resource adopts the built-in OPNsense HA singleton and applies the declared settings; a manual import is not required.
 ---
 
 # opnsense_core_hasync (Resource)
 
-Manages OPNsense High Availability synchronization settings, including pfsync state replication and optional XMLRPC configuration synchronization.
+Manages OPNsense High Availability synchronization settings, including pfsync state replication and optional XMLRPC configuration synchronization. On first apply the resource adopts the built-in OPNsense HA singleton and applies the declared settings; a manual import is not required.
 
 
 

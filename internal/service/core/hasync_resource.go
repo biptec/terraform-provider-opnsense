@@ -36,8 +36,21 @@ func (r *hasyncResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 	r.client = opnsense.NewClient(c)
 }
-func (r *hasyncResource) Create(_ context.Context, _ resource.CreateRequest, resp *resource.CreateResponse) {
-	resp.Diagnostics.AddError("Cannot Create Singleton Resource", "OPNsense HA settings already exist. Import them first with: terraform import opnsense_core_hasync.<name> core_hasync")
+func (r *hasyncResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan hasyncModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	var password types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("password"), &password)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state, err := r.applySettings(ctx, &plan, password)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Adopt OPNsense HA Settings", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+	tflog.Info(ctx, "adopted existing OPNsense HA settings", map[string]any{"id": hasyncID})
 }
 func (r *hasyncResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var old hasyncModel
@@ -51,6 +64,7 @@ func (r *hasyncResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 	state := hasyncAPIToModel(&remote.Hasync)
+	preserveHasyncConfiguredEmptyStrings(state, &old)
 	state.PasswordVersion = old.PasswordVersion
 	if state.PasswordVersion.IsNull() || state.PasswordVersion.IsUnknown() {
 		state.PasswordVersion = types.Int64Value(0)
@@ -72,34 +86,93 @@ func (r *hasyncResource) Update(ctx context.Context, req resource.UpdateRequest,
 			return
 		}
 	}
-	remote, err := r.client.Core().HasyncGet(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Read OPNsense HA Settings", err.Error())
-		return
-	}
-	applyHasyncModel(&remote.Hasync, &plan, password)
-	result, err := r.client.Core().HasyncSet(ctx, &remote.Hasync)
+	state, err := r.applySettings(ctx, &plan, password)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Update OPNsense HA Settings", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+func (r *hasyncResource) applySettings(ctx context.Context, plan *hasyncModel, password types.String) (*hasyncModel, error) {
+	remote, err := r.client.Core().HasyncGet(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read existing OPNsense HA settings: %w", err)
+	}
+	current := hasyncAPIToModel(&remote.Hasync)
+	completeHasyncModel(plan, current)
+	applyHasyncModel(&remote.Hasync, plan, password)
+	result, err := r.client.Core().HasyncSet(ctx, &remote.Hasync)
+	if err != nil {
+		return nil, fmt.Errorf("save OPNsense HA settings: %w", err)
+	}
 	if result == nil || result.Result != "saved" {
-		resp.Diagnostics.AddError("Unable to Update OPNsense HA Settings", fmt.Sprintf("unexpected API result: %#v", result))
-		return
+		return nil, fmt.Errorf("unexpected API result: %#v", result)
 	}
 	if _, err := r.client.Core().HasyncReconfigure(ctx); err != nil {
-		resp.Diagnostics.AddError("Unable to Reconfigure pfsync", err.Error())
-		return
+		return nil, fmt.Errorf("reconfigure pfsync: %w", err)
 	}
 	updated, err := r.client.Core().HasyncGet(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("OPNsense HA Settings Updated but Read Failed", err.Error())
-		return
+		return nil, fmt.Errorf("read updated OPNsense HA settings: %w", err)
 	}
 	state := hasyncAPIToModel(&updated.Hasync)
+	preserveHasyncConfiguredEmptyStrings(state, plan)
 	state.PasswordVersion = plan.PasswordVersion
-	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+	if state.PasswordVersion.IsNull() || state.PasswordVersion.IsUnknown() {
+		state.PasswordVersion = types.Int64Value(0)
+	}
+	return state, nil
 }
+
+func preserveHasyncConfiguredEmptyStrings(state, configured *hasyncModel) {
+	if !configured.PfsyncPeerIP.IsNull() && !configured.PfsyncPeerIP.IsUnknown() && configured.PfsyncPeerIP.ValueString() == "" {
+		state.PfsyncPeerIP = types.StringValue("")
+	}
+	if !configured.SynchronizeToIP.IsNull() && !configured.SynchronizeToIP.IsUnknown() && configured.SynchronizeToIP.ValueString() == "" {
+		state.SynchronizeToIP = types.StringValue("")
+	}
+	if !configured.Username.IsNull() && !configured.Username.IsUnknown() && configured.Username.ValueString() == "" {
+		state.Username = types.StringValue("")
+	}
+}
+
+func completeHasyncModel(plan, current *hasyncModel) {
+	if plan.DisablePreempt.IsNull() || plan.DisablePreempt.IsUnknown() {
+		plan.DisablePreempt = current.DisablePreempt
+	}
+	if plan.DisconnectPPPs.IsNull() || plan.DisconnectPPPs.IsUnknown() {
+		plan.DisconnectPPPs = current.DisconnectPPPs
+	}
+	if plan.PfsyncInterface.IsNull() || plan.PfsyncInterface.IsUnknown() {
+		plan.PfsyncInterface = current.PfsyncInterface
+	}
+	if plan.PfsyncPeerIP.IsNull() || plan.PfsyncPeerIP.IsUnknown() {
+		plan.PfsyncPeerIP = current.PfsyncPeerIP
+	}
+	if plan.PfsyncVersion.IsNull() || plan.PfsyncVersion.IsUnknown() {
+		plan.PfsyncVersion = current.PfsyncVersion
+	}
+	if plan.PfsyncDefer.IsNull() || plan.PfsyncDefer.IsUnknown() {
+		plan.PfsyncDefer = current.PfsyncDefer
+	}
+	if plan.SynchronizeToIP.IsNull() || plan.SynchronizeToIP.IsUnknown() {
+		plan.SynchronizeToIP = current.SynchronizeToIP
+	}
+	if plan.VerifyPeer.IsNull() || plan.VerifyPeer.IsUnknown() {
+		plan.VerifyPeer = current.VerifyPeer
+	}
+	if plan.Username.IsNull() || plan.Username.IsUnknown() {
+		plan.Username = current.Username
+	}
+	if plan.SyncItems.IsNull() || plan.SyncItems.IsUnknown() {
+		plan.SyncItems = current.SyncItems
+	}
+	if plan.PasswordVersion.IsNull() || plan.PasswordVersion.IsUnknown() {
+		plan.PasswordVersion = types.Int64Value(0)
+	}
+}
+
 func (r *hasyncResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.Diagnostics.AddWarning("Singleton Resource Removed From State Only", "OPNsense HA settings remain unchanged. Re-import with ID `core_hasync` to manage them again.")
 }

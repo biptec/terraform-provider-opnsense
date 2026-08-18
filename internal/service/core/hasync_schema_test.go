@@ -57,6 +57,48 @@ func TestApplyHasyncModelPreservesUnsetPassword(t *testing.T) {
 	}
 }
 
+func TestPreserveHasyncConfiguredEmptyStrings(t *testing.T) {
+	t.Parallel()
+	state := &hasyncModel{
+		PfsyncPeerIP: types.StringNull(), SynchronizeToIP: types.StringNull(), Username: types.StringNull(),
+	}
+	configured := &hasyncModel{
+		PfsyncPeerIP: types.StringValue(""), SynchronizeToIP: types.StringValue(""), Username: types.StringValue(""),
+	}
+	preserveHasyncConfiguredEmptyStrings(state, configured)
+	for name, value := range map[string]types.String{
+		"pfsync_peer_ip": state.PfsyncPeerIP, "synchronize_to_ip": state.SynchronizeToIP, "username": state.Username,
+	} {
+		if value.IsNull() || value.IsUnknown() || value.ValueString() != "" {
+			t.Fatalf("%s did not preserve explicit empty string: %#v", name, value)
+		}
+	}
+}
+
+func TestCompleteHasyncModelPreservesExistingSingletonDefaults(t *testing.T) {
+	t.Parallel()
+	plan := &hasyncModel{
+		DisablePreempt: types.BoolUnknown(), DisconnectPPPs: types.BoolUnknown(),
+		PfsyncInterface: types.StringUnknown(), PfsyncPeerIP: types.StringUnknown(),
+		PfsyncVersion: types.StringUnknown(), PfsyncDefer: types.BoolUnknown(),
+		SynchronizeToIP: types.StringUnknown(), VerifyPeer: types.BoolUnknown(),
+		Username: types.StringUnknown(), SyncItems: types.SetUnknown(types.StringType),
+		PasswordVersion: types.Int64Unknown(),
+	}
+	current := hasyncAPIToModel(&apicore.HasyncSettings{
+		DisablePreempt: "1", DisconnectPPPs: "0", PfsyncInterface: api.SelectedMap("opt9"),
+		PfsyncPeerIP: "10.0.0.2", PfsyncVersion: api.SelectedMap("1400"), PfsyncDefer: "1",
+		SynchronizeToIP: "", VerifyPeer: "0", Username: "", SyncItems: api.SelectedMapList{},
+	})
+	completeHasyncModel(plan, current)
+	if !plan.DisablePreempt.ValueBool() || plan.PfsyncInterface.ValueString() != "opt9" || plan.PfsyncPeerIP.ValueString() != "10.0.0.2" {
+		t.Fatalf("existing singleton values were not preserved: %+v", plan)
+	}
+	if plan.PasswordVersion.ValueInt64() != 0 {
+		t.Fatalf("unexpected password version: %d", plan.PasswordVersion.ValueInt64())
+	}
+}
+
 func TestHasyncPasswordIsWriteOnly(t *testing.T) {
 	t.Parallel()
 	schema := hasyncResourceSchema()
