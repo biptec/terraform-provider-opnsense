@@ -10,12 +10,12 @@ import (
 
 func TestConvertVipCARP(t *testing.T) {
 	t.Parallel()
-	model := vipResourceModel{Mode: types.StringValue("carp"), Interface: types.StringValue("lan"), Network: types.StringValue("192.0.2.10/24"), Gateway: types.StringNull(), NoExpand: types.BoolValue(false), NoBind: types.BoolValue(false), Password: types.StringValue("secret"), VHID: types.Int64Value(10), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(20), PeerIPv4: types.StringNull(), PeerIPv6: types.StringNull(), NoSync: types.BoolValue(false), Description: types.StringValue("HA VIP")}
+	model := vipResourceModel{Mode: types.StringValue("carp"), Interface: types.StringValue("lan"), Network: types.StringValue("192.0.2.10/24"), Gateway: types.StringNull(), NoExpand: types.BoolValue(false), NoBind: types.BoolValue(false), Password: types.StringValue("secret"), VHID: types.Int64Value(10), VirtualMAC: types.StringValue("02:DE:AD:BE:EF:10"), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(20), PeerIPv4: types.StringNull(), PeerIPv6: types.StringNull(), NoSync: types.BoolValue(false), Description: types.StringValue("HA VIP")}
 	got, err := convertVipSchemaToStruct(&model, types.StringValue("secret"))
 	if err != nil {
 		t.Fatalf("convertVipSchemaToStruct() error = %v", err)
 	}
-	if got.Mode.String() != "carp" || got.VHID != "10" || got.AdvertisementSkew != "20" {
+	if got.Mode.String() != "carp" || got.VHID != "10" || got.VirtualMAC != "02:de:ad:be:ef:10" || got.AdvertisementSkew != "20" {
 		t.Fatalf("vip = %#v", got)
 	}
 }
@@ -25,6 +25,24 @@ func TestConvertVipRequiresCARPCredentials(t *testing.T) {
 	model := vipResourceModel{Mode: types.StringValue("carp"), Interface: types.StringValue("lan"), Network: types.StringValue("192.0.2.10/24"), Password: types.StringNull(), VHID: types.Int64Null(), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(0)}
 	if _, err := convertVipSchemaToStruct(&model, types.StringNull()); err == nil {
 		t.Fatal("expected CARP validation error")
+	}
+}
+
+func TestConvertVipRejectsInvalidVirtualMAC(t *testing.T) {
+	t.Parallel()
+	for _, value := range []string{"01:00:5e:00:00:01", "ff:ff:ff:ff:ff:ff", "not-a-mac"} {
+		model := vipResourceModel{Mode: types.StringValue("carp"), Interface: types.StringValue("wan"), Network: types.StringValue("192.0.2.10/24"), Password: types.StringValue("secret"), VHID: types.Int64Value(10), VirtualMAC: types.StringValue(value), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(0)}
+		if _, err := convertVipSchemaToStruct(&model, types.StringValue("secret")); err == nil {
+			t.Fatalf("expected virtual MAC validation error for %q", value)
+		}
+	}
+}
+
+func TestConvertVipRejectsVirtualMACOutsideCARP(t *testing.T) {
+	t.Parallel()
+	model := vipResourceModel{Mode: types.StringValue("ipalias"), Interface: types.StringValue("wan"), Network: types.StringValue("192.0.2.11/24"), VirtualMAC: types.StringValue("02:de:ad:be:ef:11"), VHID: types.Int64Value(10), AdvertisementBase: types.Int64Value(1), AdvertisementSkew: types.Int64Value(0)}
+	if _, err := convertVipSchemaToStruct(&model, types.StringNull()); err == nil {
+		t.Fatal("expected virtual_mac mode validation error")
 	}
 }
 
@@ -101,12 +119,12 @@ func TestConvertVipStructDoesNotReturnPassword(t *testing.T) {
 	t.Parallel()
 	model, err := convertVipStructToSchema(&apiinterfaces.Vip{
 		Mode: api.SelectedMap("carp"), Interface: api.SelectedMap("wan"), Network: "192.0.2.10/24",
-		Password: "remote-secret", VHID: "10", AdvertisementBase: "1", AdvertisementSkew: "0",
+		Password: "remote-secret", VHID: "10", VirtualMAC: "02:de:ad:be:ef:10", AdvertisementBase: "1", AdvertisementSkew: "0",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !model.Password.IsNull() || !model.PasswordConfigured.ValueBool() {
+	if !model.Password.IsNull() || !model.PasswordConfigured.ValueBool() || model.VirtualMAC.ValueString() != "02:de:ad:be:ef:10" {
 		t.Fatalf("password leaked into model or configured flag missing: %+v", model)
 	}
 }
