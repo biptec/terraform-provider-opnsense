@@ -20,6 +20,7 @@
 
 ### Fixed
 
+- Core HA synchronization now adopts the built-in OPNsense singleton on first apply, so fresh router deployments no longer require a manual `terraform import`.
 - Interface assignment creation now waits for newly registered devices to appear in OPNsense assignment options, preventing fresh loopback deployments from requiring a second apply.
 
 ## v0.25.0 - 2026-07-28

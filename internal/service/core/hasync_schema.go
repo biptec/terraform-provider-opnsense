@@ -52,7 +52,7 @@ type hasyncDataSourceModel struct {
 func hasyncResourceSchema() schema.Schema {
 	return schema.Schema{
 		Version:             1,
-		MarkdownDescription: "Manages OPNsense High Availability synchronization settings, including pfsync state replication and optional XMLRPC configuration synchronization.",
+		MarkdownDescription: "Manages OPNsense High Availability synchronization settings, including pfsync state replication and optional XMLRPC configuration synchronization. On first apply the resource adopts the built-in OPNsense HA singleton and applies the declared settings; a manual import is not required.",
 		Attributes: map[string]schema.Attribute{
 			"disable_preempt":     schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "When enabled, a recovering preferred CARP node does not preempt an already active master."},
 			"disconnect_ppps":     schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "When enabled, PPP-type interfaces are disconnected while this node is a CARP backup."},

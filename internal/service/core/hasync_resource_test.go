@@ -60,11 +60,6 @@ func testAccCoreHasyncConfig(disablePreempt bool, password string, passwordVersi
 		value = "true"
 	}
 	return `
-import {
-  to = opnsense_core_hasync.test
-  id = "core_hasync"
-}
-
 resource "opnsense_core_hasync" "test" {
   disable_preempt  = ` + value + `
   pfsync_version   = "1400"
