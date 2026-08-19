@@ -5,6 +5,7 @@ import (
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	quaggaapi "github.com/biptec/opnsense-go/pkg/quagga"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -89,5 +90,52 @@ func TestOSPF6InterfacePreservesOptionalNulls(t *testing.T) {
 	}
 	if !state.BFD.IsNull() {
 		t.Fatalf("empty bfd must remain null: %v", state.BFD)
+	}
+}
+
+func TestOSPFPolicyConversions(t *testing.T) {
+	prefix := ospfPrefixListToAPI(&ospfPrefixListModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("nc-connected-v4"),
+		SequenceNumber: types.Int64Value(10), Action: types.StringValue("deny"),
+		Network: types.StringValue("10.200.0.0/24"),
+	})
+	if prefix.Name != "nc-connected-v4" || prefix.SequenceNumber != "10" || prefix.Action.String() != "deny" || prefix.Network != "10.200.0.0/24" {
+		t.Fatalf("unexpected OSPF prefix list: %#v", prefix)
+	}
+
+	routeMap := ospfRouteMapToAPI(&ospfRouteMapModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("nc-connected-v4"),
+		Action: types.StringValue("deny"), RouteMapID: types.Int64Value(10),
+		PrefixLists: types.SetValueMust(types.StringType, []attr.Value{types.StringValue("prefix-id")}),
+		Set:         types.StringValue(""),
+	})
+	if routeMap.Name != "nc-connected-v4" || routeMap.RouteMapID != "10" || len(routeMap.PrefixList) != 1 || routeMap.PrefixList[0] != "prefix-id" {
+		t.Fatalf("unexpected OSPF route map: %#v", routeMap)
+	}
+
+	redistribution := ospfRedistributionToAPI(&ospfRedistributionModel{
+		Enabled: types.BoolValue(true), Description: types.StringValue("redistribute endpoint connected routes"),
+		Redistribute: types.StringValue("connected"), RouteMap: types.StringValue("route-map-id"),
+	})
+	if redistribution.Redistribute.String() != "connected" || redistribution.RouteMap.String() != "route-map-id" {
+		t.Fatalf("unexpected OSPF redistribution: %#v", redistribution)
+	}
+}
+
+func TestOSPF6PolicyConversions(t *testing.T) {
+	prefix := ospf6PrefixListToAPI(&ospf6PrefixListModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("nc-connected-v6"),
+		SequenceNumber: types.Int64Value(10), Action: types.StringValue("deny"),
+		Network: types.StringValue("fd00:200::/64"),
+	})
+	if prefix.Name != "nc-connected-v6" || prefix.SequenceNumber != "10" || prefix.Action.String() != "deny" {
+		t.Fatalf("unexpected OSPFv3 prefix list: %#v", prefix)
+	}
+
+	state := ospf6RedistributionFromAPI(&quaggaapi.OSPF6Redistribution{
+		Enabled: "1", Description: "connected", Redistribute: api.SelectedMap("connected"), RouteMap: api.SelectedMap("route-map-id"),
+	}, "11111111-2222-4333-8444-555555555555")
+	if !state.Enabled.ValueBool() || state.Redistribute.ValueString() != "connected" || state.RouteMap.ValueString() != "route-map-id" {
+		t.Fatalf("unexpected OSPFv3 redistribution state: %#v", state)
 	}
 }
