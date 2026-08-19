@@ -3,12 +3,12 @@
 page_title: "opnsense_haproxy_settings Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages global OPNsense HAProxy settings. This singleton must be imported before use.
+  Manages global OPNsense HAProxy settings. The built-in singleton is adopted automatically on first apply; explicit import remains supported.
 ---
 
 # opnsense_haproxy_settings (Resource)
 
-Manages global OPNsense HAProxy settings. This singleton must be imported before use.
+Manages global OPNsense HAProxy settings. The built-in singleton is adopted automatically on first apply; explicit import remains supported.
 
 
 
