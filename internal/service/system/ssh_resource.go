@@ -42,8 +42,13 @@ func (r *sshResource) Create(ctx context.Context, req resource.CreateRequest, re
 		resp.Diagnostics.AddError("Unable to Configure SSH", err.Error())
 		return
 	}
-	data.ID = types.StringValue("system_ssh")
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	result, err := r.client.ApiExtensions().SshGet(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read SSH Settings After Apply", err.Error())
+		return
+	}
+	state := sshFromAPI(&result.SSH, data.AllowReaddress.ValueBool())
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *sshResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -71,8 +76,13 @@ func (r *sshResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		resp.Diagnostics.AddError("Unable to Configure SSH", err.Error())
 		return
 	}
-	data.ID = types.StringValue("system_ssh")
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	result, err := r.client.ApiExtensions().SshGet(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read SSH Settings After Apply", err.Error())
+		return
+	}
+	state := sshFromAPI(&result.SSH, data.AllowReaddress.ValueBool())
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *sshResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -92,10 +102,6 @@ func (r *sshResource) ImportState(ctx context.Context, req resource.ImportStateR
 }
 
 func (r *sshResource) apply(ctx context.Context, data *sshResourceModel) error {
-	desired, err := sshToAPI(ctx, data)
-	if err != nil {
-		return err
-	}
 	currentResponse, err := r.client.ApiExtensions().SshGet(ctx)
 	if err != nil {
 		return err
@@ -104,6 +110,10 @@ func (r *sshResource) apply(ctx context.Context, data *sshResourceModel) error {
 		return fmt.Errorf("SSH get API returned an empty response")
 	}
 	current := &currentResponse.SSH
+	desired, err := sshToAPI(ctx, data, current)
+	if err != nil {
+		return err
+	}
 	if sshEqual(current, desired) {
 		return nil
 	}
@@ -129,18 +139,26 @@ func (r *sshResource) apply(ctx context.Context, data *sshResourceModel) error {
 	return nil
 }
 
-func sshToAPI(ctx context.Context, data *sshResourceModel) (*apiextensions.SshSettings, error) {
+func sshToAPI(ctx context.Context, data *sshResourceModel, current *apiextensions.SshSettings) (*apiextensions.SshSettings, error) {
 	interfaces, err := stringSet(ctx, data.Interfaces)
 	if err != nil {
 		return nil, err
 	}
-	return &apiextensions.SshSettings{
-		Enabled:                data.Enabled.ValueBool(),
-		Port:                   int(data.Port.ValueInt64()),
-		Interfaces:             interfaces,
-		PasswordAuthentication: data.PasswordAuthentication.ValueBool(),
-		PermitRootLogin:        data.PermitRootLogin.ValueBool(),
-	}, nil
+	result := *current
+	result.Interfaces = interfaces
+	if !data.Enabled.IsNull() && !data.Enabled.IsUnknown() {
+		result.Enabled = data.Enabled.ValueBool()
+	}
+	if !data.Port.IsNull() && !data.Port.IsUnknown() {
+		result.Port = int(data.Port.ValueInt64())
+	}
+	if !data.PasswordAuthentication.IsNull() && !data.PasswordAuthentication.IsUnknown() {
+		result.PasswordAuthentication = data.PasswordAuthentication.ValueBool()
+	}
+	if !data.PermitRootLogin.IsNull() && !data.PermitRootLogin.IsUnknown() {
+		result.PermitRootLogin = data.PermitRootLogin.ValueBool()
+	}
+	return &result, nil
 }
 
 func sshFromAPI(data *apiextensions.SshSettings, allowReaddress bool) *sshResourceModel {

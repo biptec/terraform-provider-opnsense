@@ -4,13 +4,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -36,20 +32,18 @@ func webguiResourceSchema() schema.Schema {
 			"protocol": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
-				Default:  stringdefault.StaticString("https"),
 				Validators: []validator.String{
 					stringvalidator.OneOf("http", "https"),
 				},
-				MarkdownDescription: "Web GUI protocol. Defaults to `https`.",
+				MarkdownDescription: "Web GUI protocol. When omitted, the current protocol is preserved.",
 			},
 			"port": schema.Int64Attribute{
 				Optional: true,
 				Computed: true,
-				Default:  int64default.StaticInt64(443),
 				Validators: []validator.Int64{
 					int64validator.Between(1, 65535),
 				},
-				MarkdownDescription: "Web GUI TCP port. Defaults to `443`.",
+				MarkdownDescription: "Web GUI TCP port. When omitted, the current port is preserved.",
 			},
 			"interfaces": schema.SetAttribute{
 				Required:            true,
@@ -60,34 +54,31 @@ func webguiResourceSchema() schema.Schema {
 			"certificate_ref": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString(""),
-				MarkdownDescription: "OPNsense certificate reference used by HTTPS. Required by the API when protocol is `https`.",
+				MarkdownDescription: "OPNsense certificate reference used by HTTPS. When omitted, the current certificate is preserved.",
 			},
 			"session_timeout_minutes": schema.Int64Attribute{
 				Optional: true,
+				Computed: true,
 				Validators: []validator.Int64{
 					int64validator.Between(1, 86400),
 				},
-				MarkdownDescription: "Session timeout in minutes. Leave unset to retain the OPNsense default behavior.",
+				MarkdownDescription: "Session timeout in minutes. When omitted, the current setting is preserved.",
 			},
 			"hsts": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(true),
-				MarkdownDescription: "Enable HTTP Strict Transport Security. Defaults to `true`.",
+				MarkdownDescription: "Enable HTTP Strict Transport Security. When omitted, the current setting is preserved.",
 			},
 			"disable_http_redirect": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "Disable automatic HTTP-to-HTTPS redirection. Defaults to `false`.",
+				MarkdownDescription: "Disable automatic HTTP-to-HTTPS redirection. When omitted, the current setting is preserved.",
 			},
 			"alternate_hostnames": schema.SetAttribute{
 				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
-				Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-				MarkdownDescription: "Additional valid Web GUI hostnames. Defaults to an empty set.",
+				MarkdownDescription: "Additional valid Web GUI hostnames. When omitted, the current set is preserved.",
 			},
 			"allow_readdress": schema.BoolAttribute{
 				Optional: true,

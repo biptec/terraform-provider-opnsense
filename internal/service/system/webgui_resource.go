@@ -42,8 +42,13 @@ func (r *webguiResource) Create(ctx context.Context, req resource.CreateRequest,
 		resp.Diagnostics.AddError("Unable to Configure Web GUI", err.Error())
 		return
 	}
-	data.ID = types.StringValue("system_webgui")
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	result, err := r.client.ApiExtensions().WebguiGet(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Web GUI Settings After Apply", err.Error())
+		return
+	}
+	state := webguiFromAPI(&result.Webgui, data.AllowReaddress.ValueBool())
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *webguiResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -71,8 +76,13 @@ func (r *webguiResource) Update(ctx context.Context, req resource.UpdateRequest,
 		resp.Diagnostics.AddError("Unable to Configure Web GUI", err.Error())
 		return
 	}
-	data.ID = types.StringValue("system_webgui")
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	result, err := r.client.ApiExtensions().WebguiGet(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Web GUI Settings After Apply", err.Error())
+		return
+	}
+	state := webguiFromAPI(&result.Webgui, data.AllowReaddress.ValueBool())
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *webguiResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -92,10 +102,6 @@ func (r *webguiResource) ImportState(ctx context.Context, req resource.ImportSta
 }
 
 func (r *webguiResource) apply(ctx context.Context, data *webguiResourceModel) error {
-	desired, err := webguiToAPI(ctx, data)
-	if err != nil {
-		return err
-	}
 	currentResponse, err := r.client.ApiExtensions().WebguiGet(ctx)
 	if err != nil {
 		return err
@@ -104,6 +110,10 @@ func (r *webguiResource) apply(ctx context.Context, data *webguiResourceModel) e
 		return fmt.Errorf("web GUI get API returned an empty response")
 	}
 	current := &currentResponse.Webgui
+	desired, err := webguiToAPI(ctx, data, current)
+	if err != nil {
+		return err
+	}
 	if webguiEqual(current, desired) {
 		return nil
 	}
@@ -129,30 +139,41 @@ func (r *webguiResource) apply(ctx context.Context, data *webguiResourceModel) e
 	return nil
 }
 
-func webguiToAPI(ctx context.Context, data *webguiResourceModel) (*apiextensions.WebguiSettings, error) {
+func webguiToAPI(ctx context.Context, data *webguiResourceModel, current *apiextensions.WebguiSettings) (*apiextensions.WebguiSettings, error) {
 	interfaces, err := stringSet(ctx, data.Interfaces)
 	if err != nil {
 		return nil, err
 	}
-	alternateHostnames, err := stringSet(ctx, data.AlternateHostnames)
-	if err != nil {
-		return nil, err
+	result := *current
+	result.Interfaces = interfaces
+	result.AlternateHostnames = append([]string{}, current.AlternateHostnames...)
+	if !data.Protocol.IsNull() && !data.Protocol.IsUnknown() {
+		result.Protocol = data.Protocol.ValueString()
 	}
-	var timeout *int
+	if !data.Port.IsNull() && !data.Port.IsUnknown() {
+		result.Port = int(data.Port.ValueInt64())
+	}
+	if !data.CertificateRef.IsNull() && !data.CertificateRef.IsUnknown() {
+		result.CertificateRef = data.CertificateRef.ValueString()
+	}
 	if !data.SessionTimeoutMinutes.IsNull() && !data.SessionTimeoutMinutes.IsUnknown() {
 		value := int(data.SessionTimeoutMinutes.ValueInt64())
-		timeout = &value
+		result.SessionTimeout = &value
 	}
-	return &apiextensions.WebguiSettings{
-		Protocol:            data.Protocol.ValueString(),
-		Port:                int(data.Port.ValueInt64()),
-		Interfaces:          interfaces,
-		CertificateRef:      data.CertificateRef.ValueString(),
-		SessionTimeout:      timeout,
-		HSTS:                data.HSTS.ValueBool(),
-		DisableHTTPRedirect: data.DisableHTTPRedirect.ValueBool(),
-		AlternateHostnames:  alternateHostnames,
-	}, nil
+	if !data.HSTS.IsNull() && !data.HSTS.IsUnknown() {
+		result.HSTS = data.HSTS.ValueBool()
+	}
+	if !data.DisableHTTPRedirect.IsNull() && !data.DisableHTTPRedirect.IsUnknown() {
+		result.DisableHTTPRedirect = data.DisableHTTPRedirect.ValueBool()
+	}
+	if !data.AlternateHostnames.IsNull() && !data.AlternateHostnames.IsUnknown() {
+		values, err := stringSet(ctx, data.AlternateHostnames)
+		if err != nil {
+			return nil, err
+		}
+		result.AlternateHostnames = values
+	}
+	return &result, nil
 }
 
 func webguiFromAPI(data *apiextensions.WebguiSettings, allowReaddress bool) *webguiResourceModel {

@@ -41,13 +41,13 @@ resource "opnsense_system_webgui" "main" {
 ### Optional
 
 - `allow_readdress` (Boolean) Explicitly allow listener interface, protocol, port, or certificate changes that can disconnect the provider. Keep disabled unless the target management path and provider URI are known to remain reachable.
-- `alternate_hostnames` (Set of String) Additional valid Web GUI hostnames. Defaults to an empty set.
-- `certificate_ref` (String) OPNsense certificate reference used by HTTPS. Required by the API when protocol is `https`.
-- `disable_http_redirect` (Boolean) Disable automatic HTTP-to-HTTPS redirection. Defaults to `false`.
-- `hsts` (Boolean) Enable HTTP Strict Transport Security. Defaults to `true`.
-- `port` (Number) Web GUI TCP port. Defaults to `443`.
-- `protocol` (String) Web GUI protocol. Defaults to `https`.
-- `session_timeout_minutes` (Number) Session timeout in minutes. Leave unset to retain the OPNsense default behavior.
+- `alternate_hostnames` (Set of String) Additional valid Web GUI hostnames. When omitted, the current set is preserved.
+- `certificate_ref` (String) OPNsense certificate reference used by HTTPS. When omitted, the current certificate is preserved.
+- `disable_http_redirect` (Boolean) Disable automatic HTTP-to-HTTPS redirection. When omitted, the current setting is preserved.
+- `hsts` (Boolean) Enable HTTP Strict Transport Security. When omitted, the current setting is preserved.
+- `port` (Number) Web GUI TCP port. When omitted, the current port is preserved.
+- `protocol` (String) Web GUI protocol. When omitted, the current protocol is preserved.
+- `session_timeout_minutes` (Number) Session timeout in minutes. When omitted, the current setting is preserved.
 
 ### Read-Only
 

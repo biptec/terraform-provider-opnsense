@@ -94,7 +94,7 @@ func TestWebguiRoundTripAndSafety(t *testing.T) {
 		AlternateHostnames:    stringSetValue([]string{"router.internal"}),
 		AllowReaddress:        types.BoolValue(true),
 	}
-	remote, err := webguiToAPI(context.Background(), model)
+	remote, err := webguiToAPI(context.Background(), model, &apiextensions.WebguiSettings{Protocol: "http", Port: 80, CertificateRef: "old-cert"})
 	if err != nil {
 		t.Fatalf("webguiToAPI() error = %v", err)
 	}
@@ -115,6 +115,18 @@ func TestWebguiRoundTripAndSafety(t *testing.T) {
 	}
 }
 
+func TestWebguiOmittedSettingsPreserveCurrent(t *testing.T) {
+	current := &apiextensions.WebguiSettings{Protocol: "https", Port: 8443, Interfaces: []string{"opt1"}, CertificateRef: "cert-current", HSTS: false, DisableHTTPRedirect: true, AlternateHostnames: []string{"router.example"}}
+	model := &webguiResourceModel{Interfaces: stringSetValue([]string{"lan"}), Protocol: types.StringNull(), Port: types.Int64Null(), CertificateRef: types.StringNull(), SessionTimeoutMinutes: types.Int64Null(), HSTS: types.BoolNull(), DisableHTTPRedirect: types.BoolNull(), AlternateHostnames: types.SetNull(types.StringType)}
+	desired, err := webguiToAPI(context.Background(), model, current)
+	if err != nil {
+		t.Fatalf("webguiToAPI() error = %v", err)
+	}
+	if desired.Protocol != current.Protocol || desired.Port != current.Port || desired.CertificateRef != current.CertificateRef || desired.HSTS != current.HSTS || desired.DisableHTTPRedirect != current.DisableHTTPRedirect || !sameStrings(desired.AlternateHostnames, current.AlternateHostnames) || !sameStrings(desired.Interfaces, []string{"lan"}) {
+		t.Fatalf("omitted Web GUI settings were not preserved: %#v", desired)
+	}
+}
+
 func TestSshRoundTripAndSafety(t *testing.T) {
 	model := &sshResourceModel{
 		Enabled:                types.BoolValue(true),
@@ -124,7 +136,7 @@ func TestSshRoundTripAndSafety(t *testing.T) {
 		PermitRootLogin:        types.BoolValue(false),
 		AllowReaddress:         types.BoolValue(true),
 	}
-	remote, err := sshToAPI(context.Background(), model)
+	remote, err := sshToAPI(context.Background(), model, &apiextensions.SshSettings{Enabled: false, Port: 2222, PasswordAuthentication: true, PermitRootLogin: true})
 	if err != nil {
 		t.Fatalf("sshToAPI() error = %v", err)
 	}
@@ -136,6 +148,18 @@ func TestSshRoundTripAndSafety(t *testing.T) {
 	changed.Port = 2222
 	if !sshDisruptiveChange(remote, &changed) {
 		t.Fatal("SSH port change was not classified as disruptive")
+	}
+}
+
+func TestSshOmittedSettingsPreserveCurrent(t *testing.T) {
+	current := &apiextensions.SshSettings{Enabled: true, Port: 2222, Interfaces: []string{"opt1"}, PasswordAuthentication: true, PermitRootLogin: true}
+	model := &sshResourceModel{Interfaces: stringSetValue([]string{"lan"}), Enabled: types.BoolNull(), Port: types.Int64Null(), PasswordAuthentication: types.BoolNull(), PermitRootLogin: types.BoolNull()}
+	desired, err := sshToAPI(context.Background(), model, current)
+	if err != nil {
+		t.Fatalf("sshToAPI() error = %v", err)
+	}
+	if desired.Enabled != current.Enabled || desired.Port != current.Port || desired.PasswordAuthentication != current.PasswordAuthentication || desired.PermitRootLogin != current.PermitRootLogin || !sameStrings(desired.Interfaces, []string{"lan"}) {
+		t.Fatalf("omitted SSH settings were not preserved: %#v", desired)
 	}
 }
 
