@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -29,17 +28,15 @@ func sshResourceSchema() schema.Schema {
 			"enabled": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(true),
-				MarkdownDescription: "Enable the OPNsense SSH service. Defaults to `true`.",
+				MarkdownDescription: "Enable the OPNsense SSH service. When omitted, the current setting is preserved.",
 			},
 			"port": schema.Int64Attribute{
 				Optional: true,
 				Computed: true,
-				Default:  int64default.StaticInt64(22),
 				Validators: []validator.Int64{
 					int64validator.Between(1, 65535),
 				},
-				MarkdownDescription: "SSH TCP port. Defaults to `22`.",
+				MarkdownDescription: "SSH TCP port. When omitted, the current port is preserved.",
 			},
 			"interfaces": schema.SetAttribute{
 				Required:            true,
@@ -50,14 +47,12 @@ func sshResourceSchema() schema.Schema {
 			"password_authentication": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "Allow SSH password authentication. Defaults to `false`.",
+				MarkdownDescription: "Allow SSH password authentication. When omitted, the current setting is preserved.",
 			},
 			"permit_root_login": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "Permit direct root login over SSH. Defaults to `false`.",
+				MarkdownDescription: "Permit direct root login over SSH. When omitted, the current setting is preserved.",
 			},
 			"allow_readdress": schema.BoolAttribute{
 				Optional: true,

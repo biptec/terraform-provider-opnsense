@@ -40,10 +40,10 @@ resource "opnsense_system_ssh" "main" {
 ### Optional
 
 - `allow_readdress` (Boolean) Explicitly allow changes to SSH enablement, port, or listener interfaces. Keep disabled unless an alternate management path or console is available.
-- `enabled` (Boolean) Enable the OPNsense SSH service. Defaults to `true`.
-- `password_authentication` (Boolean) Allow SSH password authentication. Defaults to `false`.
-- `permit_root_login` (Boolean) Permit direct root login over SSH. Defaults to `false`.
-- `port` (Number) SSH TCP port. Defaults to `22`.
+- `enabled` (Boolean) Enable the OPNsense SSH service. When omitted, the current setting is preserved.
+- `password_authentication` (Boolean) Allow SSH password authentication. When omitted, the current setting is preserved.
+- `permit_root_login` (Boolean) Permit direct root login over SSH. When omitted, the current setting is preserved.
+- `port` (Number) SSH TCP port. When omitted, the current port is preserved.
 
 ### Read-Only
 
