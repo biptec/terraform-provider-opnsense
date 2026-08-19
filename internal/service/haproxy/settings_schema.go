@@ -22,7 +22,7 @@ type settingsModel struct {
 }
 
 func settingsResourceSchema() schema.Schema {
-	return schema.Schema{Version: 1, MarkdownDescription: "Manages global OPNsense HAProxy settings. This singleton must be imported before use.", Attributes: map[string]schema.Attribute{
+	return schema.Schema{Version: 1, MarkdownDescription: "Manages global OPNsense HAProxy settings. The built-in singleton is adopted automatically on first apply; explicit import remains supported.", Attributes: map[string]schema.Attribute{
 		"enabled": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether the HAProxy service is enabled."}, "graceful_stop": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether HAProxy uses graceful stop behavior."},
 		"hard_stop_after": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Maximum graceful shutdown duration, such as `60s`."}, "close_spread_time": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Optional connection close spread time."},
 		"seamless_reload": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether seamless reload is enabled."},

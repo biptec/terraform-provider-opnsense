@@ -49,6 +49,23 @@ data "opnsense_haproxy_configtest" "test" {}
 	})
 }
 
+func TestAccHAProxySettingsResourceAdoptsSingleton(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { haproxyPreCheck(t) }, ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: `
+resource "opnsense_haproxy_settings" "test" {}
+`, Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("opnsense_haproxy_settings.test", "id", "haproxy_settings"),
+				resource.TestCheckResourceAttrSet("opnsense_haproxy_settings.test", "enabled"),
+				resource.TestCheckResourceAttrSet("opnsense_haproxy_settings.test", "graceful_stop"),
+				resource.TestCheckResourceAttrSet("opnsense_haproxy_settings.test", "seamless_reload"),
+			)},
+			{ResourceName: "opnsense_haproxy_settings.test", ImportState: true, ImportStateVerify: true},
+		},
+	})
+}
+
 func TestAccHAProxyL4SNIResources(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() { haproxyPreCheck(t) }, ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
