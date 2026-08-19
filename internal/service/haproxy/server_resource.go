@@ -2,6 +2,7 @@ package haproxy
 
 import (
 	"context"
+	"fmt"
 
 	apihaproxy "github.com/biptec/opnsense-go/pkg/haproxy"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -22,8 +23,31 @@ func (r *serverResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *serverResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = serverResourceSchema()
 }
+func (r *serverResource) validateUniqueName(ctx context.Context, ownID string, data *apihaproxy.Server) error {
+	result, err := r.client.Haproxy().SearchServer(ctx)
+	if err != nil {
+		return fmt.Errorf("check existing HAProxy servers: %w", err)
+	}
+	items := make([]namedRemoteItem, 0, len(result.Rows))
+	for _, item := range result.Rows {
+		items = append(items, namedRemoteItem{ID: item.UUID, Name: item.Name})
+	}
+	return validateUniqueRemoteName("HAProxy server", data.Name, ownID, items)
+}
+
 func (r *serverResource) ops() crudOperations[serverModel, apihaproxy.Server] {
-	return crudOperations[serverModel, apihaproxy.Server]{Name: "HAProxy Server", Convert: serverModelToAPI, Expand: serverAPIToModel, Add: r.client.Haproxy().AddServer, Get: r.client.Haproxy().GetServer, Update: r.client.Haproxy().UpdateServer, Delete: r.client.Haproxy().DeleteServer, GetID: func(d *serverModel) string { return d.ID.ValueString() }, SetID: func(d *serverModel, id string) { d.ID = types.StringValue(id) }}
+	return crudOperations[serverModel, apihaproxy.Server]{
+		Name: "HAProxy Server", Convert: serverModelToAPI, Expand: serverAPIToModel,
+		Add: r.client.Haproxy().AddServer, Get: r.client.Haproxy().GetServer, Update: r.client.Haproxy().UpdateServer, Delete: r.client.Haproxy().DeleteServer,
+		GetID: func(d *serverModel) string { return d.ID.ValueString() }, SetID: func(d *serverModel, id string) { d.ID = types.StringValue(id) },
+		ValidateCreate: func(ctx context.Context, data *apihaproxy.Server) error { return r.validateUniqueName(ctx, "", data) },
+		ValidateCreated: func(ctx context.Context, id string, data *apihaproxy.Server) error {
+			return r.validateUniqueName(ctx, id, data)
+		},
+		ValidateUpdate: func(ctx context.Context, id string, data *apihaproxy.Server) error {
+			return r.validateUniqueName(ctx, id, data)
+		},
+	}
 }
 func (r *serverResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	createResource(ctx, req, resp, r.ops())

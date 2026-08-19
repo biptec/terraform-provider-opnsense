@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
@@ -101,6 +102,76 @@ func TestAccHAProxyL4SNIResources(t *testing.T) {
 			)},
 		},
 	})
+}
+
+func TestAccHAProxyServerRejectsDuplicateName(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { haproxyPreCheck(t) }, ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: testAccHAProxyUniqueServerConfig(false)},
+			{Config: testAccHAProxyUniqueServerConfig(true), ExpectError: regexp.MustCompile(`HAProxy server name "tfacc-unique-server" is already used`)},
+		},
+	})
+}
+
+func TestAccHAProxyBackendRejectsDuplicateName(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { haproxyPreCheck(t) }, ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: testAccHAProxyUniqueBackendConfig(false)},
+			{Config: testAccHAProxyUniqueBackendConfig(true), ExpectError: regexp.MustCompile(`HAProxy backend name "tfacc-unique-backend" is already used`)},
+		},
+	})
+}
+
+func testAccHAProxyUniqueServerConfig(withDuplicate bool) string {
+	duplicate := ""
+	if withDuplicate {
+		duplicate = `
+resource "opnsense_haproxy_server" "duplicate" {
+  name    = "tfacc-unique-server"
+  address = "127.0.0.2"
+  port    = 9443
+}`
+	}
+	return `
+resource "opnsense_haproxy_server" "original" {
+  name    = "tfacc-unique-server"
+  address = "127.0.0.1"
+  port    = 9443
+}
+` + duplicate
+}
+
+func testAccHAProxyUniqueBackendConfig(withDuplicate bool) string {
+	duplicate := ""
+	if withDuplicate {
+		duplicate = `
+resource "opnsense_haproxy_server" "duplicate" {
+  name    = "tfacc-unique-backend-server-2"
+  address = "127.0.0.2"
+  port    = 9443
+}
+resource "opnsense_haproxy_backend" "duplicate" {
+  name                 = "tfacc-unique-backend"
+  mode                 = "tcp"
+  linked_servers       = [opnsense_haproxy_server.duplicate.id]
+  health_check_enabled = false
+}`
+	}
+	return `
+resource "opnsense_haproxy_server" "original" {
+  name    = "tfacc-unique-backend-server-1"
+  address = "127.0.0.1"
+  port    = 9443
+}
+resource "opnsense_haproxy_backend" "original" {
+  name                 = "tfacc-unique-backend"
+  mode                 = "tcp"
+  linked_servers       = [opnsense_haproxy_server.original.id]
+  health_check_enabled = false
+}
+` + duplicate
 }
 
 func testAccHAProxyL4SNIConfig(description string, listenPort int) string {
