@@ -2,6 +2,7 @@ package haproxy
 
 import (
 	"context"
+	"fmt"
 
 	apihaproxy "github.com/biptec/opnsense-go/pkg/haproxy"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -22,8 +23,31 @@ func (r *backendResource) Metadata(_ context.Context, req resource.MetadataReque
 func (r *backendResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = backendResourceSchema()
 }
+func (r *backendResource) validateUniqueName(ctx context.Context, ownID string, data *apihaproxy.Backend) error {
+	result, err := r.client.Haproxy().SearchBackend(ctx)
+	if err != nil {
+		return fmt.Errorf("check existing HAProxy backends: %w", err)
+	}
+	items := make([]namedRemoteItem, 0, len(result.Rows))
+	for _, item := range result.Rows {
+		items = append(items, namedRemoteItem{ID: item.UUID, Name: item.Name})
+	}
+	return validateUniqueRemoteName("HAProxy backend", data.Name, ownID, items)
+}
+
 func (r *backendResource) ops() crudOperations[backendModel, apihaproxy.Backend] {
-	return crudOperations[backendModel, apihaproxy.Backend]{Name: "HAProxy Backend", Convert: backendModelToAPI, Expand: backendAPIToModel, Add: r.client.Haproxy().AddBackend, Get: r.client.Haproxy().GetBackend, Update: r.client.Haproxy().UpdateBackend, Delete: r.client.Haproxy().DeleteBackend, GetID: func(d *backendModel) string { return d.ID.ValueString() }, SetID: func(d *backendModel, id string) { d.ID = types.StringValue(id) }}
+	return crudOperations[backendModel, apihaproxy.Backend]{
+		Name: "HAProxy Backend", Convert: backendModelToAPI, Expand: backendAPIToModel,
+		Add: r.client.Haproxy().AddBackend, Get: r.client.Haproxy().GetBackend, Update: r.client.Haproxy().UpdateBackend, Delete: r.client.Haproxy().DeleteBackend,
+		GetID: func(d *backendModel) string { return d.ID.ValueString() }, SetID: func(d *backendModel, id string) { d.ID = types.StringValue(id) },
+		ValidateCreate: func(ctx context.Context, data *apihaproxy.Backend) error { return r.validateUniqueName(ctx, "", data) },
+		ValidateCreated: func(ctx context.Context, id string, data *apihaproxy.Backend) error {
+			return r.validateUniqueName(ctx, id, data)
+		},
+		ValidateUpdate: func(ctx context.Context, id string, data *apihaproxy.Backend) error {
+			return r.validateUniqueName(ctx, id, data)
+		},
+	}
 }
 func (r *backendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	createResource(ctx, req, resp, r.ops())

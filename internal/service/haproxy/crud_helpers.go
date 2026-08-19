@@ -42,15 +42,18 @@ func (c *dataSourceClient) Configure(_ context.Context, req datasource.Configure
 }
 
 type crudOperations[Model any, APIModel any] struct {
-	Name    string
-	Convert func(*Model) (*APIModel, error)
-	Expand  func(*APIModel) (*Model, error)
-	Add     func(context.Context, *APIModel) (string, error)
-	Get     func(context.Context, string) (*APIModel, error)
-	Update  func(context.Context, string, *APIModel) error
-	Delete  func(context.Context, string) error
-	GetID   func(*Model) string
-	SetID   func(*Model, string)
+	Name            string
+	Convert         func(*Model) (*APIModel, error)
+	Expand          func(*APIModel) (*Model, error)
+	Add             func(context.Context, *APIModel) (string, error)
+	Get             func(context.Context, string) (*APIModel, error)
+	Update          func(context.Context, string, *APIModel) error
+	Delete          func(context.Context, string) error
+	GetID           func(*Model) string
+	SetID           func(*Model, string)
+	ValidateCreate  func(context.Context, *APIModel) error
+	ValidateCreated func(context.Context, string, *APIModel) error
+	ValidateUpdate  func(context.Context, string, *APIModel) error
 }
 
 func createResource[Model any, APIModel any](ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, ops crudOperations[Model, APIModel]) {
@@ -64,6 +67,12 @@ func createResource[Model any, APIModel any](ctx context.Context, req resource.C
 		resp.Diagnostics.AddError("Invalid "+ops.Name, err.Error())
 		return
 	}
+	if ops.ValidateCreate != nil {
+		if err := ops.ValidateCreate(ctx, apiModel); err != nil {
+			resp.Diagnostics.AddError("Unable to Create "+ops.Name, err.Error())
+			return
+		}
+	}
 	id, err := ops.Add(ctx, apiModel)
 	if err != nil {
 		if id != "" {
@@ -72,6 +81,18 @@ func createResource[Model any, APIModel any](ctx context.Context, req resource.C
 		}
 		resp.Diagnostics.AddError("Unable to Create "+ops.Name, err.Error())
 		return
+	}
+	if ops.ValidateCreated != nil {
+		if err := ops.ValidateCreated(ctx, id, apiModel); err != nil {
+			if cleanupErr := ops.Delete(ctx, id); cleanupErr != nil {
+				ops.SetID(&data, id)
+				resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+				resp.Diagnostics.AddError(ops.Name+" Created With Conflict", fmt.Sprintf("%v; cleanup failed: %v", err, cleanupErr))
+				return
+			}
+			resp.Diagnostics.AddError("Unable to Create "+ops.Name, err.Error())
+			return
+		}
 	}
 	remote, err := ops.Get(ctx, id)
 	if err != nil {
@@ -128,6 +149,12 @@ func updateResource[Model any, APIModel any](ctx context.Context, req resource.U
 		return
 	}
 	id := ops.GetID(&data)
+	if ops.ValidateUpdate != nil {
+		if err := ops.ValidateUpdate(ctx, id, apiModel); err != nil {
+			resp.Diagnostics.AddError("Unable to Update "+ops.Name, err.Error())
+			return
+		}
+	}
 	if err := ops.Update(ctx, id, apiModel); err != nil {
 		resp.Diagnostics.AddError("Unable to Update "+ops.Name, err.Error())
 		return
