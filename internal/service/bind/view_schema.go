@@ -62,11 +62,11 @@ func viewResourceSchema() schema.Schema {
 }
 
 func viewDataSourceSchema() dschema.Schema {
-	return dschema.Schema{MarkdownDescription: "Reads a BIND view.", Attributes: map[string]dschema.Attribute{
-		"id":                        dschema.StringAttribute{Required: true},
+	return dschema.Schema{MarkdownDescription: "Reads a BIND view by UUID or semantic view name.", Attributes: map[string]dschema.Attribute{
+		"id":                        dschema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "UUID selector or resolved UUID of the view.", Validators: []validator.String{validators.IsUUIDv4()}},
 		"enabled":                   dschema.BoolAttribute{Computed: true},
 		"sequence":                  dschema.Int64Attribute{Computed: true},
-		"name":                      dschema.StringAttribute{Computed: true},
+		"name":                      dschema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Unique semantic BIND view name. Lookup is trimmed and case-insensitive.", Validators: []validator.String{stringvalidator.LengthBetween(1, 32)}},
 		"match_any":                 dschema.BoolAttribute{Computed: true},
 		"match_client_acl_ids":      dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 		"match_destination_acl_ids": dschema.SetAttribute{Computed: true, ElementType: types.StringType},

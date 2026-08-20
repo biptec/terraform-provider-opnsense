@@ -80,10 +80,11 @@ func primaryDomainResourceSchema() schema.Schema {
 }
 
 func primaryDomainDataSourceSchema() dschema.Schema {
-	return dschema.Schema{MarkdownDescription: "Reads a primary BIND zone.", Attributes: map[string]dschema.Attribute{
-		"id":                     dschema.StringAttribute{Required: true},
-		"view_id":                dschema.StringAttribute{Computed: true},
-		"domain_name":            dschema.StringAttribute{Computed: true},
+	return dschema.Schema{MarkdownDescription: "Reads a primary BIND zone by UUID or by semantic view + domain identity.", Attributes: map[string]dschema.Attribute{
+		"id":                     dschema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "UUID selector or resolved UUID of the zone.", Validators: []validator.String{validators.IsUUIDv4()}},
+		"view_id":                dschema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Optional low-level semantic view UUID selector, or resolved view UUID.", Validators: []validator.String{validators.IsUUIDv4()}},
+		"view_name":              dschema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Preferred semantic BIND view selector. Lookup is trimmed and case-insensitive.", Validators: []validator.String{stringvalidator.LengthBetween(1, 32)}},
+		"domain_name":            dschema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Semantic zone name. Lookup is trimmed, case-insensitive, and ignores one trailing dot.", Validators: []validator.String{stringvalidator.LengthBetween(1, 255)}},
 		"enabled":                dschema.BoolAttribute{Computed: true},
 		"allow_transfer_acl_ids": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 		"allow_rndc_transfer":    dschema.BoolAttribute{Computed: true},
