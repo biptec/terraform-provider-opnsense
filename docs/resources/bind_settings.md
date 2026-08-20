@@ -3,21 +3,16 @@
 page_title: "opnsense_bind_settings Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages BIND global settings. This singleton must be imported with bind_settings before use. Attributes omitted from configuration retain their imported upstream values.
+  Manages BIND global settings. The built-in singleton is adopted automatically on first apply; explicit import remains supported. Attributes omitted from configuration retain their existing upstream values.
 ---
 
 # opnsense_bind_settings (Resource)
 
-Manages BIND global settings. This singleton must be imported with `bind_settings` before use. Attributes omitted from configuration retain their imported upstream values.
+Manages BIND global settings. The built-in singleton is adopted automatically on first apply; explicit import remains supported. Attributes omitted from configuration retain their existing upstream values.
 
 ## Example Usage
 
 ```terraform
-import {
-  to = opnsense_bind_settings.main
-  id = "bind_settings"
-}
-
 resource "opnsense_bind_settings" "main" {
   enabled               = true
   listen_ipv4           = ["192.0.2.53", "10.0.0.1"]

@@ -87,7 +87,7 @@ func settingsAttributesResource() map[string]schema.Attribute {
 }
 
 func settingsResourceSchema() schema.Schema {
-	return schema.Schema{MarkdownDescription: "Manages BIND global settings. This singleton must be imported with `bind_settings` before use. Attributes omitted from configuration retain their imported upstream values.", Version: 1, Attributes: settingsAttributesResource()}
+	return schema.Schema{MarkdownDescription: "Manages BIND global settings. The built-in singleton is adopted automatically on first apply; explicit import remains supported. Attributes omitted from configuration retain their existing upstream values.", Version: 1, Attributes: settingsAttributesResource()}
 }
 
 func settingsDataSourceSchema() dschema.Schema {
