@@ -89,6 +89,11 @@ func TestAccBindAuthoritativeResources(t *testing.T) {
 					resource.TestCheckResourceAttrSet("opnsense_bind_record.ns", "id"),
 					resource.TestCheckResourceAttr("data.opnsense_bind_primary_domain.test", "domain_name", "tfacc-bind.invalid"),
 					resource.TestCheckResourceAttrSet("data.opnsense_bind_primary_domain.test", "transfer_key_id"),
+					resource.TestCheckResourceAttrPair("data.opnsense_bind_view.by_name", "id", "opnsense_bind_view.test", "id"),
+					resource.TestCheckResourceAttrPair("data.opnsense_bind_primary_domain.semantic", "id", "opnsense_bind_primary_domain.test", "id"),
+					resource.TestCheckResourceAttr("data.opnsense_bind_primary_domain.semantic", "domain_name", "tfacc-bind.invalid"),
+					resource.TestCheckResourceAttr("data.opnsense_bind_primary_domain.semantic", "view_name", "tfacc_bind_internal"),
+					resource.TestCheckResourceAttrPair("data.opnsense_bind_primary_domain.semantic_by_view_id", "id", "opnsense_bind_primary_domain.test", "id"),
 					resource.TestCheckResourceAttr("data.opnsense_bind_primary_domain.test", "update_key_ids.#", "1"),
 					resource.TestCheckTypeSetElemAttr("data.opnsense_bind_primary_domain.test", "also_notify.*", "192.0.2.54"),
 					checkBindPrimaryTransferRuntime(),
@@ -315,6 +320,26 @@ resource "opnsense_bind_record" "ns" {
 
 data "opnsense_bind_primary_domain" "test" {
   id = opnsense_bind_primary_domain.test.id
+
+  depends_on = [opnsense_bind_primary_domain_update_key.test]
+}
+
+data "opnsense_bind_view" "by_name" {
+  name = "TFACC_BIND_INTERNAL"
+
+  depends_on = [opnsense_bind_view.test]
+}
+
+data "opnsense_bind_primary_domain" "semantic" {
+  domain_name = "TFACC-BIND.INVALID."
+  view_name   = "TFACC_BIND_INTERNAL"
+
+  depends_on = [opnsense_bind_primary_domain_update_key.test]
+}
+
+data "opnsense_bind_primary_domain" "semantic_by_view_id" {
+  domain_name = "tfacc-bind.invalid"
+  view_id     = opnsense_bind_view.test.id
 
   depends_on = [opnsense_bind_primary_domain_update_key.test]
 }
