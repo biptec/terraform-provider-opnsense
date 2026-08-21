@@ -83,6 +83,7 @@ func TestBindPrimaryDomainRoundTrip(t *testing.T) {
 func TestBindSettingsRoundTrip(t *testing.T) {
 	remote := &apibind.SettingsResponse{General: apibind.GeneralSettings{
 		Enabled: "1", ListenIPv4: api.SelectedMapList{"10.0.0.1", "192.0.2.53"}, ListenIPv6: api.SelectedMapList{"::1"},
+		TransferSource: "10.16.18.53", NotifySource: "10.16.16.53", NotifySourceIPv6: "2a07:e580:a10:1034::2",
 		Port: "53", LogSize: "10", LogLevel: api.SelectedMap("info"), MaxCacheSize: "25", DNSSECValidation: api.SelectedMap("auto"),
 		HideHostname: "1", HideVersion: "1", EnableRateLimiting: "1", RateLimitCount: "20",
 	}}
@@ -90,13 +91,14 @@ func TestBindSettingsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("settingsAPIToModel() error = %v", err)
 	}
-	if model.ID.ValueString() != "bind_settings" || model.Port.ValueInt64() != 53 || model.ListenIPv4.Elements()[0].String() == "" {
+	if model.ID.ValueString() != "bind_settings" || model.Port.ValueInt64() != 53 || model.ListenIPv4.Elements()[0].String() == "" || model.NotifySource.ValueString() != "10.16.16.53" || model.NotifySourceIPv6.ValueString() != "2a07:e580:a10:1034::2" {
 		t.Fatalf("unexpected settings state: %+v", model)
 	}
 	model.Port = types.Int64Value(53530)
+	model.NotifySource = types.StringValue("10.16.16.54")
 	model.Forwarders = tools.StringSliceToSet([]string{"1.1.1.1"})
 	applySettingsModel(&remote.General, model)
-	if remote.General.Port != "53530" || remote.General.Forwarders.String() != "1.1.1.1" || remote.General.HideVersion != "1" {
+	if remote.General.Port != "53530" || remote.General.NotifySource != "10.16.16.54" || remote.General.Forwarders.String() != "1.1.1.1" || remote.General.HideVersion != "1" {
 		t.Fatalf("unexpected settings API model: %+v", remote.General)
 	}
 }

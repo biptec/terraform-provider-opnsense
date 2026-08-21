@@ -17,6 +17,10 @@ resource "opnsense_bind_settings" "main" {
   enabled               = true
   listen_ipv4           = ["192.0.2.53", "10.0.0.1"]
   listen_ipv6           = ["2001:db8::53"]
+  transfer_source       = "10.0.0.1"
+  transfer_source_ipv6  = "2001:db8::53"
+  notify_source         = "10.0.0.1"
+  notify_source_ipv6    = "2001:db8::53"
   port                  = 53
   hide_hostname         = true
   hide_version          = true
@@ -51,6 +55,8 @@ resource "opnsense_bind_settings" "main" {
 - `log_level` (String)
 - `log_size_mb` (Number) Maximum size of each BIND log file in MiB.
 - `max_cache_size_percent` (Number) Maximum BIND cache size as a percentage of memory.
+- `notify_source` (String) Optional IPv4 source address for outbound authoritative NOTIFY messages.
+- `notify_source_ipv6` (String) Optional IPv6 source address for outbound authoritative NOTIFY messages.
 - `port` (Number) DNS listen port.
 - `query_source` (String) Optional IPv4 source address for recursive queries.
 - `query_source_ipv6` (String) Optional IPv6 source address for recursive queries.

@@ -42,6 +42,8 @@ data "opnsense_bind_settings" "main" {}
 - `log_level` (String)
 - `log_size_mb` (Number)
 - `max_cache_size_percent` (Number)
+- `notify_source` (String)
+- `notify_source_ipv6` (String)
 - `port` (Number)
 - `query_source` (String)
 - `query_source_ipv6` (String)
