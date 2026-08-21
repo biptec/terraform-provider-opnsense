@@ -1,8 +1,3 @@
-import {
-  to = opnsense_bind_settings.main
-  id = "bind_settings"
-}
-
 resource "opnsense_bind_settings" "main" {
   enabled               = true
   listen_ipv4           = ["192.0.2.53", "10.0.0.1"]

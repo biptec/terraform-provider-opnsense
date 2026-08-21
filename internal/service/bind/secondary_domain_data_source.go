@@ -2,6 +2,7 @@ package bind
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -19,5 +20,5 @@ func (d *secondaryDomainDataSource) Schema(_ context.Context, _ datasource.Schem
 	resp.Schema = secondaryDomainDataSourceSchema()
 }
 func (d *secondaryDomainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	readDataSource(ctx, req, resp, "BIND SecondaryDomain", d.client.Bind().GetSecondaryDomain, secondaryDomainAPIToModel, func(m *secondaryDomainResourceModel) string { return m.ID.ValueString() }, func(m *secondaryDomainResourceModel, id string) { m.ID = types.StringValue(id) })
+	readDataSource(ctx, req, resp, "BIND SecondaryDomain", d.client.Bind().GetSecondaryDomain, secondaryDomainAPIToDataSourceModel, func(m *secondaryDomainDataSourceModel) string { return m.ID.ValueString() }, func(m *secondaryDomainDataSourceModel, id string) { m.ID = types.StringValue(id) })
 }

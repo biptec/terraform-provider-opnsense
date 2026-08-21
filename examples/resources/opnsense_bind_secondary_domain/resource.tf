@@ -1,6 +1,7 @@
 variable "transfer_secret" {
   type      = string
   sensitive = true
+  ephemeral = true
 }
 
 resource "opnsense_bind_secondary_domain" "example" {
@@ -11,4 +12,5 @@ resource "opnsense_bind_secondary_domain" "example" {
   transfer_key_name      = "secondary-transfer"
   transfer_key_algorithm = "hmac-sha256"
   transfer_key           = var.transfer_secret
+  transfer_key_version   = 1
 }

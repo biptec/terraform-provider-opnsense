@@ -3,12 +3,12 @@
 page_title: "opnsense_bind_secondary_domain Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Manages a secondary BIND zone inside a selected view.
+  Manages a secondary BIND zone inside a selected view. Transfer TSIG material is write-only and is never stored in Terraform/OpenTofu plan or state.
 ---
 
 # opnsense_bind_secondary_domain (Resource)
 
-Manages a secondary BIND zone inside a selected view.
+Manages a secondary BIND zone inside a selected view. Transfer TSIG material is write-only and is never stored in Terraform/OpenTofu plan or state.
 
 ## Example Usage
 
@@ -16,6 +16,7 @@ Manages a secondary BIND zone inside a selected view.
 variable "transfer_secret" {
   type      = string
   sensitive = true
+  ephemeral = true
 }
 
 resource "opnsense_bind_secondary_domain" "example" {
@@ -26,6 +27,7 @@ resource "opnsense_bind_secondary_domain" "example" {
   transfer_key_name      = "secondary-transfer"
   transfer_key_algorithm = "hmac-sha256"
   transfer_key           = var.transfer_secret
+  transfer_key_version   = 1
 }
 ```
 
@@ -40,14 +42,18 @@ resource "opnsense_bind_secondary_domain" "example" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `allow_notify` (Set of String)
 - `allow_query_acl_ids` (Set of String)
 - `allow_transfer_acl_ids` (Set of String)
 - `enabled` (Boolean)
-- `transfer_key` (String, Sensitive) Base64 transfer TSIG secret.
+- `transfer_key` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only Base64 transfer TSIG secret. Required when configuring authenticated transfers on create. Supply it through an ephemeral variable to keep the source value out of saved plan artifacts. Increment transfer_key_version whenever the secret changes.
 - `transfer_key_algorithm` (String)
 - `transfer_key_name` (String)
+- `transfer_key_version` (Number) Stateful rotation marker for the write-only transfer key. Increment whenever the secret changes.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `transfer_key_configured` (Boolean) Whether OPNsense currently has a non-empty transfer TSIG secret configured. The secret value itself is never returned to state.

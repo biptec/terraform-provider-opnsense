@@ -3,6 +3,7 @@ package bind
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -23,8 +24,19 @@ func (r *settingsResource) Metadata(_ context.Context, req resource.MetadataRequ
 func (r *settingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = settingsResourceSchema()
 }
-func (r *settingsResource) Create(_ context.Context, _ resource.CreateRequest, resp *resource.CreateResponse) {
-	resp.Diagnostics.AddError("Cannot Create Singleton Resource", "BIND settings already exist in OPNsense. Import them first with: terraform import opnsense_bind_settings.<name> bind_settings")
+func (r *settingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan settingsResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state, err := r.applySettings(ctx, &plan)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Adopt BIND Settings", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+	tflog.Info(ctx, "adopted existing BIND settings", map[string]any{"id": "bind_settings"})
 }
 func (r *settingsResource) Read(ctx context.Context, _ resource.ReadRequest, resp *resource.ReadResponse) {
 	remote, err := r.client.Bind().SettingsGet(ctx)
@@ -45,36 +57,39 @@ func (r *settingsResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	remote, err := r.client.Bind().SettingsGet(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Read BIND Settings", err.Error())
-		return
-	}
-	applySettingsModel(&remote.General, &plan)
-	result, err := r.client.Bind().SettingsSet(ctx, &remote.General)
+	state, err := r.applySettings(ctx, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Update BIND Settings", err.Error())
-		return
-	}
-	if err := validateSettingsSetResult(result); err != nil {
-		resp.Diagnostics.AddError("Unable to Update BIND Settings", err.Error())
-		return
-	}
-	if _, err = r.client.Bind().ServiceReconfigure(ctx); err != nil {
-		resp.Diagnostics.AddError("Unable to Reconfigure BIND", err.Error())
-		return
-	}
-	updated, err := r.client.Bind().SettingsGet(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("BIND Settings Updated but Read Failed", err.Error())
-		return
-	}
-	state, err := settingsAPIToModel(updated)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Decode BIND Settings", err.Error())
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+func (r *settingsResource) applySettings(ctx context.Context, plan *settingsResourceModel) (*settingsResourceModel, error) {
+	remote, err := r.client.Bind().SettingsGet(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read existing BIND settings: %w", err)
+	}
+	original := remote.General
+	applySettingsModel(&remote.General, plan)
+	if reflect.DeepEqual(remote.General, original) {
+		return settingsAPIToModel(remote)
+	}
+	result, err := r.client.Bind().SettingsSet(ctx, &remote.General)
+	if err != nil {
+		return nil, fmt.Errorf("save BIND settings: %w", err)
+	}
+	if err := validateSettingsSetResult(result); err != nil {
+		return nil, err
+	}
+	if _, err = r.client.Bind().ServiceReconfigure(ctx); err != nil {
+		return nil, fmt.Errorf("reconfigure BIND: %w", err)
+	}
+	updated, err := r.client.Bind().SettingsGet(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read updated BIND settings: %w", err)
+	}
+	return settingsAPIToModel(updated)
 }
 
 func validateSettingsSetResult(result *api.ActionResult) error {
@@ -88,7 +103,7 @@ func validateSettingsSetResult(result *api.ActionResult) error {
 }
 
 func (r *settingsResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
-	resp.Diagnostics.AddWarning("Singleton Resource Removed From State Only", "BIND settings remain unchanged in OPNsense. Re-import with ID `bind_settings` to manage them again.")
+	resp.Diagnostics.AddWarning("Singleton Resource Removed From State Only", "BIND settings remain unchanged in OPNsense. Re-add the resource to adopt the built-in singleton again, or import it explicitly with ID `bind_settings`.")
 }
 func (r *settingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	if req.ID != "bind_settings" {

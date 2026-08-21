@@ -55,6 +55,26 @@ data "opnsense_bind_status" "test" {}
 	})
 }
 
+func TestAccBindSettingsResourceAdoptsSingleton(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { bindPreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "opnsense_bind_settings" "test" {}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_bind_settings.test", "id", "bind_settings"),
+					resource.TestCheckResourceAttrSet("opnsense_bind_settings.test", "enabled"),
+					resource.TestCheckResourceAttrSet("opnsense_bind_settings.test", "port"),
+				),
+			},
+			{ResourceName: "opnsense_bind_settings.test", ImportState: true, ImportStateVerify: true},
+		},
+	})
+}
+
 func TestAccBindAuthoritativeResources(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { bindPreCheck(t) },

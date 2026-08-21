@@ -3,12 +3,12 @@
 page_title: "opnsense_bind_secondary_domain Data Source - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Reads a secondary BIND zone.
+  Reads a secondary BIND zone without exposing transfer TSIG secret material.
 ---
 
 # opnsense_bind_secondary_domain (Data Source)
 
-Reads a secondary BIND zone.
+Reads a secondary BIND zone without exposing transfer TSIG secret material.
 
 ## Example Usage
 
@@ -30,7 +30,8 @@ data "opnsense_bind_secondary_domain" "example" {
 - `enabled` (Boolean)
 - `id` (String) The ID of this resource.
 - `primary_ips` (Set of String)
-- `transfer_key` (String, Sensitive)
+- `transfer_key` (String, Sensitive) Deprecated compatibility attribute. Always null; transfer TSIG secrets are never returned by the provider.
 - `transfer_key_algorithm` (String)
+- `transfer_key_configured` (Boolean) Whether a non-empty transfer TSIG secret is configured.
 - `transfer_key_name` (String)
 - `view_id` (String)

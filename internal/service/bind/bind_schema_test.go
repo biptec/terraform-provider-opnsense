@@ -96,8 +96,8 @@ func TestBindSecretsAreSensitive(t *testing.T) {
 		t.Fatal("TSIG data source must not expose secret")
 	}
 	secondary := secondaryDomainResourceSchema().Attributes["transfer_key"]
-	if !secondary.IsSensitive() {
-		t.Fatal("secondary transfer key must be sensitive")
+	if !secondary.IsSensitive() || !secondary.IsWriteOnly() || secondary.IsComputed() {
+		t.Fatal("secondary transfer key must be sensitive, write-only, and non-computed")
 	}
 }
 
@@ -119,6 +119,40 @@ func TestTsigKeyRemoteSecretDoesNotEnterState(t *testing.T) {
 	}
 	if !data.SecretConfigured.ValueBool() {
 		t.Fatal("TSIG metadata data source lost credential presence flag")
+	}
+}
+
+func TestSecondaryDomainRemoteSecretDoesNotEnterState(t *testing.T) {
+	remote := &apibind.SecondaryDomain{View: api.SelectedMap("view-id"), DomainName: "example.test", Enabled: "1", PrimaryIP: api.SelectedMapList{"192.0.2.53"}, TransferKeyAlgorithm: api.SelectedMap("hmac-sha256"), TransferKeyName: "xfr.example.test", TransferKey: "must-not-enter-state"}
+	state := secondaryDomainAPIToModel(remote)
+	if !state.TransferKey.IsNull() || !state.TransferKeyConfigured.ValueBool() {
+		t.Fatal("secondary transfer secret leaked into resource state or lost presence metadata")
+	}
+	data, err := secondaryDomainAPIToDataSourceModel(remote)
+	if err != nil {
+		t.Fatalf("secondaryDomainAPIToDataSourceModel() error = %v", err)
+	}
+	if !data.TransferKey.IsNull() || !data.TransferKeyConfigured.ValueBool() {
+		t.Fatal("secondary data source must expose only transfer-key presence metadata")
+	}
+}
+
+func TestApplySecondaryDomainModelPreservesOrRotatesTransferSecret(t *testing.T) {
+	remote := &apibind.SecondaryDomain{View: api.SelectedMap("view-old"), DomainName: "old.test", Enabled: "1", PrimaryIP: api.SelectedMapList{"192.0.2.53"}, TransferKeyAlgorithm: api.SelectedMap("hmac-sha256"), TransferKeyName: "xfr.old.test", TransferKey: "old-secret"}
+	plan := &secondaryDomainResourceModel{ViewID: types.StringValue("view-new"), DomainName: types.StringValue("new.test"), Enabled: types.BoolValue(true), PrimaryIPs: tools.StringSliceToSet([]string{"198.51.100.53"}), AllowNotify: tools.StringSliceToSet(nil), TransferKeyAlgorithm: types.StringValue("hmac-sha256"), TransferKeyName: types.StringValue("xfr.new.test"), AllowTransferACLs: tools.StringSliceToSet(nil), AllowQueryACLs: tools.StringSliceToSet(nil)}
+	applySecondaryDomainModel(remote, plan, types.StringNull())
+	if remote.TransferKey != "old-secret" {
+		t.Fatal("metadata update must preserve the existing transfer secret")
+	}
+	applySecondaryDomainModel(remote, plan, types.StringValue("new-secret"))
+	if remote.TransferKey != "new-secret" {
+		t.Fatal("write-only rotated transfer secret was not applied")
+	}
+	plan.TransferKeyAlgorithm = types.StringValue("")
+	plan.TransferKeyName = types.StringValue("")
+	applySecondaryDomainModel(remote, plan, types.StringNull())
+	if remote.TransferKey != "" {
+		t.Fatal("clearing transfer metadata must clear the remote transfer secret")
 	}
 }
 
