@@ -27,6 +27,8 @@ type settingsResourceModel struct {
 	QuerySourceIPv6    types.String `tfsdk:"query_source_ipv6"`
 	TransferSource     types.String `tfsdk:"transfer_source"`
 	TransferSourceIPv6 types.String `tfsdk:"transfer_source_ipv6"`
+	NotifySource       types.String `tfsdk:"notify_source"`
+	NotifySourceIPv6   types.String `tfsdk:"notify_source_ipv6"`
 	Port               types.Int64  `tfsdk:"port"`
 	Forwarders         types.Set    `tfsdk:"forwarders"`
 	FilterAAAAIPv4     types.Bool   `tfsdk:"filter_aaaa_ipv4"`
@@ -65,6 +67,8 @@ func settingsAttributesResource() map[string]schema.Attribute {
 		"query_source_ipv6":             schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv6 source address for recursive queries."},
 		"transfer_source":               schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv4 source address for zone transfers."},
 		"transfer_source_ipv6":          schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv6 source address for zone transfers."},
+		"notify_source":                 schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv4 source address for outbound authoritative NOTIFY messages."},
+		"notify_source_ipv6":            schema.StringAttribute{Optional: true, Computed: true, Validators: []validator.String{validators.IPAddress()}, MarkdownDescription: "Optional IPv6 source address for outbound authoritative NOTIFY messages."},
 		"port":                          schema.Int64Attribute{Optional: true, Computed: true, Validators: []validator.Int64{int64validator.Between(1, 65535)}, MarkdownDescription: "DNS listen port."},
 		"forwarders":                    schema.SetAttribute{Optional: true, Computed: true, ElementType: types.StringType, Validators: ipSet, MarkdownDescription: "Legacy global forwarding servers. Per-view forwarders take precedence when views are enabled."},
 		"filter_aaaa_ipv4":              schema.BoolAttribute{Optional: true, Computed: true},
@@ -95,6 +99,7 @@ func settingsDataSourceSchema() dschema.Schema {
 		"id": dschema.StringAttribute{Computed: true}, "enabled": dschema.BoolAttribute{Computed: true}, "disable_ipv6": dschema.BoolAttribute{Computed: true}, "enable_rpz": dschema.BoolAttribute{Computed: true},
 		"listen_ipv4": dschema.SetAttribute{Computed: true, ElementType: types.StringType}, "listen_ipv6": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 		"query_source": dschema.StringAttribute{Computed: true}, "query_source_ipv6": dschema.StringAttribute{Computed: true}, "transfer_source": dschema.StringAttribute{Computed: true}, "transfer_source_ipv6": dschema.StringAttribute{Computed: true},
+		"notify_source": dschema.StringAttribute{Computed: true}, "notify_source_ipv6": dschema.StringAttribute{Computed: true},
 		"port": dschema.Int64Attribute{Computed: true}, "forwarders": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 		"filter_aaaa_ipv4": dschema.BoolAttribute{Computed: true}, "filter_aaaa_ipv6": dschema.BoolAttribute{Computed: true}, "filter_aaaa_acl": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 		"log_size_mb": dschema.Int64Attribute{Computed: true}, "log_level": dschema.StringAttribute{Computed: true}, "max_cache_size_percent": dschema.Int64Attribute{Computed: true},
@@ -109,7 +114,7 @@ func settingsAPIToModel(d *apibind.SettingsResponse) (*settingsResourceModel, er
 	g := d.General
 	return &settingsResourceModel{
 		ID: types.StringValue("bind_settings"), Enabled: types.BoolValue(tools.StringToBool(g.Enabled)), DisableIPv6: types.BoolValue(tools.StringToBool(g.DisableIPv6)), EnableRPZ: types.BoolValue(tools.StringToBool(g.EnableRPZ)),
-		ListenIPv4: tools.StringSliceToSet([]string(g.ListenIPv4)), ListenIPv6: tools.StringSliceToSet([]string(g.ListenIPv6)), QuerySource: types.StringValue(g.QuerySource), QuerySourceIPv6: types.StringValue(g.QuerySourceIPv6), TransferSource: types.StringValue(g.TransferSource), TransferSourceIPv6: types.StringValue(g.TransferSourceIPv6),
+		ListenIPv4: tools.StringSliceToSet([]string(g.ListenIPv4)), ListenIPv6: tools.StringSliceToSet([]string(g.ListenIPv6)), QuerySource: types.StringValue(g.QuerySource), QuerySourceIPv6: types.StringValue(g.QuerySourceIPv6), TransferSource: types.StringValue(g.TransferSource), TransferSourceIPv6: types.StringValue(g.TransferSourceIPv6), NotifySource: types.StringValue(g.NotifySource), NotifySourceIPv6: types.StringValue(g.NotifySourceIPv6),
 		Port: types.Int64Value(tools.StringToInt64(g.Port)), Forwarders: tools.StringSliceToSet([]string(g.Forwarders)), FilterAAAAIPv4: types.BoolValue(tools.StringToBool(g.FilterAAAAIPv4)), FilterAAAAIPv6: types.BoolValue(tools.StringToBool(g.FilterAAAAIPv6)), FilterAAAAACL: tools.StringSliceToSet([]string(g.FilterAAAAACL)),
 		LogSize: types.Int64Value(tools.StringToInt64(g.LogSize)), LogLevel: types.StringValue(g.LogLevel.String()), MaxCacheSize: types.Int64Value(tools.StringToInt64(g.MaxCacheSize)), RecursionACLIDs: tools.StringSliceToSet([]string(g.Recursion)), AllowTransferACLs: tools.StringSliceToSet([]string(g.AllowTransfer)), AllowQueryACLs: tools.StringSliceToSet([]string(g.AllowQuery)),
 		DNSSECValidation: types.StringValue(g.DNSSECValidation.String()), HideHostname: types.BoolValue(tools.StringToBool(g.HideHostname)), HideVersion: types.BoolValue(tools.StringToBool(g.HideVersion)), DisablePrefetch: types.BoolValue(tools.StringToBool(g.DisablePrefetch)), EnableRateLimiting: types.BoolValue(tools.StringToBool(g.EnableRateLimiting)), RateLimitCount: types.Int64Value(tools.StringToInt64(g.RateLimitCount)), RateLimitExcept: tools.StringSliceToSet([]string(g.RateLimitExcept)),
@@ -143,6 +148,12 @@ func applySettingsModel(g *apibind.GeneralSettings, d *settingsResourceModel) {
 	}
 	if !d.TransferSourceIPv6.IsNull() && !d.TransferSourceIPv6.IsUnknown() {
 		g.TransferSourceIPv6 = d.TransferSourceIPv6.ValueString()
+	}
+	if !d.NotifySource.IsNull() && !d.NotifySource.IsUnknown() {
+		g.NotifySource = d.NotifySource.ValueString()
+	}
+	if !d.NotifySourceIPv6.IsNull() && !d.NotifySourceIPv6.IsUnknown() {
+		g.NotifySourceIPv6 = d.NotifySourceIPv6.ValueString()
 	}
 	if !d.Port.IsNull() && !d.Port.IsUnknown() {
 		g.Port = tools.Int64ToString(d.Port.ValueInt64())
