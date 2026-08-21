@@ -15,6 +15,7 @@ var _ resource.Resource = &secondaryDomainResource{}
 var _ resource.ResourceWithConfigure = &secondaryDomainResource{}
 var _ resource.ResourceWithImportState = &secondaryDomainResource{}
 var _ resource.ResourceWithUpgradeState = &secondaryDomainResource{}
+var _ resource.ResourceWithConfigValidators = &secondaryDomainResource{}
 
 type secondaryDomainResource struct{ resourceClient }
 
@@ -26,6 +27,10 @@ func (r *secondaryDomainResource) Metadata(_ context.Context, req resource.Metad
 
 func (r *secondaryDomainResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = secondaryDomainResourceSchema()
+}
+
+func (r *secondaryDomainResource) ConfigValidators(context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{secondaryDomainTransferConfigValidator{}}
 }
 
 func (r *secondaryDomainResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -104,7 +109,7 @@ func (r *secondaryDomainResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 	applySecondaryDomainModel(remote, &plan, secret)
-	if transferMetadataConfigured(&plan) && remote.TransferKey == "" {
+	if legacyTransferMetadataConfigured(&plan) && remote.TransferKey == "" {
 		resp.Diagnostics.AddError("Missing BIND Secondary Transfer Key", "authenticated transfer metadata is configured but OPNsense has no transfer TSIG secret; provide transfer_key and increment transfer_key_version")
 		return
 	}
@@ -157,7 +162,7 @@ func (r *secondaryDomainResource) UpgradeState(context.Context) map[int64]resour
 				configured := !old.TransferKey.IsNull() && !old.TransferKey.IsUnknown() && old.TransferKey.ValueString() != ""
 				resp.Diagnostics.Append(resp.State.Set(ctx, &secondaryDomainResourceModel{
 					ID: old.ID, ViewID: old.ViewID, DomainName: old.DomainName, Enabled: old.Enabled,
-					PrimaryIPs: old.PrimaryIPs, AllowNotify: old.AllowNotify,
+					PrimaryIPs: old.PrimaryIPs, AllowNotify: old.AllowNotify, TransferKeyID: types.StringValue(""),
 					TransferKeyAlgorithm: old.TransferKeyAlgorithm, TransferKeyName: old.TransferKeyName,
 					TransferKey: types.StringNull(), TransferKeyVersion: types.Int64Value(0), TransferKeyConfigured: types.BoolValue(configured),
 					AllowTransferACLs: old.AllowTransferACLs, AllowQueryACLs: old.AllowQueryACLs,
@@ -167,17 +172,24 @@ func (r *secondaryDomainResource) UpgradeState(context.Context) map[int64]resour
 	}
 }
 
-func transferMetadataConfigured(d *secondaryDomainResourceModel) bool {
+func legacyTransferMetadataConfigured(d *secondaryDomainResourceModel) bool {
 	return d.TransferKeyAlgorithm.ValueString() != "" || d.TransferKeyName.ValueString() != ""
 }
 
 func validateSecondaryTransferSecret(d *secondaryDomainResourceModel, secret types.String, creating, rotated bool) error {
+	sharedKeyID := d.TransferKeyID.ValueString()
 	algorithm := d.TransferKeyAlgorithm.ValueString()
 	name := d.TransferKeyName.ValueString()
+	supplied := !secret.IsNull() && !secret.IsUnknown() && secret.ValueString() != ""
+	if sharedKeyID != "" {
+		if algorithm != "" || name != "" || supplied {
+			return fmt.Errorf("transfer_key_id is mutually exclusive with transfer_key_algorithm, transfer_key_name, and transfer_key")
+		}
+		return nil
+	}
 	if (algorithm == "") != (name == "") {
 		return fmt.Errorf("transfer_key_algorithm and transfer_key_name must either both be set or both be empty")
 	}
-	supplied := !secret.IsNull() && !secret.IsUnknown() && secret.ValueString() != ""
 	if algorithm == "" {
 		if supplied {
 			return fmt.Errorf("transfer_key requires transfer_key_algorithm and transfer_key_name")

@@ -19,15 +19,18 @@ variable "transfer_secret" {
   ephemeral = true
 }
 
+resource "opnsense_bind_tsig_key" "secondary_transfer" {
+  name           = "dns-xfr-public.example.net"
+  algorithm      = "hmac-sha256"
+  secret         = var.transfer_secret
+  secret_version = 1
+}
+
 resource "opnsense_bind_secondary_domain" "example" {
-  view_id                = opnsense_bind_view.public.id
-  domain_name            = "example.net"
-  primary_ips            = ["192.0.2.53"]
-  allow_notify           = ["192.0.2.53"]
-  transfer_key_name      = "secondary-transfer"
-  transfer_key_algorithm = "hmac-sha256"
-  transfer_key           = var.transfer_secret
-  transfer_key_version   = 1
+  view_id         = opnsense_bind_view.public.id
+  domain_name     = "example.net"
+  primary_ips     = ["192.0.2.53"]
+  transfer_key_id = opnsense_bind_tsig_key.secondary_transfer.id
 }
 ```
 
@@ -48,12 +51,13 @@ resource "opnsense_bind_secondary_domain" "example" {
 - `allow_query_acl_ids` (Set of String)
 - `allow_transfer_acl_ids` (Set of String)
 - `enabled` (Boolean)
-- `transfer_key` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Write-only Base64 transfer TSIG secret. Required when configuring authenticated transfers on create. Supply it through an ephemeral variable to keep the source value out of saved plan artifacts. Increment transfer_key_version whenever the secret changes.
-- `transfer_key_algorithm` (String)
-- `transfer_key_name` (String)
+- `transfer_key` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Legacy write-only Base64 transfer TSIG secret. Required only for the inline algorithm/name path. Prefer transfer_key_id for new configurations. Supply through an ephemeral variable and increment transfer_key_version whenever it changes.
+- `transfer_key_algorithm` (String) Legacy inline TSIG algorithm. Prefer transfer_key_id for new configurations.
+- `transfer_key_id` (String) Preferred shared BIND TSIG key UUID used to authenticate AXFR/IXFR and NOTIFY. The same key can be referenced by BIND view selectors. Mutually exclusive with the legacy inline transfer-key attributes.
+- `transfer_key_name` (String) Legacy inline TSIG name. Prefer transfer_key_id for new configurations.
 - `transfer_key_version` (Number) Stateful rotation marker for the write-only transfer key. Increment whenever the secret changes.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `transfer_key_configured` (Boolean) Whether OPNsense currently has a non-empty transfer TSIG secret configured. The secret value itself is never returned to state.
+- `transfer_key_configured` (Boolean) Whether the secondary zone has authenticated transfer TSIG configured, either through transfer_key_id or a legacy inline secret. Secret material is never returned to state.

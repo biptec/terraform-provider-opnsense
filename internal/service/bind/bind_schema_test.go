@@ -136,6 +136,38 @@ func TestTsigKeyRemoteSecretDoesNotEnterState(t *testing.T) {
 	}
 }
 
+func TestSecondaryDomainSharedTransferKeyRoundTrip(t *testing.T) {
+	model := &secondaryDomainResourceModel{
+		ViewID: types.StringValue("view-id"), DomainName: types.StringValue("example.test"), Enabled: types.BoolValue(true),
+		PrimaryIPs: tools.StringSliceToSet([]string{"10.16.16.53"}), AllowNotify: tools.StringSliceToSet(nil),
+		TransferKeyID: types.StringValue("shared-key-id"), TransferKeyAlgorithm: types.StringValue(""), TransferKeyName: types.StringValue(""),
+		AllowTransferACLs: tools.StringSliceToSet(nil), AllowQueryACLs: tools.StringSliceToSet(nil),
+	}
+	remote := secondaryDomainModelToAPI(model, "")
+	if remote.TransferKeyID.String() != "shared-key-id" || remote.TransferKey != "" || remote.TransferKeyName != "" {
+		t.Fatalf("unexpected shared-key API secondary domain: %+v", remote)
+	}
+	state := secondaryDomainAPIToModel(remote)
+	if state.TransferKeyID.ValueString() != "shared-key-id" || !state.TransferKeyConfigured.ValueBool() {
+		t.Fatalf("shared transfer key reference lost in state: %+v", state)
+	}
+}
+
+func TestSecondaryDomainSharedTransferKeyRejectsLegacyInlineCredentials(t *testing.T) {
+	model := &secondaryDomainResourceModel{
+		TransferKeyID:        types.StringValue("shared-key-id"),
+		TransferKeyAlgorithm: types.StringValue("hmac-sha256"), TransferKeyName: types.StringValue("legacy"),
+	}
+	if err := validateSecondaryTransferSecret(model, types.StringNull(), true, false); err == nil {
+		t.Fatal("expected shared and inline secondary transfer keys to be mutually exclusive")
+	}
+	model.TransferKeyAlgorithm = types.StringValue("")
+	model.TransferKeyName = types.StringValue("")
+	if err := validateSecondaryTransferSecret(model, types.StringValue("legacy-secret"), true, false); err == nil {
+		t.Fatal("expected shared transfer key and inline secret to be mutually exclusive")
+	}
+}
+
 func TestSecondaryDomainRemoteSecretDoesNotEnterState(t *testing.T) {
 	remote := &apibind.SecondaryDomain{View: api.SelectedMap("view-id"), DomainName: "example.test", Enabled: "1", PrimaryIP: api.SelectedMapList{"192.0.2.53"}, TransferKeyAlgorithm: api.SelectedMap("hmac-sha256"), TransferKeyName: "xfr.example.test", TransferKey: "must-not-enter-state"}
 	state := secondaryDomainAPIToModel(remote)
@@ -162,6 +194,14 @@ func TestApplySecondaryDomainModelPreservesOrRotatesTransferSecret(t *testing.T)
 	if remote.TransferKey != "new-secret" {
 		t.Fatal("write-only rotated transfer secret was not applied")
 	}
+	plan.TransferKeyID = types.StringValue("shared-key-id")
+	plan.TransferKeyAlgorithm = types.StringValue("")
+	plan.TransferKeyName = types.StringValue("")
+	applySecondaryDomainModel(remote, plan, types.StringNull())
+	if remote.TransferKeyID.String() != "shared-key-id" || remote.TransferKey != "" || remote.TransferKeyName != "" || remote.TransferKeyAlgorithm.String() != "" {
+		t.Fatalf("switching to shared transfer key did not clear legacy credentials: %+v", remote)
+	}
+	plan.TransferKeyID = types.StringValue("")
 	plan.TransferKeyAlgorithm = types.StringValue("")
 	plan.TransferKeyName = types.StringValue("")
 	applySecondaryDomainModel(remote, plan, types.StringNull())

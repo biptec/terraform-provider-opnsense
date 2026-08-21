@@ -33,5 +33,6 @@ data "opnsense_bind_secondary_domain" "example" {
 - `transfer_key` (String, Sensitive) Deprecated compatibility attribute. Always null; transfer TSIG secrets are never returned by the provider.
 - `transfer_key_algorithm` (String)
 - `transfer_key_configured` (Boolean) Whether a non-empty transfer TSIG secret is configured.
+- `transfer_key_id` (String) Shared BIND TSIG key UUID when the preferred reference-based transfer authentication is configured.
 - `transfer_key_name` (String)
 - `view_id` (String)
