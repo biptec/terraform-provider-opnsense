@@ -13,15 +13,42 @@ Manages a BIND view. Views are evaluated in ascending sequence order; a match-an
 ## Example Usage
 
 ```terraform
+variable "dns_xfr_internal_secret" {
+  type      = string
+  sensitive = true
+  ephemeral = true
+}
+
+variable "dns_xfr_public_secret" {
+  type      = string
+  sensitive = true
+  ephemeral = true
+}
+
+resource "opnsense_bind_tsig_key" "internal_transfer" {
+  name           = "dns-xfr-internal.example.net"
+  algorithm      = "hmac-sha256"
+  secret         = var.dns_xfr_internal_secret
+  secret_version = 1
+}
+
+resource "opnsense_bind_tsig_key" "public_transfer" {
+  name           = "dns-xfr-public.example.net"
+  algorithm      = "hmac-sha256"
+  secret         = var.dns_xfr_public_secret
+  secret_version = 1
+}
+
 resource "opnsense_bind_view" "internal" {
-  sequence                = 10
-  name                    = "internal"
-  match_client_acl_ids    = [opnsense_bind_acl.internal.id]
-  recursion               = true
-  allow_recursion_acl_ids = [opnsense_bind_acl.internal.id]
-  allow_query_acl_ids     = [opnsense_bind_acl.internal.id]
-  forwarders              = ["1.1.1.1", "9.9.9.9"]
-  dnssec_validation       = "auto"
+  sequence                          = 10
+  name                              = "internal"
+  match_client_acl_ids              = [opnsense_bind_acl.internal.id]
+  match_client_tsig_key_ids         = [opnsense_bind_tsig_key.internal_transfer.id]
+  exclude_match_client_tsig_key_ids = [opnsense_bind_tsig_key.public_transfer.id]
+  recursion                         = true
+  allow_recursion_acl_ids           = [opnsense_bind_acl.internal.id]
+  allow_query_acl_ids               = [opnsense_bind_acl.internal.id]
+  dnssec_validation                 = "auto"
 }
 
 resource "opnsense_bind_view" "public" {
@@ -48,9 +75,11 @@ resource "opnsense_bind_view" "public" {
 - `allow_transfer_acl_ids` (Set of String) Default ACL UUIDs allowed to transfer zones in this view.
 - `dnssec_validation` (String) DNSSEC validation mode for recursive queries: auto or no.
 - `enabled` (Boolean) Whether the view is enabled.
+- `exclude_match_client_tsig_key_ids` (Set of String) TSIG key UUIDs excluded before positive client selectors. Use this to route a signed transfer request past an earlier internal view to a later public view while sharing one listener address.
 - `forwarders` (Set of String) Optional upstream resolvers used by recursive queries.
 - `match_any` (Boolean) Match every client. Only the final catch-all view should enable this.
 - `match_client_acl_ids` (Set of String) ACL UUIDs used by match-clients.
+- `match_client_tsig_key_ids` (Set of String) TSIG key UUIDs positively matched by match-clients. Useful for selecting a BIND view for signed zone transfers.
 - `match_destination_acl_ids` (Set of String) ACL UUIDs used by match-destinations. Use separate LAN and WAN destination ACLs for split DNS.
 - `recursion` (Boolean) Enable recursive resolution in this view.
 - `sequence` (Number) Evaluation order from 1 to 9999.

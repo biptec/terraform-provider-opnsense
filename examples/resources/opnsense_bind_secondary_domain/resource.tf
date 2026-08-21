@@ -4,13 +4,16 @@ variable "transfer_secret" {
   ephemeral = true
 }
 
+resource "opnsense_bind_tsig_key" "secondary_transfer" {
+  name           = "dns-xfr-public.example.net"
+  algorithm      = "hmac-sha256"
+  secret         = var.transfer_secret
+  secret_version = 1
+}
+
 resource "opnsense_bind_secondary_domain" "example" {
-  view_id                = opnsense_bind_view.public.id
-  domain_name            = "example.net"
-  primary_ips            = ["192.0.2.53"]
-  allow_notify           = ["192.0.2.53"]
-  transfer_key_name      = "secondary-transfer"
-  transfer_key_algorithm = "hmac-sha256"
-  transfer_key           = var.transfer_secret
-  transfer_key_version   = 1
+  view_id         = opnsense_bind_view.public.id
+  domain_name     = "example.net"
+  primary_ips     = ["192.0.2.53"]
+  transfer_key_id = opnsense_bind_tsig_key.secondary_transfer.id
 }
