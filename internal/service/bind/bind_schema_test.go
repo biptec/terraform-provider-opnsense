@@ -17,8 +17,10 @@ func TestBindViewRoundTrip(t *testing.T) {
 	model := &viewResourceModel{
 		Enabled: types.BoolValue(true), Sequence: types.Int64Value(10), Name: types.StringValue("internal"),
 		MatchAny: types.BoolValue(false), MatchClientACLs: tools.StringSliceToSet([]string{"acl-a"}),
-		MatchDestinationACLs: tools.StringSliceToSet([]string{"acl-destination"}),
-		Recursion:            types.BoolValue(true), AllowRecursion: tools.StringSliceToSet([]string{"acl-a"}),
+		MatchClientTSIGKeyIDs:        tools.StringSliceToSet([]string{"tsig-internal"}),
+		ExcludeMatchClientTSIGKeyIDs: tools.StringSliceToSet([]string{"tsig-public"}),
+		MatchDestinationACLs:         tools.StringSliceToSet([]string{"acl-destination"}),
+		Recursion:                    types.BoolValue(true), AllowRecursion: tools.StringSliceToSet([]string{"acl-a"}),
 		AllowQueryAny: types.BoolValue(false), AllowQuery: tools.StringSliceToSet([]string{"acl-a"}),
 		AllowTransfer: tools.StringSliceToSet([]string{"acl-secondary"}), Forwarders: tools.StringSliceToSet([]string{"1.1.1.1"}),
 		DNSSECValidation: types.StringValue("auto"),
@@ -27,15 +29,27 @@ func TestBindViewRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("viewModelToAPI() error = %v", err)
 	}
-	if remote.Sequence != "10" || remote.MatchClients.String() != "acl-a" || remote.MatchDestinations.String() != "acl-destination" || remote.DNSSECValidation.String() != "auto" {
+	if remote.Sequence != "10" || remote.MatchClients.String() != "acl-a" || remote.MatchClientTSIGKeys.String() != "tsig-internal" || remote.ExcludeMatchClientTSIGKeys.String() != "tsig-public" || remote.MatchDestinations.String() != "acl-destination" || remote.DNSSECValidation.String() != "auto" {
 		t.Fatalf("unexpected API view: %+v", remote)
 	}
 	state, err := viewAPIToModel(remote)
 	if err != nil {
 		t.Fatalf("viewAPIToModel() error = %v", err)
 	}
-	if !state.Recursion.ValueBool() || state.Sequence.ValueInt64() != 10 || state.Forwarders.Elements()[0].String() == "" {
+	if !state.Recursion.ValueBool() || state.Sequence.ValueInt64() != 10 || state.MatchClientTSIGKeyIDs.Elements()[0].String() == "" || state.ExcludeMatchClientTSIGKeyIDs.Elements()[0].String() == "" || state.Forwarders.Elements()[0].String() == "" {
 		t.Fatalf("unexpected view state: %+v", state)
+	}
+}
+
+func TestBindViewTSIGSelectorsRejectOverlap(t *testing.T) {
+	included := tools.StringSliceToSet([]string{"key-a", "key-b"})
+	excluded := tools.StringSliceToSet([]string{"key-c", "key-b"})
+	if err := validateViewTSIGSelectors(included, excluded); err == nil {
+		t.Fatal("expected overlapping TSIG view selectors to fail validation")
+	}
+	excluded = tools.StringSliceToSet([]string{"key-c"})
+	if err := validateViewTSIGSelectors(included, excluded); err != nil {
+		t.Fatalf("non-overlapping TSIG view selectors failed validation: %v", err)
 	}
 }
 
