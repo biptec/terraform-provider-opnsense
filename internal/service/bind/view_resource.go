@@ -11,6 +11,7 @@ import (
 var _ resource.Resource = &viewResource{}
 var _ resource.ResourceWithConfigure = &viewResource{}
 var _ resource.ResourceWithImportState = &viewResource{}
+var _ resource.ResourceWithConfigValidators = &viewResource{}
 
 type viewResource struct{ resourceClient }
 
@@ -20,6 +21,9 @@ func (r *viewResource) Metadata(_ context.Context, req resource.MetadataRequest,
 }
 func (r *viewResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = viewResourceSchema()
+}
+func (r *viewResource) ConfigValidators(context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{viewTSIGMatchConfigValidator{}}
 }
 func (r *viewResource) operations() crudOperations[viewResourceModel, apibind.View] {
 	c := r.client.Bind()

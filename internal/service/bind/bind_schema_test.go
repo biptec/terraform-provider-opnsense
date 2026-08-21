@@ -17,8 +17,10 @@ func TestBindViewRoundTrip(t *testing.T) {
 	model := &viewResourceModel{
 		Enabled: types.BoolValue(true), Sequence: types.Int64Value(10), Name: types.StringValue("internal"),
 		MatchAny: types.BoolValue(false), MatchClientACLs: tools.StringSliceToSet([]string{"acl-a"}),
-		MatchDestinationACLs: tools.StringSliceToSet([]string{"acl-destination"}),
-		Recursion:            types.BoolValue(true), AllowRecursion: tools.StringSliceToSet([]string{"acl-a"}),
+		MatchClientTSIGKeyIDs:        tools.StringSliceToSet([]string{"tsig-internal"}),
+		ExcludeMatchClientTSIGKeyIDs: tools.StringSliceToSet([]string{"tsig-public"}),
+		MatchDestinationACLs:         tools.StringSliceToSet([]string{"acl-destination"}),
+		Recursion:                    types.BoolValue(true), AllowRecursion: tools.StringSliceToSet([]string{"acl-a"}),
 		AllowQueryAny: types.BoolValue(false), AllowQuery: tools.StringSliceToSet([]string{"acl-a"}),
 		AllowTransfer: tools.StringSliceToSet([]string{"acl-secondary"}), Forwarders: tools.StringSliceToSet([]string{"1.1.1.1"}),
 		DNSSECValidation: types.StringValue("auto"),
@@ -27,15 +29,27 @@ func TestBindViewRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("viewModelToAPI() error = %v", err)
 	}
-	if remote.Sequence != "10" || remote.MatchClients.String() != "acl-a" || remote.MatchDestinations.String() != "acl-destination" || remote.DNSSECValidation.String() != "auto" {
+	if remote.Sequence != "10" || remote.MatchClients.String() != "acl-a" || remote.MatchClientTSIGKeys.String() != "tsig-internal" || remote.ExcludeMatchClientTSIGKeys.String() != "tsig-public" || remote.MatchDestinations.String() != "acl-destination" || remote.DNSSECValidation.String() != "auto" {
 		t.Fatalf("unexpected API view: %+v", remote)
 	}
 	state, err := viewAPIToModel(remote)
 	if err != nil {
 		t.Fatalf("viewAPIToModel() error = %v", err)
 	}
-	if !state.Recursion.ValueBool() || state.Sequence.ValueInt64() != 10 || state.Forwarders.Elements()[0].String() == "" {
+	if !state.Recursion.ValueBool() || state.Sequence.ValueInt64() != 10 || state.MatchClientTSIGKeyIDs.Elements()[0].String() == "" || state.ExcludeMatchClientTSIGKeyIDs.Elements()[0].String() == "" || state.Forwarders.Elements()[0].String() == "" {
 		t.Fatalf("unexpected view state: %+v", state)
+	}
+}
+
+func TestBindViewTSIGSelectorsRejectOverlap(t *testing.T) {
+	included := tools.StringSliceToSet([]string{"key-a", "key-b"})
+	excluded := tools.StringSliceToSet([]string{"key-c", "key-b"})
+	if err := validateViewTSIGSelectors(included, excluded); err == nil {
+		t.Fatal("expected overlapping TSIG view selectors to fail validation")
+	}
+	excluded = tools.StringSliceToSet([]string{"key-c"})
+	if err := validateViewTSIGSelectors(included, excluded); err != nil {
+		t.Fatalf("non-overlapping TSIG view selectors failed validation: %v", err)
 	}
 }
 
@@ -122,6 +136,38 @@ func TestTsigKeyRemoteSecretDoesNotEnterState(t *testing.T) {
 	}
 }
 
+func TestSecondaryDomainSharedTransferKeyRoundTrip(t *testing.T) {
+	model := &secondaryDomainResourceModel{
+		ViewID: types.StringValue("view-id"), DomainName: types.StringValue("example.test"), Enabled: types.BoolValue(true),
+		PrimaryIPs: tools.StringSliceToSet([]string{"10.16.16.53"}), AllowNotify: tools.StringSliceToSet(nil),
+		TransferKeyID: types.StringValue("shared-key-id"), TransferKeyAlgorithm: types.StringValue(""), TransferKeyName: types.StringValue(""),
+		AllowTransferACLs: tools.StringSliceToSet(nil), AllowQueryACLs: tools.StringSliceToSet(nil),
+	}
+	remote := secondaryDomainModelToAPI(model, "")
+	if remote.TransferKeyID.String() != "shared-key-id" || remote.TransferKey != "" || remote.TransferKeyName != "" {
+		t.Fatalf("unexpected shared-key API secondary domain: %+v", remote)
+	}
+	state := secondaryDomainAPIToModel(remote)
+	if state.TransferKeyID.ValueString() != "shared-key-id" || !state.TransferKeyConfigured.ValueBool() {
+		t.Fatalf("shared transfer key reference lost in state: %+v", state)
+	}
+}
+
+func TestSecondaryDomainSharedTransferKeyRejectsLegacyInlineCredentials(t *testing.T) {
+	model := &secondaryDomainResourceModel{
+		TransferKeyID:        types.StringValue("shared-key-id"),
+		TransferKeyAlgorithm: types.StringValue("hmac-sha256"), TransferKeyName: types.StringValue("legacy"),
+	}
+	if err := validateSecondaryTransferSecret(model, types.StringNull(), true, false); err == nil {
+		t.Fatal("expected shared and inline secondary transfer keys to be mutually exclusive")
+	}
+	model.TransferKeyAlgorithm = types.StringValue("")
+	model.TransferKeyName = types.StringValue("")
+	if err := validateSecondaryTransferSecret(model, types.StringValue("legacy-secret"), true, false); err == nil {
+		t.Fatal("expected shared transfer key and inline secret to be mutually exclusive")
+	}
+}
+
 func TestSecondaryDomainRemoteSecretDoesNotEnterState(t *testing.T) {
 	remote := &apibind.SecondaryDomain{View: api.SelectedMap("view-id"), DomainName: "example.test", Enabled: "1", PrimaryIP: api.SelectedMapList{"192.0.2.53"}, TransferKeyAlgorithm: api.SelectedMap("hmac-sha256"), TransferKeyName: "xfr.example.test", TransferKey: "must-not-enter-state"}
 	state := secondaryDomainAPIToModel(remote)
@@ -148,6 +194,14 @@ func TestApplySecondaryDomainModelPreservesOrRotatesTransferSecret(t *testing.T)
 	if remote.TransferKey != "new-secret" {
 		t.Fatal("write-only rotated transfer secret was not applied")
 	}
+	plan.TransferKeyID = types.StringValue("shared-key-id")
+	plan.TransferKeyAlgorithm = types.StringValue("")
+	plan.TransferKeyName = types.StringValue("")
+	applySecondaryDomainModel(remote, plan, types.StringNull())
+	if remote.TransferKeyID.String() != "shared-key-id" || remote.TransferKey != "" || remote.TransferKeyName != "" || remote.TransferKeyAlgorithm.String() != "" {
+		t.Fatalf("switching to shared transfer key did not clear legacy credentials: %+v", remote)
+	}
+	plan.TransferKeyID = types.StringValue("")
 	plan.TransferKeyAlgorithm = types.StringValue("")
 	plan.TransferKeyName = types.StringValue("")
 	applySecondaryDomainModel(remote, plan, types.StringNull())
