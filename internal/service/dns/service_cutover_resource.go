@@ -81,7 +81,7 @@ func (r *serviceCutoverResource) Create(ctx context.Context, req resource.Create
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.reconcile(ctx, &plan); err != nil {
+	if err := r.reconcileInitial(ctx, &plan); err != nil {
 		resp.Diagnostics.AddError("Unable to Change DNS Service Owner", err.Error())
 		return
 	}
@@ -162,6 +162,14 @@ func (r *serviceCutoverResource) ModifyPlan(ctx context.Context, req resource.Mo
 }
 
 func (r *serviceCutoverResource) reconcile(ctx context.Context, plan *serviceCutoverResourceModel) error {
+	return r.reconcileServiceOwner(ctx, plan, true)
+}
+
+func (r *serviceCutoverResource) reconcileInitial(ctx context.Context, plan *serviceCutoverResourceModel) error {
+	return r.reconcileServiceOwner(ctx, plan, false)
+}
+
+func (r *serviceCutoverResource) reconcileServiceOwner(ctx context.Context, plan *serviceCutoverResourceModel, requireCutoverApproval bool) error {
 	target := plan.Target.ValueString()
 	active, snapshot, err := r.backend.Observe(ctx)
 	if err != nil {
@@ -176,7 +184,7 @@ func (r *serviceCutoverResource) reconcile(ctx context.Context, plan *serviceCut
 	if active == "conflict" && primaryServiceOwner(snapshot) == "conflict" {
 		return fmt.Errorf("refusing cutover while BIND and Unbound are simultaneously enabled")
 	}
-	if !plan.AllowCutover.ValueBool() {
+	if requireCutoverApproval && !plan.AllowCutover.ValueBool() {
 		return fmt.Errorf("changing DNS ownership from %q to %q requires allow_cutover = true", active, target)
 	}
 

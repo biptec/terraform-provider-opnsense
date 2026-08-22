@@ -171,6 +171,43 @@ func cutoverPlan(target string) *serviceCutoverResourceModel {
 	}
 }
 
+func TestReconcileInitialToBindDoesNotRequireApproval(t *testing.T) {
+	backend := &fakeCutoverBackend{
+		snapshot:      unboundSnapshot(),
+		bindStatus:    "stopped",
+		unboundStatus: "running",
+	}
+	resource := &serviceCutoverResource{backend: backend}
+	plan := cutoverPlan("bind")
+	plan.AllowCutover = types.BoolValue(false)
+
+	if err := resource.reconcileInitial(context.Background(), plan); err != nil {
+		t.Fatalf("reconcileInitial() error = %v", err)
+	}
+	if got := classifyServiceState(backend.snapshot); got != "bind" {
+		t.Fatalf("active service = %q, want bind", got)
+	}
+}
+
+func TestReconcileManagedToBindRequiresApproval(t *testing.T) {
+	backend := &fakeCutoverBackend{
+		snapshot:      unboundSnapshot(),
+		bindStatus:    "stopped",
+		unboundStatus: "running",
+	}
+	resource := &serviceCutoverResource{backend: backend}
+	plan := cutoverPlan("bind")
+	plan.AllowCutover = types.BoolValue(false)
+
+	err := resource.reconcile(context.Background(), plan)
+	if err == nil || !strings.Contains(err.Error(), "requires allow_cutover = true") {
+		t.Fatalf("reconcile() error = %v, want approval requirement", err)
+	}
+	if got := classifyServiceState(backend.snapshot); got != "unbound" {
+		t.Fatalf("active service = %q, want unbound", got)
+	}
+}
+
 func TestReconcileToBind(t *testing.T) {
 	backend := &fakeCutoverBackend{
 		snapshot:      unboundSnapshot(),
