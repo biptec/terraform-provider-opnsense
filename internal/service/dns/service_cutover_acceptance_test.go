@@ -77,6 +77,14 @@ func TestAccDNSServiceCutoverResource(t *testing.T) {
 					checkDNSPort53Owner("unbound", []string{"*"}),
 				),
 			},
+			{
+				Config: testAccDNSServiceCutoverConfig("unbound", false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "allow_cutover", "false"),
+					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "active_service", "unbound"),
+					checkDNSPort53Owner("unbound", []string{"*"}),
+				),
+			},
 		},
 	})
 }
