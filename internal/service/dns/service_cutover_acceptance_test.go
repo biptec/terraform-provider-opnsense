@@ -51,11 +51,12 @@ func TestAccDNSServiceCutoverResource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccDNSServiceCutoverConfig("unbound", false),
+				Config: testAccDNSServiceCutoverConfig("bind", false),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "target", "unbound"),
-					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "active_service", "unbound"),
-					checkDNSPort53Owner("unbound", []string{"*"}),
+					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "target", "bind"),
+					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "active_service", "bind"),
+					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "allow_cutover", "false"),
+					checkDNSPort53Owner("named", []string{"192.0.2.2", "198.51.100.231"}),
 				),
 			},
 			{
@@ -66,28 +67,12 @@ func TestAccDNSServiceCutoverResource(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"allow_cutover", "verify_timeout_seconds"},
 			},
 			{
-				Config:      testAccDNSServiceCutoverConfig("bind", false),
+				Config:      testAccDNSServiceCutoverConfig("unbound", false),
 				ExpectError: regexp.MustCompile("DNS Cutover Requires Explicit Approval"),
-			},
-			{
-				Config: testAccDNSServiceCutoverConfig("bind", true),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "target", "bind"),
-					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "active_service", "bind"),
-					checkDNSPort53Owner("named", []string{"192.0.2.2", "198.51.100.231"}),
-				),
 			},
 			{
 				Config: testAccDNSServiceCutoverConfig("unbound", true),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "active_service", "unbound"),
-					checkDNSPort53Owner("unbound", []string{"*"}),
-				),
-			},
-			{
-				Config: testAccDNSServiceCutoverConfig("unbound", false),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "allow_cutover", "false"),
 					resource.TestCheckResourceAttr("opnsense_dns_service_cutover.resolver", "active_service", "unbound"),
 					checkDNSPort53Owner("unbound", []string{"*"}),
 				),

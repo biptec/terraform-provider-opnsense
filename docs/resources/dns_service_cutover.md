@@ -3,12 +3,12 @@
 page_title: "opnsense_dns_service_cutover Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Coordinates a guarded DNS port ownership transition between Unbound and BIND. It is the exclusive Terraform owner of BIND enabled state, Unbound enabled state, and the dnsmasq DNS port. The resource preflights BIND while it is disabled, verifies the selected service runtime, and restores the previous service state when activation fails.
+  Coordinates DNS port ownership between Unbound and BIND. Initial resource creation may select the configured target without a separate cutover approval; later owner changes remain guarded. It is the exclusive Terraform owner of BIND enabled state, Unbound enabled state, and the dnsmasq DNS port. The resource preflights BIND while it is disabled, verifies the selected service runtime, and restores the previous service state when activation fails.
 ---
 
 # opnsense_dns_service_cutover (Resource)
 
-Coordinates a guarded DNS port ownership transition between Unbound and BIND. It is the exclusive Terraform owner of BIND enabled state, Unbound enabled state, and the dnsmasq DNS port. The resource preflights BIND while it is disabled, verifies the selected service runtime, and restores the previous service state when activation fails.
+Coordinates DNS port ownership between Unbound and BIND. Initial resource creation may select the configured target without a separate cutover approval; later owner changes remain guarded. It is the exclusive Terraform owner of BIND enabled state, Unbound enabled state, and the dnsmasq DNS port. The resource preflights BIND while it is disabled, verifies the selected service runtime, and restores the previous service state when activation fails.
 
 ## Example Usage
 
@@ -48,7 +48,7 @@ resource "opnsense_dns_service_cutover" "resolver" {
 
 ### Optional
 
-- `allow_cutover` (Boolean) Explicitly permit a DNS owner transition. Keep false after the planned cutover completes.
+- `allow_cutover` (Boolean) Explicitly permit changing the DNS owner after this resource is already managed. Initial resource creation may select target without this flag. Keep false during normal steady-state operation.
 - `verify_timeout_seconds` (Number) Maximum time to wait for the selected DNS service state to converge.
 
 ### Read-Only

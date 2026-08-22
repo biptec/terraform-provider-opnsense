@@ -22,7 +22,7 @@ type serviceCutoverResourceModel struct {
 
 func serviceCutoverResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Coordinates a guarded DNS port ownership transition between Unbound and BIND. It is the exclusive Terraform owner of BIND enabled state, Unbound enabled state, and the dnsmasq DNS port. The resource preflights BIND while it is disabled, verifies the selected service runtime, and restores the previous service state when activation fails.",
+		MarkdownDescription: "Coordinates DNS port ownership between Unbound and BIND. Initial resource creation may select the configured target without a separate cutover approval; later owner changes remain guarded. It is the exclusive Terraform owner of BIND enabled state, Unbound enabled state, and the dnsmasq DNS port. The resource preflights BIND while it is disabled, verifies the selected service runtime, and restores the previous service state when activation fails.",
 		Attributes: map[string]schema.Attribute{
 			"target": schema.StringAttribute{
 				Required:            true,
@@ -35,7 +35,7 @@ func serviceCutoverResourceSchema() schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "Explicitly permit a DNS owner transition. Keep false after the planned cutover completes.",
+				MarkdownDescription: "Explicitly permit changing the DNS owner after this resource is already managed. Initial resource creation may select target without this flag. Keep false during normal steady-state operation.",
 			},
 			"verify_timeout_seconds": schema.Int64Attribute{
 				Optional:            true,
