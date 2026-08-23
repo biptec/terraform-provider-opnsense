@@ -23,3 +23,4 @@ Reads global OPNsense HAProxy settings.
 - `hard_stop_after` (String)
 - `id` (String) The ID of this resource.
 - `seamless_reload` (Boolean)
+- `show_intro` (Boolean)

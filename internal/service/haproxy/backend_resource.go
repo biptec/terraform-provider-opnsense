@@ -47,6 +47,7 @@ func (r *backendResource) ops() crudOperations[backendModel, apihaproxy.Backend]
 		ValidateUpdate: func(ctx context.Context, id string, data *apihaproxy.Backend) error {
 			return r.validateUniqueName(ctx, id, data)
 		},
+		Apply: r.applyHAProxyConfig,
 	}
 }
 func (r *backendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

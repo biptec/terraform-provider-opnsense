@@ -23,7 +23,7 @@ func (r *healthcheckResource) Schema(_ context.Context, _ resource.SchemaRequest
 	resp.Schema = healthcheckResourceSchema()
 }
 func (r *healthcheckResource) ops() crudOperations[healthcheckModel, apihaproxy.Healthcheck] {
-	return crudOperations[healthcheckModel, apihaproxy.Healthcheck]{Name: "HAProxy Healthcheck", Convert: healthcheckModelToAPI, Expand: healthcheckAPIToModel, Add: r.client.Haproxy().AddHealthcheck, Get: r.client.Haproxy().GetHealthcheck, Update: r.client.Haproxy().UpdateHealthcheck, Delete: r.client.Haproxy().DeleteHealthcheck, GetID: func(d *healthcheckModel) string { return d.ID.ValueString() }, SetID: func(d *healthcheckModel, id string) { d.ID = types.StringValue(id) }}
+	return crudOperations[healthcheckModel, apihaproxy.Healthcheck]{Name: "HAProxy Healthcheck", Convert: healthcheckModelToAPI, Expand: healthcheckAPIToModel, Add: r.client.Haproxy().AddHealthcheck, Get: r.client.Haproxy().GetHealthcheck, Update: r.client.Haproxy().UpdateHealthcheck, Delete: r.client.Haproxy().DeleteHealthcheck, GetID: func(d *healthcheckModel) string { return d.ID.ValueString() }, SetID: func(d *healthcheckModel, id string) { d.ID = types.StringValue(id) }, Apply: r.applyHAProxyConfig}
 }
 func (r *healthcheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	createResource(ctx, req, resp, r.ops())

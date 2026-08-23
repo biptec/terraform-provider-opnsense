@@ -22,6 +22,7 @@ Manages global OPNsense HAProxy settings. The built-in singleton is adopted auto
 - `graceful_stop` (Boolean) Whether HAProxy uses graceful stop behavior.
 - `hard_stop_after` (String) Maximum graceful shutdown duration, such as `60s`.
 - `seamless_reload` (Boolean) Whether seamless reload is enabled.
+- `show_intro` (Boolean) Whether HAProxy introduction and Quick Start tabs are shown in the WebUI.
 
 ### Read-Only
 

@@ -23,7 +23,7 @@ func (r *aclResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 	resp.Schema = aclResourceSchema()
 }
 func (r *aclResource) ops() crudOperations[aclModel, apihaproxy.ACL] {
-	return crudOperations[aclModel, apihaproxy.ACL]{Name: "HAProxy ACL", Convert: aclModelToAPI, Expand: aclAPIToModel, Add: r.client.Haproxy().AddACL, Get: r.client.Haproxy().GetACL, Update: r.client.Haproxy().UpdateACL, Delete: r.client.Haproxy().DeleteACL, GetID: func(d *aclModel) string { return d.ID.ValueString() }, SetID: func(d *aclModel, id string) { d.ID = types.StringValue(id) }}
+	return crudOperations[aclModel, apihaproxy.ACL]{Name: "HAProxy ACL", Convert: aclModelToAPI, Expand: aclAPIToModel, Add: r.client.Haproxy().AddACL, Get: r.client.Haproxy().GetACL, Update: r.client.Haproxy().UpdateACL, Delete: r.client.Haproxy().DeleteACL, GetID: func(d *aclModel) string { return d.ID.ValueString() }, SetID: func(d *aclModel, id string) { d.ID = types.StringValue(id) }, Apply: r.applyHAProxyConfig}
 }
 func (r *aclResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	createResource(ctx, req, resp, r.ops())
