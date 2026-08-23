@@ -23,7 +23,7 @@ func (r *frontendResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	resp.Schema = frontendResourceSchema()
 }
 func (r *frontendResource) ops() crudOperations[frontendModel, apihaproxy.Frontend] {
-	return crudOperations[frontendModel, apihaproxy.Frontend]{Name: "HAProxy Frontend", Convert: frontendModelToAPI, Expand: frontendAPIToModel, Add: r.client.Haproxy().AddFrontend, Get: r.client.Haproxy().GetFrontend, Update: r.client.Haproxy().UpdateFrontend, Delete: r.client.Haproxy().DeleteFrontend, GetID: func(d *frontendModel) string { return d.ID.ValueString() }, SetID: func(d *frontendModel, id string) { d.ID = types.StringValue(id) }}
+	return crudOperations[frontendModel, apihaproxy.Frontend]{Name: "HAProxy Frontend", Convert: frontendModelToAPI, Expand: frontendAPIToModel, Add: r.client.Haproxy().AddFrontend, Get: r.client.Haproxy().GetFrontend, Update: r.client.Haproxy().UpdateFrontend, Delete: r.client.Haproxy().DeleteFrontend, GetID: func(d *frontendModel) string { return d.ID.ValueString() }, SetID: func(d *frontendModel, id string) { d.ID = types.StringValue(id) }, Apply: r.applyHAProxyConfig}
 }
 func (r *frontendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	createResource(ctx, req, resp, r.ops())

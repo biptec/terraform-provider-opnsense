@@ -23,7 +23,7 @@ func (r *actionResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	resp.Schema = actionResourceSchema()
 }
 func (r *actionResource) ops() crudOperations[actionModel, apihaproxy.Action] {
-	return crudOperations[actionModel, apihaproxy.Action]{Name: "HAProxy Action", Convert: actionModelToAPI, Expand: actionAPIToModel, Add: r.client.Haproxy().AddAction, Get: r.client.Haproxy().GetAction, Update: r.client.Haproxy().UpdateAction, Delete: r.client.Haproxy().DeleteAction, GetID: func(d *actionModel) string { return d.ID.ValueString() }, SetID: func(d *actionModel, id string) { d.ID = types.StringValue(id) }}
+	return crudOperations[actionModel, apihaproxy.Action]{Name: "HAProxy Action", Convert: actionModelToAPI, Expand: actionAPIToModel, Add: r.client.Haproxy().AddAction, Get: r.client.Haproxy().GetAction, Update: r.client.Haproxy().UpdateAction, Delete: r.client.Haproxy().DeleteAction, GetID: func(d *actionModel) string { return d.ID.ValueString() }, SetID: func(d *actionModel, id string) { d.ID = types.StringValue(id) }, Apply: r.applyHAProxyConfig}
 }
 func (r *actionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	createResource(ctx, req, resp, r.ops())

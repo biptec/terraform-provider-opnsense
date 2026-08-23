@@ -54,6 +54,7 @@ type crudOperations[Model any, APIModel any] struct {
 	ValidateCreate  func(context.Context, *APIModel) error
 	ValidateCreated func(context.Context, string, *APIModel) error
 	ValidateUpdate  func(context.Context, string, *APIModel) error
+	Apply           func(context.Context) error
 }
 
 func createResource[Model any, APIModel any](ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, ops crudOperations[Model, APIModel]) {
@@ -91,6 +92,14 @@ func createResource[Model any, APIModel any](ctx context.Context, req resource.C
 				return
 			}
 			resp.Diagnostics.AddError("Unable to Create "+ops.Name, err.Error())
+			return
+		}
+	}
+	if ops.Apply != nil {
+		if err := ops.Apply(ctx); err != nil {
+			ops.SetID(&data, id)
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			resp.Diagnostics.AddError(ops.Name+" Created but HAProxy Apply Failed", err.Error())
 			return
 		}
 	}
@@ -159,6 +168,12 @@ func updateResource[Model any, APIModel any](ctx context.Context, req resource.U
 		resp.Diagnostics.AddError("Unable to Update "+ops.Name, err.Error())
 		return
 	}
+	if ops.Apply != nil {
+		if err := ops.Apply(ctx); err != nil {
+			resp.Diagnostics.AddError(ops.Name+" Updated but HAProxy Apply Failed", err.Error())
+			return
+		}
+	}
 	remote, err := ops.Get(ctx, id)
 	if err != nil {
 		resp.Diagnostics.AddError(ops.Name+" Updated but Read Failed", err.Error())
@@ -181,10 +196,15 @@ func deleteResource[Model any, APIModel any](ctx context.Context, req resource.D
 	}
 	if err := ops.Delete(ctx, ops.GetID(&data)); err != nil {
 		var notFound *errs.NotFoundError
-		if errors.As(err, &notFound) {
+		if !errors.As(err, &notFound) {
+			resp.Diagnostics.AddError("Unable to Delete "+ops.Name, err.Error())
 			return
 		}
-		resp.Diagnostics.AddError("Unable to Delete "+ops.Name, err.Error())
+	}
+	if ops.Apply != nil {
+		if err := ops.Apply(ctx); err != nil {
+			resp.Diagnostics.AddError(ops.Name+" Deleted but HAProxy Apply Failed", err.Error())
+		}
 	}
 }
 

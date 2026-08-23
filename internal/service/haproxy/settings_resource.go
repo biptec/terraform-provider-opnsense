@@ -3,7 +3,6 @@ package haproxy
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -78,15 +77,8 @@ func (r *settingsResource) applySettings(ctx context.Context, plan *settingsMode
 	if result == nil || result.Result != "saved" {
 		return nil, fmt.Errorf("unexpected API result: %#v", result)
 	}
-	checked, err := r.client.Haproxy().ServiceConfigtest(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("configuration test: %w", err)
-	}
-	if checked == nil || strings.Contains(strings.ToLower(checked.Result), "error") || strings.Contains(strings.ToLower(checked.Result), "failed") {
-		return nil, fmt.Errorf("configuration test result: %#v", checked)
-	}
-	if _, err = r.client.Haproxy().ServiceReconfigure(ctx); err != nil {
-		return nil, fmt.Errorf("reconfigure HAProxy: %w", err)
+	if err := r.applyHAProxyConfig(ctx); err != nil {
+		return nil, err
 	}
 	updated, err := r.client.Haproxy().SettingsGet(ctx)
 	if err != nil {
@@ -98,6 +90,9 @@ func (r *settingsResource) applySettings(ctx context.Context, plan *settingsMode
 func completeSettingsModel(plan, current *settingsModel) {
 	if plan.Enabled.IsNull() || plan.Enabled.IsUnknown() {
 		plan.Enabled = current.Enabled
+	}
+	if plan.ShowIntro.IsNull() || plan.ShowIntro.IsUnknown() {
+		plan.ShowIntro = current.ShowIntro
 	}
 	if plan.GracefulStop.IsNull() || plan.GracefulStop.IsUnknown() {
 		plan.GracefulStop = current.GracefulStop

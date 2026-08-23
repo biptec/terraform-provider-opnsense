@@ -42,6 +42,7 @@ data "opnsense_haproxy_configtest" "test" {}
 `, Check: resource.ComposeAggregateTestCheckFunc(
 			resource.TestCheckResourceAttr("data.opnsense_haproxy_settings.test", "id", "haproxy_settings"),
 			resource.TestCheckResourceAttrSet("data.opnsense_haproxy_settings.test", "enabled"),
+			resource.TestCheckResourceAttrSet("data.opnsense_haproxy_settings.test", "show_intro"),
 			resource.TestCheckResourceAttr("data.opnsense_haproxy_status.test", "id", "haproxy_status"),
 			resource.TestCheckResourceAttrSet("data.opnsense_haproxy_status.test", "status"),
 			resource.TestCheckResourceAttr("data.opnsense_haproxy_configtest.test", "id", "haproxy_configtest"),
@@ -55,12 +56,16 @@ func TestAccHAProxySettingsResourceAdoptsSingleton(t *testing.T) {
 		PreCheck: func() { haproxyPreCheck(t) }, ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{Config: `
-resource "opnsense_haproxy_settings" "test" {}
+resource "opnsense_haproxy_settings" "test" {
+  show_intro = false
+}
 `, Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("opnsense_haproxy_settings.test", "id", "haproxy_settings"),
 				resource.TestCheckResourceAttrSet("opnsense_haproxy_settings.test", "enabled"),
+				resource.TestCheckResourceAttr("opnsense_haproxy_settings.test", "show_intro", "false"),
 				resource.TestCheckResourceAttrSet("opnsense_haproxy_settings.test", "graceful_stop"),
 				resource.TestCheckResourceAttrSet("opnsense_haproxy_settings.test", "seamless_reload"),
+				checkHAProxyNoPendingDiff(),
 			)},
 			{ResourceName: "opnsense_haproxy_settings.test", ImportState: true, ImportStateVerify: true},
 		},
@@ -85,6 +90,7 @@ func TestAccHAProxyL4SNIResources(t *testing.T) {
 				resource.TestCheckResourceAttr("opnsense_haproxy_frontend.tls", "ssl_enabled", "false"),
 				resource.TestCheckTypeSetElemAttr("opnsense_haproxy_frontend.tls", "bind.*", "127.0.0.1:18443"),
 				resource.TestCheckResourceAttr("data.opnsense_haproxy_acl.sni", "ssl_sni", "tfacc.example.invalid"),
+				checkHAProxyNoPendingDiff(),
 			)},
 			{ResourceName: "opnsense_haproxy_server.endpoint", ImportState: true, ImportStateVerify: true},
 			{ResourceName: "opnsense_haproxy_healthcheck.tcp", ImportState: true, ImportStateVerify: true},
@@ -99,6 +105,7 @@ func TestAccHAProxyL4SNIResources(t *testing.T) {
 				resource.TestCheckResourceAttr("opnsense_haproxy_action.route", "description", "updated"),
 				resource.TestCheckResourceAttr("opnsense_haproxy_frontend.tls", "description", "updated"),
 				resource.TestCheckTypeSetElemAttr("opnsense_haproxy_frontend.tls", "bind.*", "127.0.0.1:18444"),
+				checkHAProxyNoPendingDiff(),
 			)},
 		},
 	})
