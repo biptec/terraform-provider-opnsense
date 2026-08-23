@@ -72,8 +72,8 @@ func (r *routeResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	// Add route to unbound
-	id, err := r.client.Routes().AddRoute(ctx, route)
+	// Add route to OPNsense
+	id, err := r.client.Routes().AddRouteResolved(ctx, route)
 	if err != nil {
 		if id != "" {
 			data.Id = types.StringValue(id)
@@ -165,10 +165,10 @@ func (r *routeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	// Update route in OPNsense core
-	err = r.client.Routes().UpdateRoute(ctx, data.Id.ValueString(), route)
+	err = r.client.Routes().UpdateRouteResolved(ctx, data.Id.ValueString(), route)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to create route, got error: %s", err))
+			fmt.Sprintf("Unable to update route, got error: %s", err))
 		return
 	}
 
