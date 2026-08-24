@@ -1,11 +1,14 @@
 package interfaces
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	apiinterfaces "github.com/biptec/opnsense-go/pkg/interfaces"
 	"github.com/biptec/terraform-provider-opnsense/internal/tools"
+	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -16,6 +19,28 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+var assignmentAutomaticIdentifierPattern = regexp.MustCompile(`^opt[0-9]+$`)
+
+type assignmentIdentifierValidator struct{}
+
+func (assignmentIdentifierValidator) Description(_ context.Context) string {
+	return "identifier must not use OPNsense-reserved lan, wan, or optN names"
+}
+
+func (v assignmentIdentifierValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v assignmentIdentifierValidator) ValidateString(ctx context.Context, request validator.StringRequest, response *validator.StringResponse) {
+	if request.ConfigValue.IsNull() || request.ConfigValue.IsUnknown() || request.ConfigValue.ValueString() == "" {
+		return
+	}
+	value := request.ConfigValue.ValueString()
+	if value == "lan" || value == "wan" || assignmentAutomaticIdentifierPattern.MatchString(value) {
+		response.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(request.Path, v.Description(ctx), value))
+	}
+}
 
 type assignmentIPv4Model struct {
 	Mode         types.String `tfsdk:"mode"`
@@ -44,6 +69,7 @@ type assignmentIPv6Model struct {
 }
 
 type assignmentResourceModel struct {
+	Identifier       types.String         `tfsdk:"identifier"`
 	Description      types.String         `tfsdk:"description"`
 	Device           types.String         `tfsdk:"device"`
 	Locked           types.Bool           `tfsdk:"locked"`
@@ -63,6 +89,7 @@ type assignmentResourceModel struct {
 }
 
 type assignmentDataSourceModel struct {
+	Identifier       types.String         `tfsdk:"identifier"`
 	Description      types.String         `tfsdk:"description"`
 	Device           types.String         `tfsdk:"device"`
 	Locked           types.Bool           `tfsdk:"locked"`
@@ -84,6 +111,16 @@ func assignmentResourceSchema() schema.Schema {
 	return schema.Schema{
 		MarkdownDescription: "Assigns a physical or virtual device to an OPNsense logical interface and manages its basic IPv4/IPv6 configuration.",
 		Attributes: map[string]schema.Attribute{
+			"identifier": schema.StringAttribute{
+				Optional: true, Computed: true,
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 32),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[a-z][a-z0-9_]*$`), "Identifier must start with a lowercase letter and contain only lowercase letters, digits, and underscores."),
+					assignmentIdentifierValidator{},
+				},
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplaceIfConfigured()},
+				MarkdownDescription: "Stable OPNsense logical interface identifier. Leave unset to use automatic `optN` allocation. Legacy identifiers `lan`, `wan`, and `optN` are reserved by OPNsense.",
+			},
 			"description":       schema.StringAttribute{Optional: true, MarkdownDescription: "Interface description."},
 			"device":            schema.StringAttribute{Required: true, MarkdownDescription: "Physical or virtual device, for example `vtnet1`, `vlan01`, or `vxlan0`."},
 			"locked":            schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Prevent deletion of the assignment in OPNsense."},
@@ -146,7 +183,8 @@ func assignmentDataSourceSchema() dschema.Schema {
 	return dschema.Schema{
 		MarkdownDescription: "Reads an OPNsense logical interface assignment.",
 		Attributes: map[string]dschema.Attribute{
-			"id":                dschema.StringAttribute{Required: true, MarkdownDescription: "Logical interface name, for example `lan` or `opt1`."},
+			"id":                dschema.StringAttribute{Required: true, MarkdownDescription: "Logical interface name, for example `lan`, `opt1`, or a semantic identifier."},
+			"identifier":        dschema.StringAttribute{Computed: true, MarkdownDescription: "Stable logical interface identifier."},
 			"name":              dschema.StringAttribute{Computed: true},
 			"description":       dschema.StringAttribute{Computed: true},
 			"device":            dschema.StringAttribute{Computed: true},
@@ -186,6 +224,9 @@ func assignmentIPv6DataSourceAttribute() dschema.SingleNestedAttribute {
 }
 
 func convertAssignmentSchemaToStruct(d *assignmentResourceModel) (*apiinterfaces.Assignment, error) {
+	if err := validateAssignmentIdentifier(d.Identifier); err != nil {
+		return nil, err
+	}
 	if d.IPv4 == nil || d.IPv6 == nil {
 		return nil, fmt.Errorf("both ipv4 and ipv6 blocks are required")
 	}
@@ -196,7 +237,7 @@ func convertAssignmentSchemaToStruct(d *assignmentResourceModel) (*apiinterfaces
 		return nil, err
 	}
 	return &apiinterfaces.Assignment{
-		Description: d.Description.ValueString(), Device: api.SelectedMap(d.Device.ValueString()),
+		Identifier: d.Identifier.ValueString(), Description: d.Description.ValueString(), Device: api.SelectedMap(d.Device.ValueString()),
 		Lock: tools.BoolToString(d.Locked.ValueBool()), Enabled: tools.BoolToString(d.Enabled.ValueBool()),
 		BlockPrivate: tools.BoolToString(d.BlockPrivate.ValueBool()), BlockBogons: tools.BoolToString(d.BlockBogons.ValueBool()),
 		GatewayInterface: tools.BoolToString(d.GatewayInterface.ValueBool()), Promiscuous: tools.BoolToString(d.Promiscuous.ValueBool()),
@@ -212,6 +253,17 @@ func convertAssignmentSchemaToStruct(d *assignmentResourceModel) (*apiinterfaces
 		DHCP6VLANPriority: optionalIntString(d.IPv6.VLANPriority), Track6Interface: d.IPv6.TrackInterface.ValueString(),
 		Track6PrefixID: optionalIntString(d.IPv6.TrackPrefixID), Track6AssociatedPD: optionalIntString(d.IPv6.TrackAssociatedPD),
 	}, nil
+}
+
+func validateAssignmentIdentifier(identifier types.String) error {
+	if identifier.IsNull() || identifier.IsUnknown() || identifier.ValueString() == "" {
+		return nil
+	}
+	value := identifier.ValueString()
+	if value == "lan" || value == "wan" || assignmentAutomaticIdentifierPattern.MatchString(value) {
+		return fmt.Errorf("interface identifier %q is reserved by OPNsense", value)
+	}
+	return nil
 }
 
 func validateAssignmentAddressMode(mode string, address types.String, prefix types.Int64, family int) error {
@@ -247,7 +299,10 @@ func convertAssignmentStructToResourceSchema(d *apiinterfaces.Assignment, id str
 	if name == "" {
 		name = id
 	}
-	return &assignmentResourceModel{Description: tools.StringOrNull(d.Description), Device: types.StringValue(d.Device.String()), Locked: types.BoolValue(tools.StringToBool(d.Lock)), Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), BlockPrivate: types.BoolValue(tools.StringToBool(d.BlockPrivate)), BlockBogons: types.BoolValue(tools.StringToBool(d.BlockBogons)), GatewayInterface: types.BoolValue(tools.StringToBool(d.GatewayInterface)), Promiscuous: types.BoolValue(tools.StringToBool(d.Promiscuous)), SpoofMAC: tools.StringOrNull(d.SpoofMAC), MTU: tools.StringToInt64Null(d.MTU), MSS: tools.StringToInt64Null(d.MSS), IPv4: assignmentIPv4FromStruct(d), IPv6: assignmentIPv6FromStruct(d), AllowReaddress: allowReaddress, Name: types.StringValue(name), Id: types.StringValue(id)}
+	if allowReaddress.IsNull() || allowReaddress.IsUnknown() {
+		allowReaddress = types.BoolValue(false)
+	}
+	return &assignmentResourceModel{Identifier: types.StringValue(name), Description: tools.StringOrNull(d.Description), Device: types.StringValue(d.Device.String()), Locked: types.BoolValue(tools.StringToBool(d.Lock)), Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), BlockPrivate: types.BoolValue(tools.StringToBool(d.BlockPrivate)), BlockBogons: types.BoolValue(tools.StringToBool(d.BlockBogons)), GatewayInterface: types.BoolValue(tools.StringToBool(d.GatewayInterface)), Promiscuous: types.BoolValue(tools.StringToBool(d.Promiscuous)), SpoofMAC: tools.StringOrNull(d.SpoofMAC), MTU: tools.StringToInt64Null(d.MTU), MSS: tools.StringToInt64Null(d.MSS), IPv4: assignmentIPv4FromStruct(d), IPv6: assignmentIPv6FromStruct(d), AllowReaddress: allowReaddress, Name: types.StringValue(name), Id: types.StringValue(id)}
 }
 
 func convertAssignmentStructToDataSourceSchema(d *apiinterfaces.Assignment, id string) *assignmentDataSourceModel {
@@ -255,5 +310,5 @@ func convertAssignmentStructToDataSourceSchema(d *apiinterfaces.Assignment, id s
 	if name == "" {
 		name = id
 	}
-	return &assignmentDataSourceModel{Description: tools.StringOrNull(d.Description), Device: types.StringValue(d.Device.String()), Locked: types.BoolValue(tools.StringToBool(d.Lock)), Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), BlockPrivate: types.BoolValue(tools.StringToBool(d.BlockPrivate)), BlockBogons: types.BoolValue(tools.StringToBool(d.BlockBogons)), GatewayInterface: types.BoolValue(tools.StringToBool(d.GatewayInterface)), Promiscuous: types.BoolValue(tools.StringToBool(d.Promiscuous)), SpoofMAC: tools.StringOrNull(d.SpoofMAC), MTU: tools.StringToInt64Null(d.MTU), MSS: tools.StringToInt64Null(d.MSS), IPv4: assignmentIPv4FromStruct(d), IPv6: assignmentIPv6FromStruct(d), Name: types.StringValue(name), Id: types.StringValue(id)}
+	return &assignmentDataSourceModel{Identifier: types.StringValue(name), Description: tools.StringOrNull(d.Description), Device: types.StringValue(d.Device.String()), Locked: types.BoolValue(tools.StringToBool(d.Lock)), Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), BlockPrivate: types.BoolValue(tools.StringToBool(d.BlockPrivate)), BlockBogons: types.BoolValue(tools.StringToBool(d.BlockBogons)), GatewayInterface: types.BoolValue(tools.StringToBool(d.GatewayInterface)), Promiscuous: types.BoolValue(tools.StringToBool(d.Promiscuous)), SpoofMAC: tools.StringOrNull(d.SpoofMAC), MTU: tools.StringToInt64Null(d.MTU), MSS: tools.StringToInt64Null(d.MSS), IPv4: assignmentIPv4FromStruct(d), IPv6: assignmentIPv6FromStruct(d), Name: types.StringValue(name), Id: types.StringValue(id)}
 }
