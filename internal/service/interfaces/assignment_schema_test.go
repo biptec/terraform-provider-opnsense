@@ -12,7 +12,7 @@ import (
 func TestConvertAssignmentSchemaToStruct(t *testing.T) {
 	t.Parallel()
 	model := assignmentResourceModel{
-		Description: types.StringValue("Transit"), Device: types.StringValue("vtnet2"),
+		Identifier: types.StringValue("transit"), Description: types.StringValue("Transit"), Device: types.StringValue("vtnet2"),
 		Locked: types.BoolValue(false), Enabled: types.BoolValue(true), BlockPrivate: types.BoolValue(true),
 		BlockBogons: types.BoolValue(false), GatewayInterface: types.BoolValue(false), Promiscuous: types.BoolValue(false),
 		SpoofMAC: types.StringNull(), MTU: types.Int64Value(1500), MSS: types.Int64Null(),
@@ -23,8 +23,40 @@ func TestConvertAssignmentSchemaToStruct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("convertAssignmentSchemaToStruct() error = %v", err)
 	}
-	if got.Device.String() != "vtnet2" || got.IPv4Mode.String() != "static" || got.IPv4Address != "192.0.2.1" || got.IPv4Prefix != "24" || got.IPv6Mode.String() != "track6" || got.Track6Interface != "wan" {
+	if got.Identifier != "transit" || got.Device.String() != "vtnet2" || got.IPv4Mode.String() != "static" || got.IPv4Address != "192.0.2.1" || got.IPv4Prefix != "24" || got.IPv6Mode.String() != "track6" || got.Track6Interface != "wan" {
 		t.Fatalf("converted assignment = %#v", got)
+	}
+}
+
+func TestAssignmentReservedIdentifiers(t *testing.T) {
+	t.Parallel()
+	for _, identifier := range []string{"lan", "wan", "opt1", "opt42"} {
+		if !isReservedAssignmentIdentifier(identifier) {
+			t.Fatalf("identifier %q should be reserved", identifier)
+		}
+	}
+	for _, identifier := range []string{"transit", "ha_control", "routed_public"} {
+		if isReservedAssignmentIdentifier(identifier) {
+			t.Fatalf("identifier %q should be allowed", identifier)
+		}
+	}
+}
+
+func TestConvertAssignmentSchemaAllowsStateDerivedAutomaticIdentifier(t *testing.T) {
+	t.Parallel()
+	model := assignmentResourceModel{
+		Identifier: types.StringValue("opt1"), Device: types.StringValue("vtnet2"),
+		Locked: types.BoolValue(false), Enabled: types.BoolValue(true), BlockPrivate: types.BoolValue(false),
+		BlockBogons: types.BoolValue(false), GatewayInterface: types.BoolValue(false), Promiscuous: types.BoolValue(false),
+		IPv4: &assignmentIPv4Model{Mode: types.StringValue("none")},
+		IPv6: &assignmentIPv6Model{Mode: types.StringValue("none")},
+	}
+	got, err := convertAssignmentSchemaToStruct(&model)
+	if err != nil {
+		t.Fatalf("convertAssignmentSchemaToStruct() error = %v", err)
+	}
+	if got.Identifier != "opt1" {
+		t.Fatalf("identifier = %q, want opt1", got.Identifier)
 	}
 }
 
@@ -51,10 +83,19 @@ func TestConvertAssignmentSchemaRejectsInvalidModes(t *testing.T) {
 
 func TestAssignmentStructRoundTrip(t *testing.T) {
 	t.Parallel()
-	input := &apiinterfaces.Assignment{Identifier: "opt1", Description: "Transit", Device: api.SelectedMap("vtnet2"), Lock: "0", Enabled: "1", IPv4Mode: api.SelectedMap("dhcp"), DHCPHostname: "edge", IPv6Mode: api.SelectedMap("none")}
-	model := convertAssignmentStructToResourceSchema(input, "opt1", types.BoolValue(false))
-	if model.Name.ValueString() != "opt1" || model.Device.ValueString() != "vtnet2" || model.IPv4.Mode.ValueString() != "dhcp" || model.IPv4.DHCPHostname.ValueString() != "edge" {
+	input := &apiinterfaces.Assignment{Identifier: "transit", Description: "Transit", Device: api.SelectedMap("vtnet2"), Lock: "0", Enabled: "1", IPv4Mode: api.SelectedMap("dhcp"), DHCPHostname: "edge", IPv6Mode: api.SelectedMap("none")}
+	model := convertAssignmentStructToResourceSchema(input, "transit", types.BoolValue(false))
+	if model.Identifier.ValueString() != "transit" || model.Name.ValueString() != "transit" || model.Device.ValueString() != "vtnet2" || model.IPv4.Mode.ValueString() != "dhcp" || model.IPv4.DHCPHostname.ValueString() != "edge" {
 		t.Fatalf("model = %#v", model)
+	}
+}
+
+func TestAssignmentImportDefaultsAllowReaddressFalse(t *testing.T) {
+	t.Parallel()
+	input := &apiinterfaces.Assignment{Identifier: "transit", Device: api.SelectedMap("vtnet2"), Lock: "0", Enabled: "1", IPv4Mode: api.SelectedMap("none"), IPv6Mode: api.SelectedMap("none")}
+	model := convertAssignmentStructToResourceSchema(input, "transit", types.BoolNull())
+	if model.AllowReaddress.IsNull() || model.AllowReaddress.IsUnknown() || model.AllowReaddress.ValueBool() {
+		t.Fatalf("allow_readdress = %#v, want false", model.AllowReaddress)
 	}
 }
 
