@@ -28,20 +28,35 @@ func TestConvertAssignmentSchemaToStruct(t *testing.T) {
 	}
 }
 
-func TestConvertAssignmentSchemaRejectsReservedIdentifier(t *testing.T) {
+func TestAssignmentReservedIdentifiers(t *testing.T) {
 	t.Parallel()
 	for _, identifier := range []string{"lan", "wan", "opt1", "opt42"} {
-		model := assignmentResourceModel{
-			Identifier: types.StringValue(identifier), Device: types.StringValue("vtnet2"),
-			Locked: types.BoolValue(false), Enabled: types.BoolValue(true), BlockPrivate: types.BoolValue(false),
-			BlockBogons: types.BoolValue(false), GatewayInterface: types.BoolValue(false), Promiscuous: types.BoolValue(false),
-			IPv4: &assignmentIPv4Model{Mode: types.StringValue("none")},
-			IPv6: &assignmentIPv6Model{Mode: types.StringValue("none")},
+		if !isReservedAssignmentIdentifier(identifier) {
+			t.Fatalf("identifier %q should be reserved", identifier)
 		}
-		_, err := convertAssignmentSchemaToStruct(&model)
-		if err == nil || !strings.Contains(err.Error(), "reserved by OPNsense") {
-			t.Fatalf("identifier %q: error = %v", identifier, err)
+	}
+	for _, identifier := range []string{"transit", "ha_control", "routed_public"} {
+		if isReservedAssignmentIdentifier(identifier) {
+			t.Fatalf("identifier %q should be allowed", identifier)
 		}
+	}
+}
+
+func TestConvertAssignmentSchemaAllowsStateDerivedAutomaticIdentifier(t *testing.T) {
+	t.Parallel()
+	model := assignmentResourceModel{
+		Identifier: types.StringValue("opt1"), Device: types.StringValue("vtnet2"),
+		Locked: types.BoolValue(false), Enabled: types.BoolValue(true), BlockPrivate: types.BoolValue(false),
+		BlockBogons: types.BoolValue(false), GatewayInterface: types.BoolValue(false), Promiscuous: types.BoolValue(false),
+		IPv4: &assignmentIPv4Model{Mode: types.StringValue("none")},
+		IPv6: &assignmentIPv6Model{Mode: types.StringValue("none")},
+	}
+	got, err := convertAssignmentSchemaToStruct(&model)
+	if err != nil {
+		t.Fatalf("convertAssignmentSchemaToStruct() error = %v", err)
+	}
+	if got.Identifier != "opt1" {
+		t.Fatalf("identifier = %q, want opt1", got.Identifier)
 	}
 }
 

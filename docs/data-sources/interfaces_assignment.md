@@ -17,7 +17,7 @@ Reads an OPNsense logical interface assignment.
 
 ### Required
 
-- `id` (String) Logical interface name, for example `lan` or `opt1`.
+- `id` (String) Logical interface name, for example `lan`, `opt1`, or a semantic identifier.
 
 ### Read-Only
 
@@ -27,6 +27,7 @@ Reads an OPNsense logical interface assignment.
 - `device` (String)
 - `enabled` (Boolean)
 - `gateway_interface` (Boolean)
+- `identifier` (String) Stable logical interface identifier.
 - `ipv4` (Attributes) (see [below for nested schema](#nestedatt--ipv4))
 - `ipv6` (Attributes) (see [below for nested schema](#nestedatt--ipv6))
 - `locked` (Boolean)

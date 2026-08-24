@@ -37,7 +37,7 @@ func (v assignmentIdentifierValidator) ValidateString(ctx context.Context, reque
 		return
 	}
 	value := request.ConfigValue.ValueString()
-	if value == "lan" || value == "wan" || assignmentAutomaticIdentifierPattern.MatchString(value) {
+	if isReservedAssignmentIdentifier(value) {
 		response.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(request.Path, v.Description(ctx), value))
 	}
 }
@@ -224,9 +224,6 @@ func assignmentIPv6DataSourceAttribute() dschema.SingleNestedAttribute {
 }
 
 func convertAssignmentSchemaToStruct(d *assignmentResourceModel) (*apiinterfaces.Assignment, error) {
-	if err := validateAssignmentIdentifier(d.Identifier); err != nil {
-		return nil, err
-	}
 	if d.IPv4 == nil || d.IPv6 == nil {
 		return nil, fmt.Errorf("both ipv4 and ipv6 blocks are required")
 	}
@@ -255,15 +252,8 @@ func convertAssignmentSchemaToStruct(d *assignmentResourceModel) (*apiinterfaces
 	}, nil
 }
 
-func validateAssignmentIdentifier(identifier types.String) error {
-	if identifier.IsNull() || identifier.IsUnknown() || identifier.ValueString() == "" {
-		return nil
-	}
-	value := identifier.ValueString()
-	if value == "lan" || value == "wan" || assignmentAutomaticIdentifierPattern.MatchString(value) {
-		return fmt.Errorf("interface identifier %q is reserved by OPNsense", value)
-	}
-	return nil
+func isReservedAssignmentIdentifier(value string) bool {
+	return value == "lan" || value == "wan" || assignmentAutomaticIdentifierPattern.MatchString(value)
 }
 
 func validateAssignmentAddressMode(mode string, address types.String, prefix types.Int64, family int) error {

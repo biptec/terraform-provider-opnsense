@@ -29,6 +29,7 @@ Assigns a physical or virtual device to an OPNsense logical interface and manage
 - `description` (String) Interface description.
 - `enabled` (Boolean) Enable the interface.
 - `gateway_interface` (Boolean) Mark the interface as a gateway interface.
+- `identifier` (String) Stable OPNsense logical interface identifier. Leave unset to use automatic `optN` allocation. Legacy identifiers `lan`, `wan`, and `optN` are reserved by OPNsense.
 - `locked` (Boolean) Prevent deletion of the assignment in OPNsense.
 - `mss` (Number) TCP MSS adjustment.
 - `mtu` (Number) Interface MTU.
