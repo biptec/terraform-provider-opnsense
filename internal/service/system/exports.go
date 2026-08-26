@@ -15,11 +15,14 @@ func Resources(context.Context) []func() resource.Resource {
 		newNtpSettingsResource,
 		newCarpHealthResource,
 		newCarpHealthCheckResource,
+		newInterfaceSyncPolicyResource,
+		newInterfacePolicyAssignmentResource,
 	}
 }
 
 func DataSources(context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		newCarpHealthStatusDataSource,
+		newInterfaceSyncPolicyDataSource,
 	}
 }
