@@ -25,6 +25,7 @@
 - HAProxy server and backend resources reject duplicate remote names, preventing independent Terraform states from silently creating ambiguous HAProxy configuration.
 - Core HA synchronization now adopts the built-in OPNsense singleton on first apply, so fresh router deployments no longer require a manual `terraform import`.
 - Interface assignment creation now waits for newly registered devices to appear in OPNsense assignment options, preventing fresh loopback deployments from requiring a second apply.
+- Interface assignment readiness now accounts for the native 30-second OPNsense `assign-opts` cache window, preventing parallel fresh VLAN assignments from failing on the first apply.
 
 ## v0.25.0 - 2026-07-28
 
