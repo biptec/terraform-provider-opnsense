@@ -22,8 +22,15 @@ var _ resource.ResourceWithImportState = &assignmentResource{}
 var _ resource.ResourceWithModifyPlan = &assignmentResource{}
 
 const (
-	assignmentDeviceReadyTimeout      = 30 * time.Second
-	assignmentDeviceReadyPollInterval = 250 * time.Millisecond
+	// OPNsense 26.7 caches `interface list assign-opts`, which backs the
+	// assignment DeviceField, for 30 seconds. A VLAN can therefore already
+	// exist in the kernel/config while the assignment API still validates
+	// against a stale device list. Keep the readiness budget strictly longer
+	// than that cache window so a fresh lookup is guaranteed before failing.
+	assignmentDeviceOptionsCacheTTL   = 30 * time.Second
+	assignmentDeviceReadyGrace        = 15 * time.Second
+	assignmentDeviceReadyTimeout      = assignmentDeviceOptionsCacheTTL + assignmentDeviceReadyGrace
+	assignmentDeviceReadyPollInterval = 500 * time.Millisecond
 )
 
 type assignmentResource struct {

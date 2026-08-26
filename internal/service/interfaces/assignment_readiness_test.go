@@ -13,6 +13,15 @@ import (
 	"github.com/biptec/opnsense-go/pkg/api"
 )
 
+func TestAssignmentDeviceReadyTimeoutCoversOPNsenseCacheTTL(t *testing.T) {
+	if assignmentDeviceReadyTimeout <= assignmentDeviceOptionsCacheTTL {
+		t.Fatalf("readiness timeout = %s, must exceed OPNsense assign-opts cache TTL %s", assignmentDeviceReadyTimeout, assignmentDeviceOptionsCacheTTL)
+	}
+	if assignmentDeviceReadyTimeout-assignmentDeviceOptionsCacheTTL < 10*time.Second {
+		t.Fatalf("readiness grace = %s, want at least 10s beyond the cache TTL", assignmentDeviceReadyTimeout-assignmentDeviceOptionsCacheTTL)
+	}
+}
+
 func TestWaitForAssignableDeviceWaitsUntilDeviceAppears(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
