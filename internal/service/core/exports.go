@@ -8,7 +8,7 @@ import (
 )
 
 func Resources(context.Context) []func() resource.Resource {
-	return []func() resource.Resource{newHasyncResource, newTunableResource}
+	return []func() resource.Resource{newHasyncResource, newHasyncSyncResource, newTunableResource}
 }
 
 func DataSources(context.Context) []func() datasource.DataSource {
