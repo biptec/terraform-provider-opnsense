@@ -85,6 +85,10 @@ func (r *ospf6PrefixListResource) Delete(ctx context.Context, req resource.Delet
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if err := unlinkOSPF6PrefixListFromRouteMaps(ctx, r.client, data.ID.ValueString()); err != nil {
+		resp.Diagnostics.AddError("Unable to Unlink OSPFv3 Prefix List", err.Error())
+		return
+	}
 	if err := r.client.Quagga().DeleteOSPF6PrefixList(ctx, data.ID.ValueString()); err != nil {
 		var nf *errs.NotFoundError
 		if !errors.As(err, &nf) {
