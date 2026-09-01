@@ -70,6 +70,7 @@ func TestAddFilterResolvedRetriesExistingReplyToGateway(t *testing.T) {
 				"total": 1, "rowCount": 1, "current": 1,
 				"rows": []map[string]any{{
 					"name":       "NC_TRANSIT_PEER_V4",
+					"disabled":   false,
 					"ipprotocol": map[string]any{"inet": map[string]any{"selected": 1, "value": "IPv4"}},
 				}},
 			})
