@@ -11,6 +11,7 @@ import (
 	"github.com/biptec/opnsense-go/pkg/errs"
 	apifirewall "github.com/biptec/opnsense-go/pkg/firewall"
 	"github.com/biptec/opnsense-go/pkg/opnsense"
+	"github.com/biptec/opnsense-go/pkg/routing"
 	"github.com/biptec/terraform-provider-opnsense/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -197,7 +198,16 @@ func isStaleReplyToGatewayError(err error) bool {
 }
 
 func (r *filterResource) replyToGatewayExists(ctx context.Context, name, ipProtocol string) (bool, error) {
-	result, err := r.client.Routing().SearchGateway(ctx)
+	type gatewayReplyToRow struct {
+		Name       string          `json:"name"`
+		IPProtocol api.SelectedMap `json:"ipprotocol"`
+	}
+
+	// Search responses can normalize unrelated gateway fields differently from
+	// the model endpoints (for example disabled can be a native JSON boolean).
+	// Decode only the fields needed for reply-to validation so those unrelated
+	// representations cannot break the readiness check.
+	result, err := api.Search[gatewayReplyToRow](r.client.Routing().Client(), ctx, routing.GatewayOpts.Search)
 	if err != nil {
 		return false, err
 	}
