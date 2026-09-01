@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	"github.com/biptec/opnsense-go/pkg/errs"
+	apifirewall "github.com/biptec/opnsense-go/pkg/firewall"
 	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/biptec/terraform-provider-opnsense/internal/validators"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -86,6 +89,11 @@ func (r *filterResource) Configure(ctx context.Context, req resource.ConfigureRe
 	r.client = opnsense.NewClient(apiClient)
 }
 
+const (
+	replyToGatewayRetryInterval = time.Second
+	replyToGatewayRetryTimeout  = 25 * time.Second
+)
+
 func (r *filterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data *filterResourceModel
 
@@ -104,8 +112,10 @@ func (r *filterResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	// Add firewall filter to unbound
-	id, err := r.client.Firewall().AddFilter(ctx, resourceStruct)
+	// OPNsense may briefly expose a stale reply-to gateway option list after a
+	// gateway is created. Retry only that exact validation failure, and only
+	// after verifying that the referenced gateway exists with the same IP family.
+	id, err := r.addFilterResolved(ctx, resourceStruct)
 	if err != nil {
 		if id != "" {
 			data.Id = types.StringValue(id)
@@ -136,6 +146,67 @@ func (r *filterResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *filterResource) addFilterResolved(ctx context.Context, filter *apifirewall.Filter) (string, error) {
+	return r.addFilterResolvedWithTiming(ctx, filter, replyToGatewayRetryInterval, replyToGatewayRetryTimeout)
+}
+
+func (r *filterResource) addFilterResolvedWithTiming(ctx context.Context, filter *apifirewall.Filter, retryInterval, retryTimeout time.Duration) (string, error) {
+	deadline := time.Now().Add(retryTimeout)
+	gatewayVerified := false
+
+	for {
+		id, err := r.client.Firewall().AddFilter(ctx, filter)
+		if err == nil {
+			return id, nil
+		}
+		if !isStaleReplyToGatewayError(err) || filter.ReplyTo.String() == "" {
+			return id, err
+		}
+
+		if !gatewayVerified {
+			exists, verifyErr := r.replyToGatewayExists(ctx, filter.ReplyTo.String(), filter.IPProtocol.String())
+			if verifyErr != nil {
+				return "", fmt.Errorf("verify reply-to gateway: %w", verifyErr)
+			}
+			if !exists {
+				return id, err
+			}
+			gatewayVerified = true
+		}
+
+		if retryTimeout <= 0 || time.Now().Add(retryInterval).After(deadline) {
+			return id, err
+		}
+
+		timer := time.NewTimer(retryInterval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return "", ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
+func isStaleReplyToGatewayError(err error) bool {
+	message := err.Error()
+	return strings.Contains(message, "rule.replyto") &&
+		strings.Contains(message, "Specify a valid gateway from the list matching the networks ip protocol")
+}
+
+func (r *filterResource) replyToGatewayExists(ctx context.Context, name, ipProtocol string) (bool, error) {
+	result, err := r.client.Routing().SearchGateway(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, gateway := range result.Rows {
+		if gateway.Name == name && gateway.IPProtocol.String() == ipProtocol {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (r *filterResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
