@@ -88,6 +88,41 @@ func TestAccSystemSshResource(t *testing.T) {
 	})
 }
 
+func TestAccSystemDnsResource(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { systemPreCheck(t) },
+		ProtoV6ProviderFactories: acctest.ProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSystemDnsConfig("1.1.1.1", "8.8.8.8"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_system_dns.test", "id", "system_dns"),
+					resource.TestCheckResourceAttr("opnsense_system_dns.test", "servers.#", "2"),
+					resource.TestCheckResourceAttr("opnsense_system_dns.test", "servers.0", "1.1.1.1"),
+					resource.TestCheckResourceAttr("opnsense_system_dns.test", "servers.1", "8.8.8.8"),
+					resource.TestCheckResourceAttr("opnsense_system_dns.test", "allow_override", "false"),
+					resource.TestCheckResourceAttr("opnsense_system_dns.test", "use_local_service", "false"),
+					checkSystemDnsRuntime("1.1.1.1", "8.8.8.8"),
+				),
+			},
+			{
+				Config: testAccSystemDnsConfig("9.9.9.9", "1.1.1.1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("opnsense_system_dns.test", "servers.0", "9.9.9.9"),
+					resource.TestCheckResourceAttr("opnsense_system_dns.test", "servers.1", "1.1.1.1"),
+					checkSystemDnsRuntime("9.9.9.9", "1.1.1.1"),
+				),
+			},
+			{
+				ResourceName:      "opnsense_system_dns.test",
+				ImportState:       true,
+				ImportStateId:     "system_dns",
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccNtpSettingsResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { systemPreCheck(t) },
@@ -190,6 +225,16 @@ resource "opnsense_system_ssh" "test" {
   allow_readdress         = true
 }
 `
+}
+
+func testAccSystemDnsConfig(primary, secondary string) string {
+	return fmt.Sprintf(`
+resource "opnsense_system_dns" "test" {
+  servers           = [%q, %q]
+  allow_override    = false
+  use_local_service = false
+}
+`, primary, secondary)
 }
 
 func testAccNtpConfig(orphan int, useLoopback bool) string {

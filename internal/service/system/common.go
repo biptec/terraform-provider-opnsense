@@ -95,6 +95,13 @@ func validateNTPAction(operation string, result *apiextensions.NtpActionResult) 
 	return validateAPIExtensionAction("NTP", operation, result.Status, result.Validations, true)
 }
 
+func validateDNSAction(operation string, result *apiextensions.DnsActionResult) error {
+	if result == nil {
+		return validateAPIExtensionAction("System DNS", operation, "", nil, false)
+	}
+	return validateAPIExtensionAction("System DNS", operation, result.Status, result.Validations, true)
+}
+
 func validationMessage(validations map[string]string) string {
 	if len(validations) == 0 {
 		return ""

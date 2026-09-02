@@ -67,7 +67,11 @@ if [ ! -d /usr/plugins/.git ]; then
 fi
 git -C /usr/plugins fetch --depth 1 https://github.com/biptec/opnsense-plugins.git {commit}
 git -C /usr/plugins checkout --detach FETCH_HEAD
-make -C /usr/plugins/sysutils/api-extensions upgrade
+# The provider acceptance image is a stock OPNsense image and does not carry
+# Router image base packages such as arping. System-resource tests do not run
+# CARP health, so build the candidate without resolving that unrelated runtime
+# dependency; Router production images continue to own arping explicitly.
+make -C /usr/plugins/sysutils/api-extensions PLUGIN_DEPENDS= upgrade
 pkg info -e 'os-api-extensions-*'
 installed_hash=$(pkg query '%At:%Av' os-api-extensions | sed -n 's/^product_hash://p')
 test -n "$installed_hash"
