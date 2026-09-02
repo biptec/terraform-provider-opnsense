@@ -25,7 +25,7 @@ type pluginResourceModel struct {
 
 func pluginResourceSchema() schema.Schema {
 	return schema.Schema{
-		MarkdownDescription: "Installs and manages an OPNsense plugin through the native firmware API. The package must be available from a configured OPNsense package repository.",
+		MarkdownDescription: "Installs and manages an OPNsense plugin. Normal Terraform refresh reads local package state through `os-api-extensions` 0.12 or newer and never refreshes remote package repositories. Repository discovery is used only during Create when installation is actually required.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:            true,
@@ -65,7 +65,7 @@ func pluginResourceSchema() schema.Schema {
 			},
 			"provided": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether the plugin is available from a configured package repository.",
+				MarkdownDescription: "Whether the plugin is present in the locally cached package repository metadata. Create may explicitly refresh repository metadata when installation is required.",
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
