@@ -3,12 +3,12 @@
 page_title: "opnsense_plugin Resource - terraform-provider-opnsense"
 subcategory: ""
 description: |-
-  Installs and manages an OPNsense plugin through the native firmware API. The package must be available from a configured OPNsense package repository.
+  Installs and manages an OPNsense plugin. Normal Terraform refresh reads local package state through os-api-extensions 0.12 or newer and never refreshes remote package repositories. Repository discovery is used only during Create when installation is actually required.
 ---
 
 # opnsense_plugin (Resource)
 
-Installs and manages an OPNsense plugin through the native firmware API. The package must be available from a configured OPNsense package repository.
+Installs and manages an OPNsense plugin. Normal Terraform refresh reads local package state through `os-api-extensions` 0.12 or newer and never refreshes remote package repositories. Repository discovery is used only during Create when installation is actually required.
 
 ## Example Usage
 
@@ -36,6 +36,6 @@ resource "opnsense_plugin" "bind" {
 
 - `id` (String) Plugin package name.
 - `installed` (Boolean) Whether the plugin is installed.
-- `provided` (Boolean) Whether the plugin is available from a configured package repository.
+- `provided` (Boolean) Whether the plugin is present in the locally cached package repository metadata. Create may explicitly refresh repository metadata when installation is required.
 - `repository` (String) Repository that supplied the plugin.
 - `version` (String) Installed plugin version.

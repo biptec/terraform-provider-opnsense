@@ -2,12 +2,19 @@ package system
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/biptec/opnsense-go/pkg/api"
 	apiextensions "github.com/biptec/opnsense-go/pkg/api_extensions"
 	apicore "github.com/biptec/opnsense-go/pkg/core"
+	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -22,9 +29,6 @@ func TestFirmwareHelpers(t *testing.T) {
 		if firmwareFlag(value) {
 			t.Errorf("firmwareFlag(%q) = true, want false", value)
 		}
-	}
-	if got := normalizeFirmwareValue("N/A"); got != "" {
-		t.Fatalf("normalizeFirmwareValue(N/A) = %q, want empty", got)
 	}
 }
 
@@ -49,6 +53,87 @@ func TestFirmwareStatusDescription(t *testing.T) {
 	}
 	if got := firmwareStatusDescription(&apicore.FirmwareUpgradeStatusResponse{Status: "ready"}, nil); got != `"ready"` {
 		t.Fatalf("unexpected ready status description: %q", got)
+	}
+}
+
+func TestPluginRefreshUsesOnlyLocalPackageAPI(t *testing.T) {
+	var packageCalls atomic.Int32
+	var firmwareInfoCalls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/api_extensions/package/get/os-api-extensions":
+			packageCalls.Add(1)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "ok",
+				"package": map[string]any{
+					"name":       "os-api-extensions",
+					"installed":  true,
+					"provided":   false,
+					"version":    "0.12",
+					"locked":     false,
+					"repository": "unknown-repository",
+					"origin":     "opnsense/os-api-extensions",
+				},
+			})
+		case "/api/core/firmware/info":
+			firmwareInfoCalls.Add(1)
+			http.Error(w, "firmware info must not be called during refresh", http.StatusInternalServerError)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	r := &pluginResource{client: opnsense.NewClient(api.NewClient(api.Options{Uri: server.URL, MaxRetries: -1}))}
+	started := time.Now()
+	state, err := r.pluginState(context.Background(), "os-api-extensions", false)
+	elapsed := time.Since(started)
+	if err != nil {
+		t.Fatalf("pluginState() error = %v", err)
+	}
+	if elapsed > time.Second {
+		t.Fatalf("local plugin refresh took %s, want under 1s in the local API test", elapsed)
+	}
+	if got := packageCalls.Load(); got != 1 {
+		t.Fatalf("local package API calls = %d, want 1", got)
+	}
+	if got := firmwareInfoCalls.Load(); got != 0 {
+		t.Fatalf("firmware info calls during refresh = %d, want 0", got)
+	}
+	if !state.Installed.ValueBool() || state.Version.ValueString() != "0.12" || state.Locked.ValueBool() {
+		t.Fatalf("unexpected plugin state: %#v", state)
+	}
+}
+
+func TestPluginCreateAdoptsInstalledPackageWithoutFirmwareInfo(t *testing.T) {
+	var firmwareInfoCalls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/api_extensions/package/get/os-api-extensions":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "ok",
+				"package": map[string]any{
+					"name": "os-api-extensions", "installed": true, "provided": false,
+					"version": "0.12", "locked": false, "repository": "unknown-repository", "origin": "opnsense/os-api-extensions",
+				},
+			})
+		case "/api/core/firmware/info":
+			firmwareInfoCalls.Add(1)
+			http.Error(w, "firmware info must not be called for an already installed package", http.StatusInternalServerError)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	r := &pluginResource{client: opnsense.NewClient(api.NewClient(api.Options{Uri: server.URL, MaxRetries: -1}))}
+	if err := r.ensurePluginInstalled(context.Background(), "os-api-extensions"); err != nil {
+		t.Fatalf("ensurePluginInstalled() error = %v", err)
+	}
+	if got := firmwareInfoCalls.Load(); got != 0 {
+		t.Fatalf("firmware info calls while adopting installed plugin = %d, want 0", got)
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	apiextensions "github.com/biptec/opnsense-go/pkg/api_extensions"
@@ -30,9 +31,17 @@ func systemClient() opnsense.Client {
 func systemPreCheck(t *testing.T) {
 	t.Helper()
 	acctest.AccPreCheck(t)
-	result, err := systemClient().ApiExtensions().WebguiGet(context.Background())
+	client := systemClient().ApiExtensions()
+	result, err := client.WebguiGet(context.Background())
 	if err != nil {
-		t.Skipf("os-api-extensions is unavailable: %v", err)
+		t.Fatalf("os-api-extensions Web GUI API is unavailable: %v", err)
+	}
+	packageState, err := client.PackageGet(context.Background(), "os-api-extensions")
+	if err != nil {
+		t.Fatalf("os-api-extensions local package status API is unavailable: %v", err)
+	}
+	if packageState.Status != "ok" || !packageState.Package.Installed || packageState.Package.Name != "os-api-extensions" {
+		t.Fatalf("unexpected os-api-extensions local package state: %#v", packageState)
 	}
 	originalWebgui = result.Webgui
 }
@@ -159,6 +168,24 @@ func TestAccNtpSettingsResource(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccPluginLocalRefreshLatency(t *testing.T) {
+	acctest.AccPreCheck(t)
+	client := systemClient().ApiExtensions()
+	started := time.Now()
+	for i := 0; i < 5; i++ {
+		state, err := client.PackageGet(context.Background(), "os-api-extensions")
+		if err != nil {
+			t.Fatalf("local package status request %d failed: %v", i+1, err)
+		}
+		if state.Status != "ok" || !state.Package.Installed {
+			t.Fatalf("local package status request %d returned unexpected state: %#v", i+1, state)
+		}
+	}
+	if elapsed := time.Since(started); elapsed > 5*time.Second {
+		t.Fatalf("five local package refreshes took %s, want <= 5s", elapsed)
+	}
 }
 
 func TestAccPluginResource(t *testing.T) {
