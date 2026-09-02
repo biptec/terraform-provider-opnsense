@@ -13,6 +13,7 @@ func Resources(context.Context) []func() resource.Resource {
 		newWebguiResource,
 		newSshResource,
 		newNtpSettingsResource,
+		newDnsSettingsResource,
 		newCarpHealthResource,
 		newCarpHealthCheckResource,
 		newInterfaceSyncPolicyResource,
