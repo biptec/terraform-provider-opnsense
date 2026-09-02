@@ -28,6 +28,7 @@ Manages an OPNsense HAProxy server endpoint.
 - `check_port` (Number) Optional dedicated health-check port.
 - `description` (String) Optional description.
 - `enabled` (Boolean) Whether to enable the server. Defaults to `true`.
+- `ha_policy` (String) Optional HA policy ID used by the policy-managed HAProxy synchronizer.
 - `max_connections` (Number) Optional maximum concurrent connections.
 - `mode` (String) Server mode: `active`, `backup`, or `disabled`. Defaults to `active`.
 - `port` (Number) Backend server TCP port.

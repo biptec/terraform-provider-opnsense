@@ -22,6 +22,7 @@ type serverModel struct {
 	Enabled           types.Bool   `tfsdk:"enabled"`
 	Name              types.String `tfsdk:"name"`
 	Description       types.String `tfsdk:"description"`
+	HAPolicy          types.String `tfsdk:"ha_policy"`
 	Address           types.String `tfsdk:"address"`
 	Port              types.Int64  `tfsdk:"port"`
 	CheckPort         types.Int64  `tfsdk:"check_port"`
@@ -42,6 +43,7 @@ func serverResourceSchema() schema.Schema {
 	return schema.Schema{Version: 1, MarkdownDescription: "Manages an OPNsense HAProxy server endpoint.", Attributes: map[string]schema.Attribute{
 		"enabled": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true), MarkdownDescription: "Whether to enable the server. Defaults to `true`."},
 		"name":    schema.StringAttribute{Required: true, MarkdownDescription: "Unique HAProxy server name."}, "description": schema.StringAttribute{Optional: true, MarkdownDescription: "Optional description."},
+		"ha_policy":       schema.StringAttribute{Optional: true, MarkdownDescription: "Optional HA policy ID used by the policy-managed HAProxy synchronizer."},
 		"address":         schema.StringAttribute{Required: true, MarkdownDescription: "Backend server address or hostname."},
 		"port":            schema.Int64Attribute{Optional: true, Validators: portValidator, MarkdownDescription: "Backend server TCP port."},
 		"check_port":      schema.Int64Attribute{Optional: true, Validators: portValidator, MarkdownDescription: "Optional dedicated health-check port."},
@@ -57,7 +59,7 @@ func serverResourceSchema() schema.Schema {
 }
 func serverDataSourceSchema() dschema.Schema {
 	return dschema.Schema{MarkdownDescription: "Reads an OPNsense HAProxy server.", Attributes: map[string]dschema.Attribute{
-		"id": dschema.StringAttribute{Required: true}, "enabled": dschema.BoolAttribute{Computed: true}, "name": dschema.StringAttribute{Computed: true}, "description": dschema.StringAttribute{Computed: true}, "address": dschema.StringAttribute{Computed: true},
+		"id": dschema.StringAttribute{Required: true}, "enabled": dschema.BoolAttribute{Computed: true}, "name": dschema.StringAttribute{Computed: true}, "description": dschema.StringAttribute{Computed: true}, "ha_policy": dschema.StringAttribute{Computed: true}, "address": dschema.StringAttribute{Computed: true},
 		"port": dschema.Int64Attribute{Computed: true}, "check_port": dschema.Int64Attribute{Computed: true}, "mode": dschema.StringAttribute{Computed: true}, "type": dschema.StringAttribute{Computed: true}, "ssl": dschema.BoolAttribute{Computed: true},
 		"max_connections": dschema.Int64Attribute{Computed: true}, "weight": dschema.Int64Attribute{Computed: true}, "check_interval": dschema.StringAttribute{Computed: true}, "check_down_interval": dschema.StringAttribute{Computed: true}, "advanced": dschema.StringAttribute{Computed: true},
 	}}
@@ -69,8 +71,8 @@ func optionalIntString(v types.Int64) string {
 	return strconv.FormatInt(v.ValueInt64(), 10)
 }
 func serverModelToAPI(d *serverModel) (*apihaproxy.Server, error) {
-	return &apihaproxy.Server{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Name: d.Name.ValueString(), Description: d.Description.ValueString(), Address: d.Address.ValueString(), Port: optionalIntString(d.Port), CheckPort: optionalIntString(d.CheckPort), Mode: api.SelectedMap(d.Mode.ValueString()), Type: api.SelectedMap(d.Type.ValueString()), SSL: tools.BoolToString(d.SSL.ValueBool()), MaxConnections: optionalIntString(d.MaxConnections), Weight: optionalIntString(d.Weight), CheckInterval: d.CheckInterval.ValueString(), CheckDownInterval: d.CheckDownInterval.ValueString(), Advanced: d.Advanced.ValueString()}, nil
+	return &apihaproxy.Server{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Name: d.Name.ValueString(), Description: d.Description.ValueString(), HAPolicy: api.SelectedMap(d.HAPolicy.ValueString()), Address: d.Address.ValueString(), Port: optionalIntString(d.Port), CheckPort: optionalIntString(d.CheckPort), Mode: api.SelectedMap(d.Mode.ValueString()), Type: api.SelectedMap(d.Type.ValueString()), SSL: tools.BoolToString(d.SSL.ValueBool()), MaxConnections: optionalIntString(d.MaxConnections), Weight: optionalIntString(d.Weight), CheckInterval: d.CheckInterval.ValueString(), CheckDownInterval: d.CheckDownInterval.ValueString(), Advanced: d.Advanced.ValueString()}, nil
 }
 func serverAPIToModel(d *apihaproxy.Server) (*serverModel, error) {
-	return &serverModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Name: types.StringValue(d.Name), Description: tools.StringOrNull(d.Description), Address: types.StringValue(d.Address), Port: tools.StringToInt64Null(d.Port), CheckPort: tools.StringToInt64Null(d.CheckPort), Mode: types.StringValue(d.Mode.String()), Type: types.StringValue(d.Type.String()), SSL: types.BoolValue(tools.StringToBool(d.SSL)), MaxConnections: tools.StringToInt64Null(d.MaxConnections), Weight: tools.StringToInt64Null(d.Weight), CheckInterval: tools.StringOrNull(d.CheckInterval), CheckDownInterval: tools.StringOrNull(d.CheckDownInterval), Advanced: tools.StringOrNull(d.Advanced)}, nil
+	return &serverModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Name: types.StringValue(d.Name), Description: tools.StringOrNull(d.Description), HAPolicy: tools.StringOrNull(d.HAPolicy.String()), Address: types.StringValue(d.Address), Port: tools.StringToInt64Null(d.Port), CheckPort: tools.StringToInt64Null(d.CheckPort), Mode: types.StringValue(d.Mode.String()), Type: types.StringValue(d.Type.String()), SSL: types.BoolValue(tools.StringToBool(d.SSL)), MaxConnections: tools.StringToInt64Null(d.MaxConnections), Weight: tools.StringToInt64Null(d.Weight), CheckInterval: tools.StringOrNull(d.CheckInterval), CheckDownInterval: tools.StringOrNull(d.CheckDownInterval), Advanced: tools.StringOrNull(d.Advanced)}, nil
 }

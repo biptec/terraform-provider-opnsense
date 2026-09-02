@@ -23,6 +23,7 @@ Reads an OPNsense HAProxy backend.
 - `custom_options` (String)
 - `description` (String)
 - `enabled` (Boolean)
+- `ha_policy` (String)
 - `health_check` (String)
 - `health_check_enabled` (Boolean)
 - `health_check_fall` (Number)

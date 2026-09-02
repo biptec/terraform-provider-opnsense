@@ -27,6 +27,7 @@ Manages an OPNsense HAProxy backend.
 - `custom_options` (String) Optional raw backend directives.
 - `description` (String) Optional description.
 - `enabled` (Boolean) Whether to enable the backend. Defaults to `true`.
+- `ha_policy` (String) Optional HA policy ID used by the policy-managed HAProxy synchronizer.
 - `health_check` (String) UUID of the HAProxy health check.
 - `health_check_enabled` (Boolean) Whether to enable backend health checks. Defaults to `true`.
 - `health_check_fall` (Number) Consecutive failed checks required before marking a server down.
