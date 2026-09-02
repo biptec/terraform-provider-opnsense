@@ -80,13 +80,13 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 
 	backend, err := backendModelToAPI(&backendModel{
 		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint_backend"), Mode: types.StringValue("tcp"),
-		Algorithm: types.StringValue("roundrobin"), LinkedServers: stringSet("server-id"), HealthCheckEnabled: types.BoolValue(true),
-		HealthCheck: types.StringValue("check-id"), HealthCheckFall: types.Int64Value(3), HealthCheckRise: types.Int64Value(2),
+		Algorithm: types.StringValue("roundrobin"), ProxyProtocol: types.StringValue("v2"), LinkedServers: stringSet("server-id"), HealthCheckEnabled: types.BoolValue(true),
+		HealthCheck: types.StringValue("check-id"), HealthCheckProxyProtocol: types.StringValue("backend"), HealthCheckFall: types.Int64Value(3), HealthCheckRise: types.Int64Value(2),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if backend.Mode.String() != "tcp" || backend.LinkedServers.String() != "server-id" || backend.HealthCheck.String() != "check-id" || backend.HealthCheckFall != "3" || backend.HealthCheckRise != "2" {
+	if backend.Mode.String() != "tcp" || backend.ProxyProtocol.String() != "v2" || backend.LinkedServers.String() != "server-id" || backend.HealthCheck.String() != "check-id" || backend.HealthCheckProxyProto.String() != "backend" || backend.HealthCheckFall != "3" || backend.HealthCheckRise != "2" {
 		t.Fatalf("unexpected backend: %+v", backend)
 	}
 
@@ -104,6 +104,18 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 
 func TestHAProxyAPIToModelRoundTrip(t *testing.T) {
 	t.Parallel()
+	backend, err := backendAPIToModel(&apihaproxy.Backend{
+		Enabled: "1", Name: "proxy_v2", Mode: api.SelectedMap("tcp"), Algorithm: api.SelectedMap("roundrobin"),
+		ProxyProtocol: api.SelectedMap("v2"), LinkedServers: api.SelectedMapList{"srv"}, HealthCheckEnabled: "1",
+		HealthCheckProxyProto: api.SelectedMap("disable"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if backend.ProxyProtocol.ValueString() != "v2" || backend.HealthCheckProxyProtocol.ValueString() != "disable" {
+		t.Fatalf("unexpected backend PROXY state: %+v", backend)
+	}
+
 	frontend, err := frontendAPIToModel(&apihaproxy.Frontend{
 		Enabled: "1", Name: "tls", Bind: api.SelectedMapList{"[2001:db8::1]:443", "192.0.2.1:443"},
 		Mode: api.SelectedMap("tcp"), SSLEnabled: "0", LinkedActions: api.SelectedMapList{"a2", "a1"},

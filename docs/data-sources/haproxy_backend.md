@@ -26,8 +26,10 @@ Reads an OPNsense HAProxy backend.
 - `health_check` (String)
 - `health_check_enabled` (Boolean)
 - `health_check_fall` (Number)
+- `health_check_proxy_protocol` (String)
 - `health_check_rise` (Number)
 - `id` (String) The ID of this resource.
 - `linked_servers` (Set of String)
 - `mode` (String)
 - `name` (String)
+- `proxy_protocol` (String)
