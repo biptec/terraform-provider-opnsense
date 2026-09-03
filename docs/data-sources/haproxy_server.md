@@ -24,6 +24,7 @@ Reads an OPNsense HAProxy server.
 - `check_port` (Number)
 - `description` (String)
 - `enabled` (Boolean)
+- `ha_policy` (String)
 - `id` (String) The ID of this resource.
 - `max_connections` (Number)
 - `mode` (String)

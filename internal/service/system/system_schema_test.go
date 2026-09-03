@@ -15,6 +15,7 @@ import (
 	apiextensions "github.com/biptec/opnsense-go/pkg/api_extensions"
 	apicore "github.com/biptec/opnsense-go/pkg/core"
 	"github.com/biptec/opnsense-go/pkg/opnsense"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -53,6 +54,17 @@ func TestFirmwareStatusDescription(t *testing.T) {
 	}
 	if got := firmwareStatusDescription(&apicore.FirmwareUpgradeStatusResponse{Status: "ready"}, nil); got != `"ready"` {
 		t.Fatalf("unexpected ready status description: %q", got)
+	}
+}
+
+func TestPluginStatusDataSourceSchema(t *testing.T) {
+	d := &pluginStatusDataSource{}
+	resp := &datasource.SchemaResponse{}
+	d.Schema(context.Background(), datasource.SchemaRequest{}, resp)
+	for _, name := range []string{"name", "installed", "provided", "version", "locked", "repository", "origin"} {
+		if _, ok := resp.Schema.Attributes[name]; !ok {
+			t.Fatalf("plugin status data source attribute %q is missing", name)
+		}
 	}
 }
 

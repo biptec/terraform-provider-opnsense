@@ -24,6 +24,7 @@ Manages an OPNsense HAProxy health check.
 - `check_port` (Number) Optional dedicated check port.
 - `description` (String) Optional description.
 - `force_ssl` (Boolean) Whether to force SSL for the health check. Defaults to `false`.
+- `ha_policy` (String) Optional HA policy ID used by the policy-managed HAProxy synchronizer.
 - `http_host` (String) Host header for HTTP checks. Defaults to `localhost`, matching OPNsense.
 - `http_method` (String) HTTP method for HTTP checks. Defaults to `options`, matching OPNsense.
 - `http_uri` (String) URI for HTTP checks. Defaults to `/`, matching OPNsense.

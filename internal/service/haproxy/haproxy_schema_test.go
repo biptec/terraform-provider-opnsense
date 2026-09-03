@@ -68,42 +68,54 @@ func TestSNIACLAndUseBackendConversion(t *testing.T) {
 func TestBackendServerHealthcheckConversion(t *testing.T) {
 	t.Parallel()
 	server, err := serverModelToAPI(&serverModel{
-		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint"), Address: types.StringValue("10.0.0.20"),
+		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint"), HAPolicy: types.StringValue("endpoint"), Address: types.StringValue("10.0.0.20"),
 		Port: types.Int64Value(443), Mode: types.StringValue("active"), Type: types.StringValue("static"), SSL: types.BoolValue(false),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if server.Address != "10.0.0.20" || server.Port != "443" || server.SSL != "0" {
+	if server.Address != "10.0.0.20" || server.Port != "443" || server.SSL != "0" || server.HAPolicy.String() != "endpoint" {
 		t.Fatalf("unexpected server: %+v", server)
 	}
 
 	backend, err := backendModelToAPI(&backendModel{
-		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint_backend"), Mode: types.StringValue("tcp"),
-		Algorithm: types.StringValue("roundrobin"), LinkedServers: stringSet("server-id"), HealthCheckEnabled: types.BoolValue(true),
-		HealthCheck: types.StringValue("check-id"), HealthCheckFall: types.Int64Value(3), HealthCheckRise: types.Int64Value(2),
+		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint_backend"), HAPolicy: types.StringValue("endpoint"), Mode: types.StringValue("tcp"),
+		Algorithm: types.StringValue("roundrobin"), ProxyProtocol: types.StringValue("v2"), LinkedServers: stringSet("server-id"), HealthCheckEnabled: types.BoolValue(true),
+		HealthCheck: types.StringValue("check-id"), HealthCheckProxyProtocol: types.StringValue("backend"), HealthCheckFall: types.Int64Value(3), HealthCheckRise: types.Int64Value(2),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if backend.Mode.String() != "tcp" || backend.LinkedServers.String() != "server-id" || backend.HealthCheck.String() != "check-id" || backend.HealthCheckFall != "3" || backend.HealthCheckRise != "2" {
+	if backend.Mode.String() != "tcp" || backend.HAPolicy.String() != "endpoint" || backend.ProxyProtocol.String() != "v2" || backend.LinkedServers.String() != "server-id" || backend.HealthCheck.String() != "check-id" || backend.HealthCheckProxyProto.String() != "backend" || backend.HealthCheckFall != "3" || backend.HealthCheckRise != "2" {
 		t.Fatalf("unexpected backend: %+v", backend)
 	}
 
 	check, err := healthcheckModelToAPI(&healthcheckModel{
-		Name: types.StringValue("tcp_check"), Type: types.StringValue("tcp"), Interval: types.StringValue("2s"),
+		Name: types.StringValue("tcp_check"), HAPolicy: types.StringValue("endpoint"), Type: types.StringValue("tcp"), Interval: types.StringValue("2s"),
 		SSL: types.StringValue("nopref"), ForceSSL: types.BoolValue(false),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if check.Type.String() != "tcp" || check.Interval != "2s" {
+	if check.Type.String() != "tcp" || check.Interval != "2s" || check.HAPolicy.String() != "endpoint" {
 		t.Fatalf("unexpected check: %+v", check)
 	}
 }
 
 func TestHAProxyAPIToModelRoundTrip(t *testing.T) {
 	t.Parallel()
+	backend, err := backendAPIToModel(&apihaproxy.Backend{
+		Enabled: "1", Name: "proxy_v2", HAPolicy: api.SelectedMap("endpoint"), Mode: api.SelectedMap("tcp"), Algorithm: api.SelectedMap("roundrobin"),
+		ProxyProtocol: api.SelectedMap("v2"), LinkedServers: api.SelectedMapList{"srv"}, HealthCheckEnabled: "1",
+		HealthCheckProxyProto: api.SelectedMap("disable"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if backend.HAPolicy.ValueString() != "endpoint" || backend.ProxyProtocol.ValueString() != "v2" || backend.HealthCheckProxyProtocol.ValueString() != "disable" {
+		t.Fatalf("unexpected backend PROXY state: %+v", backend)
+	}
+
 	frontend, err := frontendAPIToModel(&apihaproxy.Frontend{
 		Enabled: "1", Name: "tls", Bind: api.SelectedMapList{"[2001:db8::1]:443", "192.0.2.1:443"},
 		Mode: api.SelectedMap("tcp"), SSLEnabled: "0", LinkedActions: api.SelectedMapList{"a2", "a1"},
@@ -133,13 +145,13 @@ func TestHAProxyUpstreamDefaultsRoundTrip(t *testing.T) {
 	}
 
 	check, err := healthcheckAPIToModel(&apihaproxy.Healthcheck{
-		Name: "tcp_check", Type: api.SelectedMap("tcp"), Interval: "2s", SSL: api.SelectedMap("nopref"),
+		Name: "tcp_check", HAPolicy: api.SelectedMap("endpoint"), Type: api.SelectedMap("tcp"), Interval: "2s", SSL: api.SelectedMap("nopref"),
 		HTTPMethod: api.SelectedMap("options"), HTTPURI: "/", HTTPHost: "localhost", TCPMatchType: api.SelectedMap("string"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if check.HTTPMethod.ValueString() != "options" || check.HTTPURI.ValueString() != "/" ||
+	if check.HAPolicy.ValueString() != "endpoint" || check.HTTPMethod.ValueString() != "options" || check.HTTPURI.ValueString() != "/" ||
 		check.HTTPHost.ValueString() != "localhost" || check.TCPMatchType.ValueString() != "string" {
 		t.Fatalf("unexpected OPNsense health-check defaults: %+v", check)
 	}

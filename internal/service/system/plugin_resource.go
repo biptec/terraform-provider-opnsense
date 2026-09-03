@@ -152,8 +152,8 @@ func (r *pluginResource) ImportState(ctx context.Context, req resource.ImportSta
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("uninstall_on_destroy"), false)...)
 }
 
-func (r *pluginResource) findLocalPlugin(ctx context.Context, name string) (*apiextensions.PackageState, error) {
-	response, err := r.client.ApiExtensions().PackageGet(ctx, name)
+func findLocalPlugin(ctx context.Context, client opnsense.Client, name string) (*apiextensions.PackageState, error) {
+	response, err := client.ApiExtensions().PackageGet(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("local package status API call failed: %w", err)
 	}
@@ -171,6 +171,10 @@ func (r *pluginResource) findLocalPlugin(ctx context.Context, name string) (*api
 		return nil, fmt.Errorf("local package status API returned package %q while %q was requested", response.Package.Name, name)
 	}
 	return &response.Package, nil
+}
+
+func (r *pluginResource) findLocalPlugin(ctx context.Context, name string) (*apiextensions.PackageState, error) {
+	return findLocalPlugin(ctx, r.client, name)
 }
 
 // findFirmwarePlugin is intentionally reserved for mutation-only discovery or

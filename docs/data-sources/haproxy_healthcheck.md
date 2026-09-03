@@ -20,6 +20,7 @@ Reads an OPNsense HAProxy health check.
 - `check_port` (Number)
 - `description` (String)
 - `force_ssl` (Boolean)
+- `ha_policy` (String)
 - `http_host` (String)
 - `http_method` (String)
 - `http_uri` (String)
