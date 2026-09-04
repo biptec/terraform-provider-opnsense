@@ -11,6 +11,7 @@ func Resources(context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		newGatewayResource,
 		newGatewayGroupResource,
+		newRoutingApplyResource,
 	}
 }
 
