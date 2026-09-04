@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	"github.com/biptec/opnsense-go/pkg/opnsense"
@@ -100,6 +102,86 @@ func testUnlinkOSPFPrefixListFromRouteMaps(t *testing.T, ipv6 bool) {
 	}
 	if len(updated) != 1 || updated[0] != keepID {
 		t.Fatalf("updated prefix list references = %#v, want [%q]", updated, keepID)
+	}
+}
+
+func TestUnlinkOSPFPrefixListFromRouteMapsSerializesConcurrentMutations(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		ipv6 bool
+	}{
+		{name: "ospfv2", ipv6: false},
+		{name: "ospfv3", ipv6: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			family := "ospfsettings"
+			if tc.ipv6 {
+				family = "ospf6settings"
+			}
+
+			searchPath := "/api/quagga/" + family + "/searchRoutemap"
+			firstSearchEntered := make(chan struct{})
+			releaseFirstSearch := make(chan struct{})
+			secondSearchEntered := make(chan struct{})
+			var searches atomic.Int32
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if r.URL.Path != searchPath {
+					http.NotFound(w, r)
+					return
+				}
+
+				switch searches.Add(1) {
+				case 1:
+					close(firstSearchEntered)
+					<-releaseFirstSearch
+				case 2:
+					close(secondSearchEntered)
+				}
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"rows":     []map[string]any{},
+					"rowCount": 0,
+					"total":    0,
+					"current":  1,
+				})
+			}))
+			defer server.Close()
+
+			client := opnsense.NewClient(api.NewClient(api.Options{Uri: server.URL, MaxRetries: -1}))
+			unlink := func(id string) error {
+				if tc.ipv6 {
+					return unlinkOSPF6PrefixListFromRouteMaps(context.Background(), client, id)
+				}
+				return unlinkOSPFPrefixListFromRouteMaps(context.Background(), client, id)
+			}
+
+			errCh := make(chan error, 2)
+			go func() { errCh <- unlink("prefix-a") }()
+			<-firstSearchEntered
+			go func() { errCh <- unlink("prefix-b") }()
+
+			select {
+			case <-secondSearchEntered:
+				close(releaseFirstSearch)
+				t.Fatal("second prefix-list unlink reached the shared route-map before the first unlink completed")
+			case <-time.After(100 * time.Millisecond):
+				// Expected: the family-specific mutex keeps the second mutation out.
+			}
+
+			close(releaseFirstSearch)
+			for range 2 {
+				if err := <-errCh; err != nil {
+					t.Fatalf("unlink prefix list: %v", err)
+				}
+			}
+
+			select {
+			case <-secondSearchEntered:
+			case <-time.After(time.Second):
+				t.Fatal("second prefix-list unlink did not proceed after the first unlink completed")
+			}
+		})
 	}
 }
 

@@ -31,6 +31,8 @@ func (r *ospf6RouteMapResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ospf6RouteMapMutationMu.Lock()
+	defer ospf6RouteMapMutationMu.Unlock()
 	id, err := r.client.Quagga().AddOSPF6RouteMap(ctx, ospf6RouteMapToAPI(&data))
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Create OSPFv3 Route Map", err.Error())
@@ -67,6 +69,8 @@ func (r *ospf6RouteMapResource) Update(ctx context.Context, req resource.UpdateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ospf6RouteMapMutationMu.Lock()
+	defer ospf6RouteMapMutationMu.Unlock()
 	if err := r.client.Quagga().UpdateOSPF6RouteMap(ctx, data.ID.ValueString(), ospf6RouteMapToAPI(&data)); err != nil {
 		resp.Diagnostics.AddError("Unable to Update OSPFv3 Route Map", err.Error())
 		return
@@ -84,6 +88,8 @@ func (r *ospf6RouteMapResource) Delete(ctx context.Context, req resource.DeleteR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	ospf6RouteMapMutationMu.Lock()
+	defer ospf6RouteMapMutationMu.Unlock()
 	if err := r.client.Quagga().DeleteOSPF6RouteMap(ctx, data.ID.ValueString()); err != nil {
 		var nf *errs.NotFoundError
 		if !errors.As(err, &nf) {
