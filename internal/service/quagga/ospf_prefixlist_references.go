@@ -3,10 +3,16 @@ package quagga
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/biptec/opnsense-go/pkg/api"
 	"github.com/biptec/opnsense-go/pkg/opnsense"
 	"github.com/biptec/opnsense-go/pkg/quagga"
+)
+
+var (
+	ospfRouteMapMutationMu  sync.Mutex
+	ospf6RouteMapMutationMu sync.Mutex
 )
 
 type ospfRouteMapReferenceRow struct {
@@ -28,6 +34,13 @@ func withoutSelected(values api.SelectedMapList, id string) (api.SelectedMapList
 }
 
 func unlinkOSPFPrefixListFromRouteMaps(ctx context.Context, client opnsense.Client, id string) error {
+	// A prefix-list delete is a read-modify-write of a shared route-map. Terraform
+	// may delete several prefix lists concurrently, so serialize the full unlink
+	// operation to prevent a stale route-map write from reintroducing an ID that
+	// another goroutine has already removed.
+	ospfRouteMapMutationMu.Lock()
+	defer ospfRouteMapMutationMu.Unlock()
+
 	rows, err := api.Search[ospfRouteMapReferenceRow](client.Quagga().Client(), ctx, quagga.OSPFRouteMapOpts.Search)
 	if err != nil {
 		return fmt.Errorf("search OSPFv2 route-maps before prefix-list delete: %w", err)
@@ -52,6 +65,10 @@ func unlinkOSPFPrefixListFromRouteMaps(ctx context.Context, client opnsense.Clie
 }
 
 func unlinkOSPF6PrefixListFromRouteMaps(ctx context.Context, client opnsense.Client, id string) error {
+	// OSPFv3 route-maps have the same shared read-modify-write hazard as OSPFv2.
+	ospf6RouteMapMutationMu.Lock()
+	defer ospf6RouteMapMutationMu.Unlock()
+
 	rows, err := api.Search[ospfRouteMapReferenceRow](client.Quagga().Client(), ctx, quagga.OSPF6RouteMapOpts.Search)
 	if err != nil {
 		return fmt.Errorf("search OSPFv3 route-maps before prefix-list delete: %w", err)
