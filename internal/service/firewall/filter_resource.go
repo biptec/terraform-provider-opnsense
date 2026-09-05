@@ -91,8 +91,8 @@ func (r *filterResource) Configure(ctx context.Context, req resource.ConfigureRe
 }
 
 const (
-	replyToGatewayRetryInterval = time.Second
-	replyToGatewayRetryTimeout  = 25 * time.Second
+	gatewayReadinessRetryInterval = time.Second
+	gatewayReadinessRetryTimeout  = 25 * time.Second
 )
 
 func (r *filterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -113,9 +113,9 @@ func (r *filterResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	// OPNsense may briefly expose a stale reply-to gateway option list after a
-	// gateway is created. Retry only that exact validation failure, and only
-	// after verifying that the referenced gateway exists with the same IP family.
+	// OPNsense may briefly expose a stale policy/reply-to gateway option list
+	// after a gateway is created. Retry only that exact validation failure, and
+	// only after verifying that the referenced gateway exists with the same IP family.
 	id, err := r.addFilterResolved(ctx, resourceStruct)
 	if err != nil {
 		if id != "" {
@@ -150,7 +150,7 @@ func (r *filterResource) Create(ctx context.Context, req resource.CreateRequest,
 }
 
 func (r *filterResource) addFilterResolved(ctx context.Context, filter *apifirewall.Filter) (string, error) {
-	return r.addFilterResolvedWithTiming(ctx, filter, replyToGatewayRetryInterval, replyToGatewayRetryTimeout)
+	return r.addFilterResolvedWithTiming(ctx, filter, gatewayReadinessRetryInterval, gatewayReadinessRetryTimeout)
 }
 
 func (r *filterResource) addFilterResolvedWithTiming(ctx context.Context, filter *apifirewall.Filter, retryInterval, retryTimeout time.Duration) (string, error) {
@@ -162,14 +162,16 @@ func (r *filterResource) addFilterResolvedWithTiming(ctx context.Context, filter
 		if err == nil {
 			return id, nil
 		}
-		if !isStaleReplyToGatewayError(err) || filter.ReplyTo.String() == "" {
+
+		gatewayName, gatewayField := staleGatewayReference(err, filter)
+		if gatewayName == "" {
 			return id, err
 		}
 
 		if !gatewayVerified {
-			exists, verifyErr := r.replyToGatewayExists(ctx, filter.ReplyTo.String(), filter.IPProtocol.String())
+			exists, verifyErr := r.gatewayExists(ctx, gatewayName, filter.IPProtocol.String())
 			if verifyErr != nil {
-				return "", fmt.Errorf("verify reply-to gateway: %w", verifyErr)
+				return "", fmt.Errorf("verify %s gateway: %w", gatewayField, verifyErr)
 			}
 			if !exists {
 				return id, err
@@ -191,23 +193,37 @@ func (r *filterResource) addFilterResolvedWithTiming(ctx context.Context, filter
 	}
 }
 
+func staleGatewayReference(err error, filter *apifirewall.Filter) (string, string) {
+	message := err.Error()
+	if !strings.Contains(message, "Specify a valid gateway from the list matching the networks ip protocol") {
+		return "", ""
+	}
+	if strings.Contains(message, "rule.replyto") {
+		return filter.ReplyTo.String(), "reply-to"
+	}
+	if strings.Contains(message, "rule.gateway") {
+		return filter.Gateway.String(), "policy-routing"
+	}
+	return "", ""
+}
+
 func isStaleReplyToGatewayError(err error) bool {
 	message := err.Error()
 	return strings.Contains(message, "rule.replyto") &&
 		strings.Contains(message, "Specify a valid gateway from the list matching the networks ip protocol")
 }
 
-func (r *filterResource) replyToGatewayExists(ctx context.Context, name, ipProtocol string) (bool, error) {
-	type gatewayReplyToRow struct {
+func (r *filterResource) gatewayExists(ctx context.Context, name, ipProtocol string) (bool, error) {
+	type gatewayReadinessRow struct {
 		Name       string          `json:"name"`
 		IPProtocol api.SelectedMap `json:"ipprotocol"`
 	}
 
 	// Search responses can normalize unrelated gateway fields differently from
 	// the model endpoints (for example disabled can be a native JSON boolean).
-	// Decode only the fields needed for reply-to validation so those unrelated
-	// representations cannot break the readiness check.
-	result, err := api.Search[gatewayReplyToRow](r.client.Routing().Client(), ctx, routing.GatewayOpts.Search)
+	// Decode only the fields needed for readiness validation so those unrelated
+	// representations cannot break the check.
+	result, err := api.Search[gatewayReadinessRow](r.client.Routing().Client(), ctx, routing.GatewayOpts.Search)
 	if err != nil {
 		return false, err
 	}
