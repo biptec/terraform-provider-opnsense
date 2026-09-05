@@ -207,12 +207,6 @@ func staleGatewayReference(err error, filter *apifirewall.Filter) (string, strin
 	return "", ""
 }
 
-func isStaleReplyToGatewayError(err error) bool {
-	message := err.Error()
-	return strings.Contains(message, "rule.replyto") &&
-		strings.Contains(message, "Specify a valid gateway from the list matching the networks ip protocol")
-}
-
 func (r *filterResource) gatewayExists(ctx context.Context, name, ipProtocol string) (bool, error) {
 	type gatewayReadinessRow struct {
 		Name       string          `json:"name"`
