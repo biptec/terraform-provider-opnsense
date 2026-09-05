@@ -75,21 +75,27 @@ jobs:
 
           # Each shard runs on its own runner with its own OPNsense VM, so
           # shards run in parallel while tests within a shard stay serial.
-          # Long-running suites get a dedicated shard; everything else shares
-          # "other". Every internal/service/<pkg> directory MUST be assigned
-          # to a shard — the check below fails the run otherwise.
+          # Long-running suites get dedicated shards; the remaining service
+          # packages are balanced across smaller parallel groups. Every
+          # internal/service/<pkg> directory MUST be assigned to a shard — the
+          # check below fails the run otherwise.
           SHARDS = {
               "bind": ["bind", "dns"],
               "firewall": ["firewall"],
               "unbound": ["unbound"],
               "ipsec": ["ipsec"],
               "system": ["system"],
-              "other": ["acmeclient", "caddy", "core", "diagnostics", "dnsmasq", "haproxy", "interfaces", "kea",
-                        "openvpn", "quagga", "routes", "routing", "trust", "wireguard"],
+              # The former "other" shard took about an hour because all of these
+              # packages ran serially against one VM. Keep expensive packages
+              # isolated and balance the remainder using recent full-suite timings.
+              "haproxy": ["haproxy"],
+              "interfaces": ["interfaces"],
+              "network-services": ["caddy", "dnsmasq", "kea", "openvpn", "wireguard"],
+              "routing-misc": ["acmeclient", "core", "diagnostics", "quagga", "routes", "routing", "trust"],
           }
-          # Non-service packages, tested with "other" on full-suite runs.
-          EXTRA_OTHER = ["./internal/provider/...", "./internal/tools/...",
-                         "./internal/validators/..."]
+          # Non-service packages are quick and ride with routing-misc on full-suite runs.
+          EXTRA_ROUTING_MISC = ["./internal/provider/...", "./internal/tools/...",
+                                "./internal/validators/..."]
 
           assigned = {p for pkgs in SHARDS.values() for p in pkgs}
           on_disk = {d for d in os.listdir("internal/service")
@@ -105,8 +111,8 @@ jobs:
           if requested == ["./..."]:
               for name, pkgs in SHARDS.items():
                   paths = [f"./internal/service/{p}/..." for p in pkgs]
-                  if name == "other":
-                      paths += EXTRA_OTHER
+                  if name == "routing-misc":
+                      paths += EXTRA_ROUTING_MISC
                   matrix.append({"name": name, "packages": " ".join(paths)})
           else:
               services = []
