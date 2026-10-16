@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/biptec/opnsense-go/pkg/api"
 	"github.com/biptec/opnsense-go/pkg/errs"
 	apirouting "github.com/biptec/opnsense-go/pkg/routing"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -25,9 +26,21 @@ func (r *gatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	resp.Schema = gatewayResourceSchema()
 }
 
+// Search endpoints can normalize unrelated gateway fields differently from
+// model GET endpoints (for example disabled may be a native JSON boolean).
+// Reattachment needs only stable identity fields, so decode only those fields.
+type gatewayReplacementRow struct {
+	UUID        string          `json:"uuid"`
+	Name        string          `json:"name"`
+	Description string          `json:"descr"`
+	Interface   api.SelectedMap `json:"interface"`
+	IPProtocol  api.SelectedMap `json:"ipprotocol"`
+	Gateway     string          `json:"gateway"`
+}
+
 // The gateway's unique configured name and endpoint routing details survive
 // a clean native HA restore, while its MVC UUID may not.
-func exactGatewayReplacement(prior *gatewayResourceModel, rows []apirouting.Gateway) (string, error) {
+func exactGatewayReplacement(prior *gatewayResourceModel, rows []gatewayReplacementRow) (string, error) {
 	if prior.Name.IsNull() || prior.Name.IsUnknown() || prior.Name.ValueString() == "" ||
 		prior.Interface.IsNull() || prior.Interface.IsUnknown() || prior.Interface.ValueString() == "" ||
 		prior.IPProtocol.IsNull() || prior.IPProtocol.IsUnknown() || prior.IPProtocol.ValueString() == "" ||
@@ -59,7 +72,9 @@ func exactGatewayReplacement(prior *gatewayResourceModel, rows []apirouting.Gate
 }
 
 func (r *gatewayResource) reattach(ctx context.Context, prior *gatewayResourceModel) (string, *apirouting.Gateway, error) {
-	response, err := r.client.Routing().SearchGateway(ctx)
+	response, err := api.Search[gatewayReplacementRow](
+		r.client.Routing().Client(), ctx, apirouting.GatewayOpts.Search,
+	)
 	if err != nil {
 		return "", nil, fmt.Errorf("search gateways: %w", err)
 	}

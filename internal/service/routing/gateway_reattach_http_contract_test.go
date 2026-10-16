@@ -49,6 +49,9 @@ func TestReattachGatewayHTTPContract(t *testing.T) {
 				row[k] = v
 			}
 			row["uuid"] = "new-gateway-uuid"
+			// OPNsense searchGateway returns this as a native JSON boolean on
+			// current releases; reattachment must ignore unrelated shape drift.
+			row["disabled"] = false
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"total": total, "rowCount": 1, "current": 1,
 				"rows": []map[string]any{row},
