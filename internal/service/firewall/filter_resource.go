@@ -256,9 +256,9 @@ func exactFilterReplacement(prior *filterResourceModel, rows []map[string]any) (
 	if err != nil {
 		return "", fmt.Errorf("convert prior firewall rule: %w", err)
 	}
-	if desired.Interface.String() == "" {
-		return "", fmt.Errorf("firewall rule has no concrete endpoint interface")
-	}
+	// An empty interface set is a valid OPNsense floating rule. It is still
+	// safe to reattach when the remaining rule identity matches exactly and
+	// uniquely; do not confuse it with a missing/unknown Terraform block.
 	field := func(row map[string]any, key string) string {
 		value, ok := row[key].(string)
 		if !ok {

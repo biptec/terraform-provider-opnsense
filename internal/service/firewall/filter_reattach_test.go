@@ -45,6 +45,16 @@ func TestExactFilterReplacement(t *testing.T) {
 	if err != nil || id != "new-local-rule-uuid" {
 		t.Fatalf("expected exact reattach: %q %v", id, err)
 	}
+
+	floating := *prior
+	floating.Interface = &filterInterfaceBlock{
+		Interface: types.SetValueMust(types.StringType, []attr.Value{}),
+		Invert:    types.BoolValue(false),
+	}
+	floatingMatch := cloneRow(match, "interface", "")
+	if id, err = exactFilterReplacement(&floating, []map[string]any{floatingMatch}); err != nil || id != "new-local-rule-uuid" {
+		t.Fatalf("expected exact floating-rule reattach: %q %v", id, err)
+	}
 	cases := []struct {
 		name     string
 		rows     []map[string]any
