@@ -8,6 +8,7 @@ import (
 	apirouting "github.com/biptec/opnsense-go/pkg/routing"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -19,6 +20,7 @@ var _ resource.ResourceWithConfigure = &routingApplyResource{}
 type routingApplyResource struct{ routingResourceClient }
 
 type routingApplyResourceModel struct {
+	Enabled types.Bool   `tfsdk:"enabled"`
 	Trigger types.String `tfsdk:"trigger"`
 	Id      types.String `tfsdk:"id"`
 }
@@ -33,6 +35,12 @@ func (r *routingApplyResource) Schema(_ context.Context, _ resource.SchemaReques
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Reconfigures the OPNsense routing service when a caller-controlled triggger changes.",
 		Attributes: map[string]schema.Attribute{
+			"enabled": schema.BoolAttribute{
+				MarkdownDescription: "Whether create/update may reconfigure the OPNsense routing service. Defaults to true for backward compatibility.",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
+			},
 			"trigger": schema.StringAttribute{
 				MarkdownDescription: "Opaque caller-controlled value. Changing this value re-applies the routing configuration.",
 				Required:            true,
@@ -50,7 +58,10 @@ type routingApplyClient interface {
 	ReconfigureService(context.Context, api.Endpoint) error
 }
 
-func applyRoutingConfig(ctx context.Context, client routingApplyClient) error {
+func applyRoutingConfig(ctx context.Context, client routingApplyClient, enabled bool) error {
+	if !enabled {
+		return nil
+	}
 	if err := client.ReconfigureService(ctx, apirouting.GatewayOpts.Reconfigure); err != nil {
 		return fmt.Errorf("reconfigure routing: %w", err)
 	}
@@ -58,7 +69,7 @@ func applyRoutingConfig(ctx context.Context, client routingApplyClient) error {
 }
 
 func (r *routingApplyResource) apply(ctx context.Context, data *routingApplyResourceModel) error {
-	if err := applyRoutingConfig(ctx, r.client.Routing().Client()); err != nil {
+	if err := applyRoutingConfig(ctx, r.client.Routing().Client(), data.Enabled.ValueBool()); err != nil {
 		return err
 	}
 	data.Id = types.StringValue("routing")
