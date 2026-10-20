@@ -36,6 +36,7 @@ Manages one CARP L2 health check through `os-api-extensions`. Automatic scope di
 - `scope` (String) CARP target scope. `interface` automatically discovers CARP on the probe interface; `all_carp` discovers all configured CARP; `vhid` and `vhid_group` are explicit overrides; `global` preserves legacy global demotion.
 - `vhid` (Number) Explicit CARP VHID when `scope = "vhid"`. Keep zero for every other scope.
 - `vhid_targets` (Set of String) Explicit `interface:VHID` targets when `scope = "vhid_group"`. Empty for automatic and single-VHID scopes.
+- `wait_for_healthy` (Boolean) Wait for this check's runtime probe to become healthy before Create or Update completes. CARP control state is not required, so this can gate VIP creation.
 
 ### Read-Only
 
