@@ -76,7 +76,29 @@ func (r *carpHealthCheckResource) Create(ctx context.Context, req resource.Creat
 		resp.Diagnostics.AddError("CARP Health Check Created but Read Failed", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, carpHealthCheckFromAPI(remote, id))...)
+	state := carpHealthCheckStateFromRemote(&data, remote, id)
+	if err := r.waitForHealthyIfRequested(ctx, &data, id); err != nil {
+		// A failed readiness gate must not leave an untracked remote check that
+		// a later apply could treat as a completed dependency. If the operation
+		// context itself was cancelled, preserve state rather than issuing a new
+		// side effect after cancellation.
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+			resp.Diagnostics.AddError("CARP Health Check Readiness", err.Error())
+			return
+		}
+		if cleanupErr := r.client.ApiExtensions().DeleteCarpHealthCheck(ctx, id); cleanupErr != nil {
+			resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+			resp.Diagnostics.AddError(
+				"CARP Health Check Readiness",
+				fmt.Sprintf("%v; cleanup of created check %s also failed: %v", err, id, cleanupErr),
+			)
+			return
+		}
+		resp.Diagnostics.AddError("CARP Health Check Readiness", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 func (r *carpHealthCheckResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data carpHealthCheckResourceModel
@@ -94,7 +116,7 @@ func (r *carpHealthCheckResource) Read(ctx context.Context, req resource.ReadReq
 		resp.Diagnostics.AddError("Unable to Read CARP Health Check", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, carpHealthCheckFromAPI(remote, data.ID.ValueString()))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, carpHealthCheckStateFromRemote(&data, remote, data.ID.ValueString()))...)
 }
 func (r *carpHealthCheckResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data carpHealthCheckResourceModel
@@ -116,7 +138,10 @@ func (r *carpHealthCheckResource) Update(ctx context.Context, req resource.Updat
 		resp.Diagnostics.AddError("CARP Health Check Updated but Read Failed", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, carpHealthCheckFromAPI(remote, data.ID.ValueString()))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, carpHealthCheckStateFromRemote(&data, remote, data.ID.ValueString()))...)
+	if err := r.waitForHealthyIfRequested(ctx, &data, data.ID.ValueString()); err != nil {
+		resp.Diagnostics.AddError("CARP Health Check Readiness", err.Error())
+	}
 }
 func (r *carpHealthCheckResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data carpHealthCheckResourceModel
@@ -301,6 +326,7 @@ func carpHealthCheckFromAPI(data *apiextensions.CarpHealthCheck, id string) *car
 		Enabled: types.BoolValue(data.Enabled.Bool()), Name: types.StringValue(data.Name),
 		Interface: types.StringValue(data.Interface.String()), Target: types.StringValue(data.Target),
 		Scope: types.StringValue(scope), VHID: types.Int64Value(vhid), FailureAdvSkew: types.Int64Value(failureAdvSkew),
+		WaitForHealthy:     types.BoolValue(false),
 		VHIDTargets:        tools.StringSliceToSet([]string(data.VHIDTargets)),
 		FallbackIPv4Target: types.StringValue(data.FallbackIPv4Target), FallbackIPv4Gateway: types.StringValue(data.FallbackIPv4Gateway),
 		FallbackIPv6Target: types.StringValue(data.FallbackIPv6Target), FallbackIPv6Gateway: types.StringValue(data.FallbackIPv6Gateway),

@@ -35,6 +35,7 @@ type carpHealthCheckResourceModel struct {
 	Scope                      types.String `tfsdk:"scope"`
 	VHID                       types.Int64  `tfsdk:"vhid"`
 	FailureAdvSkew             types.Int64  `tfsdk:"failure_advskew"`
+	WaitForHealthy             types.Bool   `tfsdk:"wait_for_healthy"`
 	VHIDTargets                types.Set    `tfsdk:"vhid_targets"`
 	FallbackIPv4Target         types.String `tfsdk:"fallback_ipv4_target"`
 	FallbackIPv4Gateway        types.String `tfsdk:"fallback_ipv4_gateway"`
@@ -83,6 +84,7 @@ func carpHealthCheckResourceSchema() schema.Schema {
 				Optional: true, Computed: true, Default: int64default.StaticInt64(254), Validators: []validator.Int64{int64validator.Between(1, 254)},
 				MarkdownDescription: "advskew enforced while this check is unhealthy. Use 254 for a hard local-segment failure; lower values can provide softer preference changes.",
 			},
+			"wait_for_healthy": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Wait for this check's runtime probe to become healthy before Create or Update completes. CARP control state is not required, so this can gate VIP creation."},
 			"vhid_targets": schema.SetAttribute{
 				Optional: true, Computed: true, Default: emptySet, ElementType: types.StringType,
 				Validators:          []validator.Set{setvalidator.ValueStringsAre(stringvalidator.RegexMatches(vhidTargetPattern, "must use logical-interface:VHID with VHID between 1 and 255"))},
