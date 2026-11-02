@@ -38,6 +38,23 @@ func TestFrontendL4PassthroughConversion(t *testing.T) {
 	}
 }
 
+func TestFrontendTLSTerminationConversion(t *testing.T) {
+	t.Parallel()
+	model := &frontendModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("oidc_ingress"),
+		Bind: stringSet("10.0.16.81:443"), Mode: types.StringValue("http"),
+		SSLEnabled: types.BoolValue(true), SSLCertificates: stringSet("oidc-cert"),
+		SSLDefaultCertificate: types.StringValue("oidc-cert"), LinkedActions: stringSet(),
+	}
+	got, err := frontendModelToAPI(model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Mode.String() != "http" || got.SSLEnabled != "1" || got.SSLCertificates.String() != "oidc-cert" || got.SSLDefaultCertificate.String() != "oidc-cert" {
+		t.Fatalf("frontend TLS termination fields not preserved: %+v", got)
+	}
+}
+
 func TestSNIACLAndUseBackendConversion(t *testing.T) {
 	t.Parallel()
 	acl, err := aclModelToAPI(&aclModel{
@@ -69,13 +86,14 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 	t.Parallel()
 	server, err := serverModelToAPI(&serverModel{
 		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint"), HAPolicy: types.StringValue("endpoint"), Address: types.StringValue("10.0.0.20"),
-		Port: types.Int64Value(443), Mode: types.StringValue("active"), Type: types.StringValue("static"), SSL: types.BoolValue(false),
+		Port: types.Int64Value(443), Mode: types.StringValue("active"), Type: types.StringValue("static"), SSL: types.BoolValue(true),
+		SSLSNI: types.StringValue("deneb.svc.sandbox.biptec.net"), SSLVerify: types.BoolValue(true), SSLCA: stringSet("ca-ref"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if server.Address != "10.0.0.20" || server.Port != "443" || server.SSL != "0" || server.HAPolicy.String() != "endpoint" {
-		t.Fatalf("unexpected server: %+v", server)
+	if server.Address != "10.0.0.20" || server.Port != "443" || server.SSL != "1" || server.HAPolicy.String() != "endpoint" || server.SSLSNI != "deneb.svc.sandbox.biptec.net" || server.SSLVerify != "1" || server.SSLCA.String() != "ca-ref" {
+		t.Fatalf("unexpected TLS server: %+v", server)
 	}
 
 	backend, err := backendModelToAPI(&backendModel{
@@ -118,13 +136,13 @@ func TestHAProxyAPIToModelRoundTrip(t *testing.T) {
 
 	frontend, err := frontendAPIToModel(&apihaproxy.Frontend{
 		Enabled: "1", Name: "tls", Bind: api.SelectedMapList{"[2001:db8::1]:443", "192.0.2.1:443"},
-		Mode: api.SelectedMap("tcp"), SSLEnabled: "0", LinkedActions: api.SelectedMapList{"a2", "a1"},
+		Mode: api.SelectedMap("http"), SSLEnabled: "1", SSLCertificates: api.SelectedMapList{"cert-b", "cert-a"}, SSLDefaultCertificate: api.SelectedMap("cert-a"), LinkedActions: api.SelectedMapList{"a2", "a1"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if frontend.Mode.ValueString() != "tcp" || frontend.SSLEnabled.ValueBool() {
-		t.Fatalf("unexpected frontend: %+v", frontend)
+	if frontend.Mode.ValueString() != "http" || !frontend.SSLEnabled.ValueBool() || frontend.SSLDefaultCertificate.ValueString() != "cert-a" || tools.SetToString(frontend.SSLCertificates, ",") != "cert-a,cert-b" {
+		t.Fatalf("unexpected TLS frontend: %+v", frontend)
 	}
 	if tools.SetToString(frontend.LinkedActions, ",") != "a1,a2" {
 		t.Fatalf("unexpected actions: %s", tools.SetToString(frontend.LinkedActions, ","))
