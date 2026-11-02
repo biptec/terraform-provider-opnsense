@@ -3,7 +3,7 @@ module github.com/biptec/terraform-provider-opnsense
 go 1.25.8
 
 require (
-	github.com/biptec/opnsense-go v0.29.2-0.20261102184556-b88d8c670b50
+	github.com/biptec/opnsense-go v0.29.2-0.20261102185026-fa2d7b9b6207
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-framework v1.16.1
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0

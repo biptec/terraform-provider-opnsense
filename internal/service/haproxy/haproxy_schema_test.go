@@ -87,12 +87,15 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 	server, err := serverModelToAPI(&serverModel{
 		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint"), HAPolicy: types.StringValue("endpoint"), Address: types.StringValue("10.0.0.20"),
 		Port: types.Int64Value(443), Mode: types.StringValue("active"), Type: types.StringValue("static"), SSL: types.BoolValue(true),
-		SSLSNI: types.StringValue("deneb.svc.sandbox.biptec.net"), SSLVerify: types.BoolValue(true), SSLCA: stringSet("ca-ref"),
+		SSLSNI: types.StringValue("deneb.svc.sandbox.biptec.net"), SSLVerify: types.BoolValue(true),
+		SSLVerifyHost: types.StringValue("deneb.svc.sandbox.biptec.net"), SSLCA: stringSet("ca-ref"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if server.Address != "10.0.0.20" || server.Port != "443" || server.SSL != "1" || server.HAPolicy.String() != "endpoint" || server.SSLSNI != "deneb.svc.sandbox.biptec.net" || server.SSLVerify != "1" || server.SSLCA.String() != "ca-ref" {
+	if server.Address != "10.0.0.20" || server.Port != "443" || server.SSL != "1" || server.HAPolicy.String() != "endpoint" ||
+		server.SSLSNI != "deneb.svc.sandbox.biptec.net" || server.SSLVerify != "1" ||
+		server.SSLVerifyHost != "deneb.svc.sandbox.biptec.net" || server.SSLCA.String() != "ca-ref" {
 		t.Fatalf("unexpected TLS server: %+v", server)
 	}
 

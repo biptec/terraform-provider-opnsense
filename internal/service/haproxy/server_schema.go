@@ -32,6 +32,7 @@ type serverModel struct {
 	SSL               types.Bool   `tfsdk:"ssl"`
 	SSLSNI            types.String `tfsdk:"ssl_sni"`
 	SSLVerify         types.Bool   `tfsdk:"ssl_verify"`
+	SSLVerifyHost     types.String `tfsdk:"ssl_verify_host"`
 	SSLCA             types.Set    `tfsdk:"ssl_ca"`
 	MaxConnections    types.Int64  `tfsdk:"max_connections"`
 	Weight            types.Int64  `tfsdk:"weight"`
@@ -55,7 +56,8 @@ func serverResourceSchema() schema.Schema {
 		"type":            schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("static"), Validators: []validator.String{stringvalidator.OneOf("static", "template", "unix")}, MarkdownDescription: "Server type. Defaults to `static`."},
 		"ssl":             schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether HAProxy establishes TLS to the backend. Keep disabled for raw TCP/TLS passthrough. Defaults to `false`."},
 		"ssl_sni":         schema.StringAttribute{Optional: true, MarkdownDescription: "TLS SNI hostname sent to this backend server."},
-		"ssl_verify":      schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true), MarkdownDescription: "Whether HAProxy verifies the backend TLS certificate. Defaults to `true`."},
+		"ssl_verify":      schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true), MarkdownDescription: "Whether HAProxy verifies the backend TLS certificate chain. Defaults to `true`."},
+		"ssl_verify_host": schema.StringAttribute{Optional: true, MarkdownDescription: "Optional hostname verified against the backend certificate subject/SAN when ssl_verify=true."},
 		"ssl_ca":          schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType, MarkdownDescription: "OPNsense CA refids trusted when verifying this backend TLS certificate."},
 		"max_connections": schema.Int64Attribute{Optional: true, Validators: nonNegative, MarkdownDescription: "Optional maximum concurrent connections."},
 		"weight":          schema.Int64Attribute{Optional: true, Validators: nonNegative, MarkdownDescription: "Optional server weight."},
@@ -68,7 +70,7 @@ func serverDataSourceSchema() dschema.Schema {
 	return dschema.Schema{MarkdownDescription: "Reads an OPNsense HAProxy server.", Attributes: map[string]dschema.Attribute{
 		"id": dschema.StringAttribute{Required: true}, "enabled": dschema.BoolAttribute{Computed: true}, "name": dschema.StringAttribute{Computed: true}, "description": dschema.StringAttribute{Computed: true}, "ha_policy": dschema.StringAttribute{Computed: true}, "address": dschema.StringAttribute{Computed: true},
 		"port": dschema.Int64Attribute{Computed: true}, "check_port": dschema.Int64Attribute{Computed: true}, "mode": dschema.StringAttribute{Computed: true}, "type": dschema.StringAttribute{Computed: true}, "ssl": dschema.BoolAttribute{Computed: true},
-		"ssl_sni": dschema.StringAttribute{Computed: true}, "ssl_verify": dschema.BoolAttribute{Computed: true}, "ssl_ca": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
+		"ssl_sni": dschema.StringAttribute{Computed: true}, "ssl_verify": dschema.BoolAttribute{Computed: true}, "ssl_verify_host": dschema.StringAttribute{Computed: true}, "ssl_ca": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 		"max_connections": dschema.Int64Attribute{Computed: true}, "weight": dschema.Int64Attribute{Computed: true}, "check_interval": dschema.StringAttribute{Computed: true}, "check_down_interval": dschema.StringAttribute{Computed: true}, "advanced": dschema.StringAttribute{Computed: true},
 	}}
 }
@@ -79,8 +81,8 @@ func optionalIntString(v types.Int64) string {
 	return strconv.FormatInt(v.ValueInt64(), 10)
 }
 func serverModelToAPI(d *serverModel) (*apihaproxy.Server, error) {
-	return &apihaproxy.Server{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Name: d.Name.ValueString(), Description: d.Description.ValueString(), HAPolicy: api.SelectedMap(d.HAPolicy.ValueString()), Address: d.Address.ValueString(), Port: optionalIntString(d.Port), CheckPort: optionalIntString(d.CheckPort), Mode: api.SelectedMap(d.Mode.ValueString()), Type: api.SelectedMap(d.Type.ValueString()), SSL: tools.BoolToString(d.SSL.ValueBool()), SSLSNI: d.SSLSNI.ValueString(), SSLVerify: tools.BoolToString(d.SSLVerify.ValueBool()), SSLCA: optionalSelectedMapList(d.SSLCA), MaxConnections: optionalIntString(d.MaxConnections), Weight: optionalIntString(d.Weight), CheckInterval: d.CheckInterval.ValueString(), CheckDownInterval: d.CheckDownInterval.ValueString(), Advanced: d.Advanced.ValueString()}, nil
+	return &apihaproxy.Server{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Name: d.Name.ValueString(), Description: d.Description.ValueString(), HAPolicy: api.SelectedMap(d.HAPolicy.ValueString()), Address: d.Address.ValueString(), Port: optionalIntString(d.Port), CheckPort: optionalIntString(d.CheckPort), Mode: api.SelectedMap(d.Mode.ValueString()), Type: api.SelectedMap(d.Type.ValueString()), SSL: tools.BoolToString(d.SSL.ValueBool()), SSLSNI: d.SSLSNI.ValueString(), SSLVerify: tools.BoolToString(d.SSLVerify.ValueBool()), SSLVerifyHost: d.SSLVerifyHost.ValueString(), SSLCA: optionalSelectedMapList(d.SSLCA), MaxConnections: optionalIntString(d.MaxConnections), Weight: optionalIntString(d.Weight), CheckInterval: d.CheckInterval.ValueString(), CheckDownInterval: d.CheckDownInterval.ValueString(), Advanced: d.Advanced.ValueString()}, nil
 }
 func serverAPIToModel(d *apihaproxy.Server) (*serverModel, error) {
-	return &serverModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Name: types.StringValue(d.Name), Description: tools.StringOrNull(d.Description), HAPolicy: tools.StringOrNull(d.HAPolicy.String()), Address: types.StringValue(d.Address), Port: tools.StringToInt64Null(d.Port), CheckPort: tools.StringToInt64Null(d.CheckPort), Mode: types.StringValue(d.Mode.String()), Type: types.StringValue(d.Type.String()), SSL: types.BoolValue(tools.StringToBool(d.SSL)), SSLSNI: tools.StringOrNull(d.SSLSNI), SSLVerify: types.BoolValue(tools.StringToBool(d.SSLVerify)), SSLCA: tools.StringSliceToSet([]string(d.SSLCA)), MaxConnections: tools.StringToInt64Null(d.MaxConnections), Weight: tools.StringToInt64Null(d.Weight), CheckInterval: tools.StringOrNull(d.CheckInterval), CheckDownInterval: tools.StringOrNull(d.CheckDownInterval), Advanced: tools.StringOrNull(d.Advanced)}, nil
+	return &serverModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Name: types.StringValue(d.Name), Description: tools.StringOrNull(d.Description), HAPolicy: tools.StringOrNull(d.HAPolicy.String()), Address: types.StringValue(d.Address), Port: tools.StringToInt64Null(d.Port), CheckPort: tools.StringToInt64Null(d.CheckPort), Mode: types.StringValue(d.Mode.String()), Type: types.StringValue(d.Type.String()), SSL: types.BoolValue(tools.StringToBool(d.SSL)), SSLSNI: tools.StringOrNull(d.SSLSNI), SSLVerify: types.BoolValue(tools.StringToBool(d.SSLVerify)), SSLVerifyHost: tools.StringOrNull(d.SSLVerifyHost), SSLCA: tools.StringSliceToSet([]string(d.SSLCA)), MaxConnections: tools.StringToInt64Null(d.MaxConnections), Weight: tools.StringToInt64Null(d.Weight), CheckInterval: tools.StringOrNull(d.CheckInterval), CheckDownInterval: tools.StringOrNull(d.CheckDownInterval), Advanced: tools.StringOrNull(d.Advanced)}, nil
 }
