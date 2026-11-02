@@ -27,8 +27,11 @@ Manages an OPNsense HAProxy frontend. TCP mode can be used for L4 TLS passthroug
 - `default_backend` (String) UUID of the default backend.
 - `description` (String) Optional description.
 - `enabled` (Boolean) Whether to enable the frontend. Defaults to `true`.
+- `ha_policy` (String) Optional HA synchronization policy ID used by the policy-managed HAProxy synchronizer.
 - `linked_actions` (Set of String) HAProxy action UUIDs attached to the frontend.
 - `mode` (String) Frontend mode: `http`, `ssl`, or `tcp`. Use `tcp` for raw TLS passthrough. Defaults to `http`.
+- `ssl_certificates` (Set of String) OPNsense certificate refids available to this TLS-terminating frontend.
+- `ssl_default_certificate` (String) OPNsense certificate refid used as the default TLS certificate for this frontend.
 - `ssl_enabled` (Boolean) Whether HAProxy terminates TLS on this frontend. Keep disabled for L4 passthrough. Defaults to `false`.
 
 ### Read-Only

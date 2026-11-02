@@ -41,7 +41,7 @@ func TestFrontendL4PassthroughConversion(t *testing.T) {
 func TestFrontendTLSTerminationConversion(t *testing.T) {
 	t.Parallel()
 	model := &frontendModel{
-		Enabled: types.BoolValue(true), Name: types.StringValue("oidc_ingress"),
+		Enabled: types.BoolValue(true), Name: types.StringValue("oidc_ingress"), HAPolicy: types.StringValue("endpoint"),
 		Bind: stringSet("10.0.16.81:443"), Mode: types.StringValue("http"),
 		SSLEnabled: types.BoolValue(true), SSLCertificates: stringSet("oidc-cert"),
 		SSLDefaultCertificate: types.StringValue("oidc-cert"), LinkedActions: stringSet(),
@@ -50,7 +50,7 @@ func TestFrontendTLSTerminationConversion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Mode.String() != "http" || got.SSLEnabled != "1" || got.SSLCertificates.String() != "oidc-cert" || got.SSLDefaultCertificate.String() != "oidc-cert" {
+	if got.HAPolicy.String() != "endpoint" || got.Mode.String() != "http" || got.SSLEnabled != "1" || got.SSLCertificates.String() != "oidc-cert" || got.SSLDefaultCertificate.String() != "oidc-cert" {
 		t.Fatalf("frontend TLS termination fields not preserved: %+v", got)
 	}
 }
@@ -156,13 +156,13 @@ func TestHAProxyAPIToModelRoundTrip(t *testing.T) {
 	}
 
 	frontend, err := frontendAPIToModel(&apihaproxy.Frontend{
-		Enabled: "1", Name: "tls", Bind: api.SelectedMapList{"[2001:db8::1]:443", "192.0.2.1:443"},
+		Enabled: "1", Name: "tls", HAPolicy: api.SelectedMap("endpoint"), Bind: api.SelectedMapList{"[2001:db8::1]:443", "192.0.2.1:443"},
 		Mode: api.SelectedMap("http"), SSLEnabled: "1", SSLCertificates: api.SelectedMapList{"cert-b", "cert-a"}, SSLDefaultCertificate: api.SelectedMap("cert-a"), LinkedActions: api.SelectedMapList{"a2", "a1"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if frontend.Mode.ValueString() != "http" || !frontend.SSLEnabled.ValueBool() || frontend.SSLDefaultCertificate.ValueString() != "cert-a" || tools.SetToString(frontend.SSLCertificates, ",") != "cert-a,cert-b" {
+	if frontend.HAPolicy.ValueString() != "endpoint" || frontend.Mode.ValueString() != "http" || !frontend.SSLEnabled.ValueBool() || frontend.SSLDefaultCertificate.ValueString() != "cert-a" || tools.SetToString(frontend.SSLCertificates, ",") != "cert-a,cert-b" {
 		t.Fatalf("unexpected TLS frontend: %+v", frontend)
 	}
 	if tools.SetToString(frontend.LinkedActions, ",") != "a1,a2" {

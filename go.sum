@@ -31,6 +31,8 @@ github.com/biptec/opnsense-go v0.29.2-0.20261102184556-b88d8c670b50 h1:ijBh+9IQg
 github.com/biptec/opnsense-go v0.29.2-0.20261102184556-b88d8c670b50/go.mod h1:XQ1/Qo1Zd2xgxi7KYCzdHqvCoBp9BNr+Xd6+1hzzDRY=
 github.com/biptec/opnsense-go v0.29.2-0.20261102185026-fa2d7b9b6207 h1:Bgy9gXEqMS8Og7xcN5hayC86c2XkrzrFTiS7KUa5Ugw=
 github.com/biptec/opnsense-go v0.29.2-0.20261102185026-fa2d7b9b6207/go.mod h1:XQ1/Qo1Zd2xgxi7KYCzdHqvCoBp9BNr+Xd6+1hzzDRY=
+github.com/biptec/opnsense-go v0.29.2-0.20261102191236-6ad9d1087262 h1:RcLsBDQYzofNBuwHWrvb8yslxLgbNWNlEjwRYku5vts=
+github.com/biptec/opnsense-go v0.29.2-0.20261102191236-6ad9d1087262/go.mod h1:XQ1/Qo1Zd2xgxi7KYCzdHqvCoBp9BNr+Xd6+1hzzDRY=
 github.com/bmatcuk/doublestar/v4 v4.10.0 h1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=
 github.com/bmatcuk/doublestar/v4 v4.10.0/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=

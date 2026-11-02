@@ -19,6 +19,7 @@ func DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		newCaDataSource,
 		newCertDataSource,
+		newCertByDescriptionDataSource,
 		newSettingsDataSource,
 	}
 }

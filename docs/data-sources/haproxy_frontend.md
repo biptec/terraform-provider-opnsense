@@ -23,8 +23,11 @@ Reads an OPNsense HAProxy frontend.
 - `default_backend` (String)
 - `description` (String)
 - `enabled` (Boolean)
+- `ha_policy` (String)
 - `id` (String) The ID of this resource.
 - `linked_actions` (Set of String)
 - `mode` (String)
 - `name` (String)
+- `ssl_certificates` (Set of String)
+- `ssl_default_certificate` (String)
 - `ssl_enabled` (Boolean)

@@ -33,6 +33,10 @@ Manages an OPNsense HAProxy server endpoint.
 - `mode` (String) Server mode: `active`, `backup`, or `disabled`. Defaults to `active`.
 - `port` (Number) Backend server TCP port.
 - `ssl` (Boolean) Whether HAProxy establishes TLS to the backend. Keep disabled for raw TCP/TLS passthrough. Defaults to `false`.
+- `ssl_ca` (Set of String) OPNsense CA refids trusted when verifying this backend TLS certificate.
+- `ssl_sni` (String) TLS SNI hostname sent to this backend server.
+- `ssl_verify` (Boolean) Whether HAProxy verifies the backend TLS certificate chain. Defaults to `true`.
+- `ssl_verify_host` (String) Optional hostname verified against the backend certificate subject/SAN when ssl_verify=true.
 - `type` (String) Server type. Defaults to `static`.
 - `weight` (Number) Optional server weight.
 
