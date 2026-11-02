@@ -39,7 +39,7 @@ func (r *ntpSettingsResource) Create(ctx context.Context, req resource.CreateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.apply(ctx, &data); err != nil {
+	if err := r.apply(ctx, &data, true); err != nil {
 		resp.Diagnostics.AddError("Unable to Configure NTP", err.Error())
 		return
 	}
@@ -67,7 +67,7 @@ func (r *ntpSettingsResource) Update(ctx context.Context, req resource.UpdateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.apply(ctx, &data); err != nil {
+	if err := r.apply(ctx, &data, false); err != nil {
 		resp.Diagnostics.AddError("Unable to Configure NTP", err.Error())
 		return
 	}
@@ -90,12 +90,14 @@ func (r *ntpSettingsResource) ImportState(ctx context.Context, req resource.Impo
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
 }
 
-func (r *ntpSettingsResource) apply(ctx context.Context, data *ntpSettingsResourceModel) error {
-	desired, err := ntpToAPI(ctx, data)
-	if err != nil {
-		return err
-	}
-	currentResponse, err := r.client.ApiExtensions().NtpGet(ctx)
+type ntpSettingsClient interface {
+	NtpGet(context.Context) (*apiextensions.NtpResponse, error)
+	NtpSet(context.Context, *apiextensions.NtpSettings) (*apiextensions.NtpActionResult, error)
+	NtpReconfigure(context.Context) (*apiextensions.NtpActionResult, error)
+}
+
+func applyNTPSettings(ctx context.Context, client ntpSettingsClient, desired *apiextensions.NtpSettings, reconfigureIfEqual bool) error {
+	currentResponse, err := client.NtpGet(ctx)
 	if err != nil {
 		return err
 	}
@@ -103,17 +105,28 @@ func (r *ntpSettingsResource) apply(ctx context.Context, data *ntpSettingsResour
 		return fmt.Errorf("NTP get API returned an empty response")
 	}
 	if ntpEqual(&currentResponse.NTP, desired) {
+		if !reconfigureIfEqual {
+			return nil
+		}
+		reconfigured, err := client.NtpReconfigure(ctx)
+		if err != nil {
+			return err
+		}
+		if err = validateNTPAction("reconfigure", reconfigured); err != nil {
+			return err
+		}
+		tflog.Trace(ctx, "reconfigured NTP runtime for existing settings")
 		return nil
 	}
 
-	result, err := r.client.ApiExtensions().NtpSet(ctx, desired)
+	result, err := client.NtpSet(ctx, desired)
 	if err != nil {
 		return err
 	}
 	if err = validateNTPAction("settings update", result); err != nil {
 		return err
 	}
-	reconfigured, err := r.client.ApiExtensions().NtpReconfigure(ctx)
+	reconfigured, err := client.NtpReconfigure(ctx)
 	if err != nil {
 		return err
 	}
@@ -122,6 +135,14 @@ func (r *ntpSettingsResource) apply(ctx context.Context, data *ntpSettingsResour
 	}
 	tflog.Trace(ctx, "configured NTP settings")
 	return nil
+}
+
+func (r *ntpSettingsResource) apply(ctx context.Context, data *ntpSettingsResourceModel, reconfigureIfEqual bool) error {
+	desired, err := ntpToAPI(ctx, data)
+	if err != nil {
+		return err
+	}
+	return applyNTPSettings(ctx, r.client.ApiExtensions(), desired, reconfigureIfEqual)
 }
 
 func ntpToAPI(ctx context.Context, data *ntpSettingsResourceModel) (*apiextensions.NtpSettings, error) {
