@@ -118,6 +118,24 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 	if check.Type.String() != "tcp" || check.Interval != "2s" || check.HAPolicy.String() != "endpoint" {
 		t.Fatalf("unexpected check: %+v", check)
 	}
+
+	httpsCheck, err := healthcheckModelToAPI(&healthcheckModel{
+		Name: types.StringValue("oidc_https"), HAPolicy: types.StringValue("endpoint"), Type: types.StringValue("http"), Interval: types.StringValue("2s"),
+		SSL: types.StringValue("sslsni"), SSLSNI: types.StringValue("deneb.svc.sandbox.biptec.net"),
+		HTTPMethod: types.StringValue("get"), HTTPURI: types.StringValue("/realms/sso/.well-known/openid-configuration"),
+		HTTPVersion: types.StringValue("http11"), HTTPHost: types.StringValue("id.central.sandbox.biptec.net"),
+		HTTPExpressionEnabled: types.BoolValue(true), HTTPExpression: types.StringValue("string"),
+		HTTPNegate: types.BoolValue(false), HTTPValue: types.StringValue("https://id.central.sandbox.biptec.net/realms/sso"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if httpsCheck.Type.String() != "http" || httpsCheck.SSL.String() != "sslsni" || httpsCheck.SSLSNI != "deneb.svc.sandbox.biptec.net" ||
+		httpsCheck.HTTPMethod.String() != "get" || httpsCheck.HTTPVersion.String() != "http11" ||
+		httpsCheck.HTTPHost != "id.central.sandbox.biptec.net" || httpsCheck.HTTPExpressionEnabled != "1" ||
+		httpsCheck.HTTPExpression.String() != "string" || httpsCheck.HTTPValue != "https://id.central.sandbox.biptec.net/realms/sso" {
+		t.Fatalf("unexpected HTTPS check: %+v", httpsCheck)
+	}
 }
 
 func TestHAProxyAPIToModelRoundTrip(t *testing.T) {
@@ -164,13 +182,15 @@ func TestHAProxyUpstreamDefaultsRoundTrip(t *testing.T) {
 
 	check, err := healthcheckAPIToModel(&apihaproxy.Healthcheck{
 		Name: "tcp_check", HAPolicy: api.SelectedMap("endpoint"), Type: api.SelectedMap("tcp"), Interval: "2s", SSL: api.SelectedMap("nopref"),
-		HTTPMethod: api.SelectedMap("options"), HTTPURI: "/", HTTPHost: "localhost", TCPMatchType: api.SelectedMap("string"),
+		HTTPMethod: api.SelectedMap("options"), HTTPURI: "/", HTTPVersion: api.SelectedMap("http10"), HTTPHost: "localhost",
+		HTTPExpressionEnabled: "0", HTTPNegate: "0", TCPMatchType: api.SelectedMap("string"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if check.HAPolicy.ValueString() != "endpoint" || check.HTTPMethod.ValueString() != "options" || check.HTTPURI.ValueString() != "/" ||
-		check.HTTPHost.ValueString() != "localhost" || check.TCPMatchType.ValueString() != "string" {
+		check.HTTPVersion.ValueString() != "http10" || check.HTTPHost.ValueString() != "localhost" ||
+		check.HTTPExpressionEnabled.ValueBool() || check.HTTPNegate.ValueBool() || check.TCPMatchType.ValueString() != "string" {
 		t.Fatalf("unexpected OPNsense health-check defaults: %+v", check)
 	}
 }
