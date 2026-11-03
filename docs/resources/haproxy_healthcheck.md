@@ -25,9 +25,14 @@ Manages an OPNsense HAProxy health check.
 - `description` (String) Optional description.
 - `force_ssl` (Boolean) Whether to force SSL for the health check. Defaults to `false`.
 - `ha_policy` (String) Optional HA policy ID used by the policy-managed HAProxy synchronizer.
-- `http_host` (String) Host header for HTTP checks. Defaults to `localhost`, matching OPNsense.
+- `http_expression` (String) HTTP response expectation type: exact/regex status or exact/regex response body.
+- `http_expression_enabled` (Boolean) Enable an explicit HTTP response expectation.
+- `http_host` (String) Host header for HTTP checks. OPNsense emits it only for HTTP/1.1 or HTTP/2 checks.
 - `http_method` (String) HTTP method for HTTP checks. Defaults to `options`, matching OPNsense.
+- `http_negate` (Boolean) Negate the configured HTTP response expectation.
 - `http_uri` (String) URI for HTTP checks. Defaults to `/`, matching OPNsense.
+- `http_value` (String) Expected HTTP status/body value used when http_expression_enabled=true.
+- `http_version` (String) HTTP protocol version for HTTP health checks. Use `http11` or `http2` when a Host header must be sent. Defaults to `http10`.
 - `interval` (String) Health-check interval. Defaults to `2s`.
 - `ssl` (String) TLS preference for the check. Defaults to `nopref`.
 - `ssl_sni` (String) Optional SNI name sent by an SSL health check.

@@ -18,47 +18,53 @@ import (
 )
 
 type frontendModel struct {
-	Enabled        types.Bool   `tfsdk:"enabled"`
-	Name           types.String `tfsdk:"name"`
-	Description    types.String `tfsdk:"description"`
-	Bind           types.Set    `tfsdk:"bind"`
-	BindOptions    types.String `tfsdk:"bind_options"`
-	Mode           types.String `tfsdk:"mode"`
-	DefaultBackend types.String `tfsdk:"default_backend"`
-	SSLEnabled     types.Bool   `tfsdk:"ssl_enabled"`
-	CustomOptions  types.String `tfsdk:"custom_options"`
-	LinkedActions  types.Set    `tfsdk:"linked_actions"`
-	ID             types.String `tfsdk:"id"`
+	Enabled               types.Bool   `tfsdk:"enabled"`
+	Name                  types.String `tfsdk:"name"`
+	Description           types.String `tfsdk:"description"`
+	HAPolicy              types.String `tfsdk:"ha_policy"`
+	Bind                  types.Set    `tfsdk:"bind"`
+	BindOptions           types.String `tfsdk:"bind_options"`
+	Mode                  types.String `tfsdk:"mode"`
+	DefaultBackend        types.String `tfsdk:"default_backend"`
+	SSLEnabled            types.Bool   `tfsdk:"ssl_enabled"`
+	SSLCertificates       types.Set    `tfsdk:"ssl_certificates"`
+	SSLDefaultCertificate types.String `tfsdk:"ssl_default_certificate"`
+	CustomOptions         types.String `tfsdk:"custom_options"`
+	LinkedActions         types.Set    `tfsdk:"linked_actions"`
+	ID                    types.String `tfsdk:"id"`
 }
 
 func frontendResourceSchema() schema.Schema {
 	return schema.Schema{Version: 1, MarkdownDescription: "Manages an OPNsense HAProxy frontend. TCP mode can be used for L4 TLS passthrough without terminating TLS on the firewall.", Attributes: map[string]schema.Attribute{
-		"enabled":         schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true), MarkdownDescription: "Whether to enable the frontend. Defaults to `true`."},
-		"name":            schema.StringAttribute{Required: true, MarkdownDescription: "Unique HAProxy frontend name."},
-		"description":     schema.StringAttribute{Optional: true, MarkdownDescription: "Optional description."},
-		"bind":            schema.SetAttribute{Required: true, ElementType: types.StringType, Validators: []validator.Set{setvalidator.SizeAtLeast(1)}, MarkdownDescription: "Listen addresses in HAProxy address:port syntax."},
-		"bind_options":    schema.StringAttribute{Optional: true, MarkdownDescription: "Optional raw bind options."},
-		"mode":            schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("http"), Validators: []validator.String{stringvalidator.OneOf("http", "ssl", "tcp")}, MarkdownDescription: "Frontend mode: `http`, `ssl`, or `tcp`. Use `tcp` for raw TLS passthrough. Defaults to `http`."},
-		"default_backend": schema.StringAttribute{Optional: true, MarkdownDescription: "UUID of the default backend."},
-		"ssl_enabled":     schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether HAProxy terminates TLS on this frontend. Keep disabled for L4 passthrough. Defaults to `false`."},
-		"custom_options":  schema.StringAttribute{Optional: true, MarkdownDescription: "Optional raw frontend directives, for example TCP inspection directives required before SNI routing."},
-		"linked_actions":  schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType, MarkdownDescription: "HAProxy action UUIDs attached to the frontend."},
-		"id":              schema.StringAttribute{Computed: true, MarkdownDescription: "UUID of the HAProxy frontend.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
+		"enabled":                 schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true), MarkdownDescription: "Whether to enable the frontend. Defaults to `true`."},
+		"name":                    schema.StringAttribute{Required: true, MarkdownDescription: "Unique HAProxy frontend name."},
+		"description":             schema.StringAttribute{Optional: true, MarkdownDescription: "Optional description."},
+		"ha_policy":               schema.StringAttribute{Optional: true, MarkdownDescription: "Optional HA synchronization policy ID used by the policy-managed HAProxy synchronizer."},
+		"bind":                    schema.SetAttribute{Required: true, ElementType: types.StringType, Validators: []validator.Set{setvalidator.SizeAtLeast(1)}, MarkdownDescription: "Listen addresses in HAProxy address:port syntax."},
+		"bind_options":            schema.StringAttribute{Optional: true, MarkdownDescription: "Optional raw bind options."},
+		"mode":                    schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("http"), Validators: []validator.String{stringvalidator.OneOf("http", "ssl", "tcp")}, MarkdownDescription: "Frontend mode: `http`, `ssl`, or `tcp`. Use `tcp` for raw TLS passthrough. Defaults to `http`."},
+		"default_backend":         schema.StringAttribute{Optional: true, MarkdownDescription: "UUID of the default backend."},
+		"ssl_enabled":             schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), MarkdownDescription: "Whether HAProxy terminates TLS on this frontend. Keep disabled for L4 passthrough. Defaults to `false`."},
+		"ssl_certificates":        schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType, MarkdownDescription: "OPNsense certificate refids available to this TLS-terminating frontend."},
+		"ssl_default_certificate": schema.StringAttribute{Optional: true, MarkdownDescription: "OPNsense certificate refid used as the default TLS certificate for this frontend."},
+		"custom_options":          schema.StringAttribute{Optional: true, MarkdownDescription: "Optional raw frontend directives, for example TCP inspection directives required before SNI routing."},
+		"linked_actions":          schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType, MarkdownDescription: "HAProxy action UUIDs attached to the frontend."},
+		"id":                      schema.StringAttribute{Computed: true, MarkdownDescription: "UUID of the HAProxy frontend.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 	}}
 }
 
 func frontendDataSourceSchema() dschema.Schema {
 	return dschema.Schema{MarkdownDescription: "Reads an OPNsense HAProxy frontend.", Attributes: map[string]dschema.Attribute{
 		"id": dschema.StringAttribute{Required: true}, "enabled": dschema.BoolAttribute{Computed: true}, "name": dschema.StringAttribute{Computed: true},
-		"description": dschema.StringAttribute{Computed: true}, "bind": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
+		"description": dschema.StringAttribute{Computed: true}, "ha_policy": dschema.StringAttribute{Computed: true}, "bind": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 		"bind_options": dschema.StringAttribute{Computed: true}, "mode": dschema.StringAttribute{Computed: true}, "default_backend": dschema.StringAttribute{Computed: true},
-		"ssl_enabled": dschema.BoolAttribute{Computed: true}, "custom_options": dschema.StringAttribute{Computed: true}, "linked_actions": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
+		"ssl_enabled": dschema.BoolAttribute{Computed: true}, "ssl_certificates": dschema.SetAttribute{Computed: true, ElementType: types.StringType}, "ssl_default_certificate": dschema.StringAttribute{Computed: true}, "custom_options": dschema.StringAttribute{Computed: true}, "linked_actions": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 	}}
 }
 
 func frontendModelToAPI(d *frontendModel) (*apihaproxy.Frontend, error) {
-	return &apihaproxy.Frontend{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Name: d.Name.ValueString(), Description: d.Description.ValueString(), Bind: api.SelectedMapList(tools.SetToStringSlice(d.Bind)), BindOptions: d.BindOptions.ValueString(), Mode: api.SelectedMap(d.Mode.ValueString()), DefaultBackend: api.SelectedMap(d.DefaultBackend.ValueString()), SSLEnabled: tools.BoolToString(d.SSLEnabled.ValueBool()), CustomOptions: d.CustomOptions.ValueString(), LinkedActions: api.SelectedMapList(tools.SetToStringSlice(d.LinkedActions))}, nil
+	return &apihaproxy.Frontend{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Name: d.Name.ValueString(), Description: d.Description.ValueString(), HAPolicy: api.SelectedMap(d.HAPolicy.ValueString()), Bind: api.SelectedMapList(tools.SetToStringSlice(d.Bind)), BindOptions: d.BindOptions.ValueString(), Mode: api.SelectedMap(d.Mode.ValueString()), DefaultBackend: api.SelectedMap(d.DefaultBackend.ValueString()), SSLEnabled: tools.BoolToString(d.SSLEnabled.ValueBool()), SSLCertificates: optionalSelectedMapList(d.SSLCertificates), SSLDefaultCertificate: api.SelectedMap(d.SSLDefaultCertificate.ValueString()), CustomOptions: d.CustomOptions.ValueString(), LinkedActions: api.SelectedMapList(tools.SetToStringSlice(d.LinkedActions))}, nil
 }
 func frontendAPIToModel(d *apihaproxy.Frontend) (*frontendModel, error) {
-	return &frontendModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Name: types.StringValue(d.Name), Description: tools.StringOrNull(d.Description), Bind: tools.StringSliceToSet([]string(d.Bind)), BindOptions: tools.StringOrNull(d.BindOptions), Mode: types.StringValue(d.Mode.String()), DefaultBackend: tools.StringOrNull(d.DefaultBackend.String()), SSLEnabled: types.BoolValue(tools.StringToBool(d.SSLEnabled)), CustomOptions: tools.StringOrNull(d.CustomOptions), LinkedActions: tools.StringSliceToSet([]string(d.LinkedActions))}, nil
+	return &frontendModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Name: types.StringValue(d.Name), Description: tools.StringOrNull(d.Description), HAPolicy: tools.StringOrNull(d.HAPolicy.String()), Bind: tools.StringSliceToSet([]string(d.Bind)), BindOptions: tools.StringOrNull(d.BindOptions), Mode: types.StringValue(d.Mode.String()), DefaultBackend: tools.StringOrNull(d.DefaultBackend.String()), SSLEnabled: types.BoolValue(tools.StringToBool(d.SSLEnabled)), SSLCertificates: tools.StringSliceToSet([]string(d.SSLCertificates)), SSLDefaultCertificate: tools.StringOrNull(d.SSLDefaultCertificate.String()), CustomOptions: tools.StringOrNull(d.CustomOptions), LinkedActions: tools.StringSliceToSet([]string(d.LinkedActions))}, nil
 }

@@ -26,6 +26,9 @@ func TestAccTrustCertResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet("opnsense_trust_cert.test", "crt"),
 					resource.TestCheckResourceAttrSet("opnsense_trust_cert.test", "crt_payload"),
 					resource.TestCheckResourceAttrSet("opnsense_trust_cert.test", "valid_to"),
+					resource.TestCheckResourceAttr("data.opnsense_trust_cert_by_description.lookup", "description", "Test Cert"),
+					resource.TestCheckResourceAttrSet("data.opnsense_trust_cert_by_description.lookup", "id"),
+					resource.TestCheckResourceAttrSet("data.opnsense_trust_cert_by_description.lookup", "ref_id"),
 				),
 			},
 			{
@@ -67,6 +70,10 @@ resource "opnsense_trust_cert" "test" {
   country       = "US"
   common_name   = %[2]q
   altnames_dns  = %[3]q
+}
+
+data "opnsense_trust_cert_by_description" "lookup" {
+  description = opnsense_trust_cert.test.description
 }
 `, description, commonName, altnamesDns)
 }

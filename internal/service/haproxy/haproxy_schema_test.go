@@ -38,6 +38,23 @@ func TestFrontendL4PassthroughConversion(t *testing.T) {
 	}
 }
 
+func TestFrontendTLSTerminationConversion(t *testing.T) {
+	t.Parallel()
+	model := &frontendModel{
+		Enabled: types.BoolValue(true), Name: types.StringValue("oidc_ingress"), HAPolicy: types.StringValue("endpoint"),
+		Bind: stringSet("10.0.16.81:443"), Mode: types.StringValue("http"),
+		SSLEnabled: types.BoolValue(true), SSLCertificates: stringSet("oidc-cert"),
+		SSLDefaultCertificate: types.StringValue("oidc-cert"), LinkedActions: stringSet(),
+	}
+	got, err := frontendModelToAPI(model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.HAPolicy.String() != "endpoint" || got.Mode.String() != "http" || got.SSLEnabled != "1" || got.SSLCertificates.String() != "oidc-cert" || got.SSLDefaultCertificate.String() != "oidc-cert" {
+		t.Fatalf("frontend TLS termination fields not preserved: %+v", got)
+	}
+}
+
 func TestSNIACLAndUseBackendConversion(t *testing.T) {
 	t.Parallel()
 	acl, err := aclModelToAPI(&aclModel{
@@ -69,13 +86,17 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 	t.Parallel()
 	server, err := serverModelToAPI(&serverModel{
 		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint"), HAPolicy: types.StringValue("endpoint"), Address: types.StringValue("10.0.0.20"),
-		Port: types.Int64Value(443), Mode: types.StringValue("active"), Type: types.StringValue("static"), SSL: types.BoolValue(false),
+		Port: types.Int64Value(443), Mode: types.StringValue("active"), Type: types.StringValue("static"), SSL: types.BoolValue(true),
+		SSLSNI: types.StringValue("deneb.svc.sandbox.biptec.net"), SSLVerify: types.BoolValue(true),
+		SSLVerifyHost: types.StringValue("deneb.svc.sandbox.biptec.net"), SSLCA: stringSet("ca-ref"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if server.Address != "10.0.0.20" || server.Port != "443" || server.SSL != "0" || server.HAPolicy.String() != "endpoint" {
-		t.Fatalf("unexpected server: %+v", server)
+	if server.Address != "10.0.0.20" || server.Port != "443" || server.SSL != "1" || server.HAPolicy.String() != "endpoint" ||
+		server.SSLSNI != "deneb.svc.sandbox.biptec.net" || server.SSLVerify != "1" ||
+		server.SSLVerifyHost != "deneb.svc.sandbox.biptec.net" || server.SSLCA.String() != "ca-ref" {
+		t.Fatalf("unexpected TLS server: %+v", server)
 	}
 
 	backend, err := backendModelToAPI(&backendModel{
@@ -100,6 +121,24 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 	if check.Type.String() != "tcp" || check.Interval != "2s" || check.HAPolicy.String() != "endpoint" {
 		t.Fatalf("unexpected check: %+v", check)
 	}
+
+	httpsCheck, err := healthcheckModelToAPI(&healthcheckModel{
+		Name: types.StringValue("oidc_https"), HAPolicy: types.StringValue("endpoint"), Type: types.StringValue("http"), Interval: types.StringValue("2s"),
+		SSL: types.StringValue("sslsni"), SSLSNI: types.StringValue("deneb.svc.sandbox.biptec.net"),
+		HTTPMethod: types.StringValue("get"), HTTPURI: types.StringValue("/realms/sso/.well-known/openid-configuration"),
+		HTTPVersion: types.StringValue("http11"), HTTPHost: types.StringValue("id.central.sandbox.biptec.net"),
+		HTTPExpressionEnabled: types.BoolValue(true), HTTPExpression: types.StringValue("string"),
+		HTTPNegate: types.BoolValue(false), HTTPValue: types.StringValue("https://id.central.sandbox.biptec.net/realms/sso"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if httpsCheck.Type.String() != "http" || httpsCheck.SSL.String() != "sslsni" || httpsCheck.SSLSNI != "deneb.svc.sandbox.biptec.net" ||
+		httpsCheck.HTTPMethod.String() != "get" || httpsCheck.HTTPVersion.String() != "http11" ||
+		httpsCheck.HTTPHost != "id.central.sandbox.biptec.net" || httpsCheck.HTTPExpressionEnabled != "1" ||
+		httpsCheck.HTTPExpression.String() != "string" || httpsCheck.HTTPValue != "https://id.central.sandbox.biptec.net/realms/sso" {
+		t.Fatalf("unexpected HTTPS check: %+v", httpsCheck)
+	}
 }
 
 func TestHAProxyAPIToModelRoundTrip(t *testing.T) {
@@ -117,14 +156,14 @@ func TestHAProxyAPIToModelRoundTrip(t *testing.T) {
 	}
 
 	frontend, err := frontendAPIToModel(&apihaproxy.Frontend{
-		Enabled: "1", Name: "tls", Bind: api.SelectedMapList{"[2001:db8::1]:443", "192.0.2.1:443"},
-		Mode: api.SelectedMap("tcp"), SSLEnabled: "0", LinkedActions: api.SelectedMapList{"a2", "a1"},
+		Enabled: "1", Name: "tls", HAPolicy: api.SelectedMap("endpoint"), Bind: api.SelectedMapList{"[2001:db8::1]:443", "192.0.2.1:443"},
+		Mode: api.SelectedMap("http"), SSLEnabled: "1", SSLCertificates: api.SelectedMapList{"cert-b", "cert-a"}, SSLDefaultCertificate: api.SelectedMap("cert-a"), LinkedActions: api.SelectedMapList{"a2", "a1"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if frontend.Mode.ValueString() != "tcp" || frontend.SSLEnabled.ValueBool() {
-		t.Fatalf("unexpected frontend: %+v", frontend)
+	if frontend.HAPolicy.ValueString() != "endpoint" || frontend.Mode.ValueString() != "http" || !frontend.SSLEnabled.ValueBool() || frontend.SSLDefaultCertificate.ValueString() != "cert-a" || tools.SetToString(frontend.SSLCertificates, ",") != "cert-a,cert-b" {
+		t.Fatalf("unexpected TLS frontend: %+v", frontend)
 	}
 	if tools.SetToString(frontend.LinkedActions, ",") != "a1,a2" {
 		t.Fatalf("unexpected actions: %s", tools.SetToString(frontend.LinkedActions, ","))
@@ -146,13 +185,15 @@ func TestHAProxyUpstreamDefaultsRoundTrip(t *testing.T) {
 
 	check, err := healthcheckAPIToModel(&apihaproxy.Healthcheck{
 		Name: "tcp_check", HAPolicy: api.SelectedMap("endpoint"), Type: api.SelectedMap("tcp"), Interval: "2s", SSL: api.SelectedMap("nopref"),
-		HTTPMethod: api.SelectedMap("options"), HTTPURI: "/", HTTPHost: "localhost", TCPMatchType: api.SelectedMap("string"),
+		HTTPMethod: api.SelectedMap("options"), HTTPURI: "/", HTTPVersion: api.SelectedMap("http10"), HTTPHost: "localhost",
+		HTTPExpressionEnabled: "0", HTTPNegate: "0", TCPMatchType: api.SelectedMap("string"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if check.HAPolicy.ValueString() != "endpoint" || check.HTTPMethod.ValueString() != "options" || check.HTTPURI.ValueString() != "/" ||
-		check.HTTPHost.ValueString() != "localhost" || check.TCPMatchType.ValueString() != "string" {
+		check.HTTPVersion.ValueString() != "http10" || check.HTTPHost.ValueString() != "localhost" ||
+		check.HTTPExpressionEnabled.ValueBool() || check.HTTPNegate.ValueBool() || check.TCPMatchType.ValueString() != "string" {
 		t.Fatalf("unexpected OPNsense health-check defaults: %+v", check)
 	}
 }
