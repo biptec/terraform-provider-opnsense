@@ -38,6 +38,25 @@ func TestFrontendL4PassthroughConversion(t *testing.T) {
 	}
 }
 
+func TestFrontendClearsDefaultBackend(t *testing.T) {
+	t.Parallel()
+	got, err := frontendModelToAPI(&frontendModel{
+		Enabled:        types.BoolValue(true),
+		Name:           types.StringValue("shared_internal"),
+		Bind:           stringSet("10.0.0.10:443"),
+		Mode:           types.StringValue("http"),
+		DefaultBackend: types.StringNull(),
+		SSLEnabled:     types.BoolValue(true),
+		LinkedActions:  stringSet(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.DefaultBackend.String() != "" {
+		t.Fatalf("default backend = %q, want empty API value", got.DefaultBackend.String())
+	}
+}
+
 func TestFrontendTLSTerminationConversion(t *testing.T) {
 	t.Parallel()
 	model := &frontendModel{
