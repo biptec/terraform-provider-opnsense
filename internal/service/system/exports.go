@@ -18,6 +18,7 @@ func Resources(context.Context) []func() resource.Resource {
 		newCarpHealthCheckResource,
 		newInterfaceSyncPolicyResource,
 		newInterfacePolicyAssignmentResource,
+		newHAProxyTLSIdentityResource,
 	}
 }
 
