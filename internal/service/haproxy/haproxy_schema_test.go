@@ -7,6 +7,7 @@ import (
 	apihaproxy "github.com/biptec/opnsense-go/pkg/haproxy"
 	"github.com/biptec/terraform-provider-opnsense/internal/tools"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -71,6 +72,84 @@ func TestFrontendTLSTerminationConversion(t *testing.T) {
 	}
 	if got.HAPolicy.String() != "endpoint" || got.Mode.String() != "http" || got.SSLEnabled != "1" || got.SSLCertificates.String() != "oidc-cert" || got.SSLDefaultCertificate.String() != "oidc-cert" {
 		t.Fatalf("frontend TLS termination fields not preserved: %+v", got)
+	}
+}
+
+func TestFrontendSSLCertificatesMayBeChildOwned(t *testing.T) {
+	t.Parallel()
+
+	attr, ok := frontendResourceSchema().Attributes["ssl_certificates"].(resourceschema.SetAttribute)
+	if !ok {
+		t.Fatal("ssl_certificates is not a SetAttribute")
+	}
+	if !attr.Optional || !attr.Computed {
+		t.Fatalf("ssl_certificates must be Optional+Computed, got Optional=%v Computed=%v", attr.Optional, attr.Computed)
+	}
+	if attr.Default != nil {
+		t.Fatal("ssl_certificates must not have a default when child TLS identities own membership")
+	}
+
+	got, err := frontendModelToAPI(&frontendModel{
+		Enabled:         types.BoolValue(true),
+		Name:            types.StringValue("shared"),
+		Bind:            stringSet("10.0.0.10:443"),
+		Mode:            types.StringValue("http"),
+		SSLEnabled:      types.BoolValue(true),
+		SSLCertificates: types.SetNull(types.StringType),
+		LinkedActions:   stringSet(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.SSLCertificates != nil {
+		t.Fatalf("omitted ssl_certificates must stay omitted in API payload, got %#v", got.SSLCertificates)
+	}
+}
+
+func TestFrontendCreateSeedsDefaultForChildOwnedMembership(t *testing.T) {
+	t.Parallel()
+
+	got, err := frontendModelToAPI(&frontendModel{
+		Enabled:               types.BoolValue(true),
+		Name:                  types.StringValue("shared"),
+		Bind:                  stringSet("10.0.0.10:443"),
+		Mode:                  types.StringValue("http"),
+		SSLEnabled:            types.BoolValue(true),
+		SSLCertificates:       types.SetNull(types.StringType),
+		SSLDefaultCertificate: types.StringValue("cert-default"),
+		LinkedActions:         stringSet(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.SSLCertificates != nil {
+		t.Fatalf("pre-create omitted ssl_certificates = %#v, want nil", got.SSLCertificates)
+	}
+	if err := prepareFrontendCreate(t.Context(), got); err != nil {
+		t.Fatal(err)
+	}
+	if got.SSLCertificates.String() != "cert-default" {
+		t.Fatalf("create certificates = %q, want default only", got.SSLCertificates.String())
+	}
+
+	explicit, err := frontendModelToAPI(&frontendModel{
+		Enabled:               types.BoolValue(true),
+		Name:                  types.StringValue("explicit"),
+		Bind:                  stringSet("10.0.0.11:443"),
+		Mode:                  types.StringValue("http"),
+		SSLEnabled:            types.BoolValue(true),
+		SSLCertificates:       stringSet("cert-default", "cert-consumer"),
+		SSLDefaultCertificate: types.StringValue("cert-default"),
+		LinkedActions:         stringSet(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareFrontendCreate(t.Context(), explicit); err != nil {
+		t.Fatal(err)
+	}
+	if explicit.SSLCertificates.String() != "cert-consumer,cert-default" {
+		t.Fatalf("explicit certificate ownership changed on create: %q", explicit.SSLCertificates.String())
 	}
 }
 
