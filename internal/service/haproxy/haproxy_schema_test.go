@@ -180,6 +180,26 @@ func TestSNIACLAndUseBackendConversion(t *testing.T) {
 	}
 }
 
+func TestBackendStickinessPatternSchemaParity(t *testing.T) {
+	t.Parallel()
+
+	resourceAttr, ok := backendResourceSchema().Attributes["stickiness_pattern"].(resourceschema.StringAttribute)
+	if !ok {
+		t.Fatalf("resource stickiness_pattern schema type = %T, want StringAttribute", backendResourceSchema().Attributes["stickiness_pattern"])
+	}
+	if !resourceAttr.IsOptional() || !resourceAttr.IsComputed() {
+		t.Fatalf("resource stickiness_pattern must remain optional+computed")
+	}
+
+	dataSourceAttr, ok := backendDataSourceSchema().Attributes["stickiness_pattern"]
+	if !ok {
+		t.Fatal("data source stickiness_pattern is missing")
+	}
+	if !dataSourceAttr.IsComputed() {
+		t.Fatal("data source stickiness_pattern must remain computed")
+	}
+}
+
 func TestBackendStickinessPatternRoundTrip(t *testing.T) {
 	t.Parallel()
 
