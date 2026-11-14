@@ -82,6 +82,7 @@ func TestAccHAProxyL4SNIResources(t *testing.T) {
 				resource.TestCheckResourceAttr("opnsense_haproxy_server.endpoint", "port", "9443"),
 				resource.TestCheckResourceAttr("opnsense_haproxy_healthcheck.tcp", "type", "tcp"),
 				resource.TestCheckResourceAttr("opnsense_haproxy_backend.endpoint", "mode", "tcp"),
+				resource.TestCheckResourceAttr("opnsense_haproxy_backend.endpoint", "stickiness_pattern", "none"),
 				resource.TestCheckResourceAttr("opnsense_haproxy_backend.endpoint", "linked_servers.#", "1"),
 				resource.TestCheckResourceAttr("opnsense_haproxy_acl.sni", "expression", "ssl_sni"),
 				resource.TestCheckResourceAttr("opnsense_haproxy_acl.sni", "ssl_sni", "tfacc.example.invalid"),
@@ -203,6 +204,7 @@ resource "opnsense_haproxy_backend" "endpoint" {
   description          = %[1]q
   mode                 = "tcp"
   algorithm            = "roundrobin"
+  stickiness_pattern   = "none"
   linked_servers       = [opnsense_haproxy_server.endpoint.id]
   health_check_enabled = true
   health_check         = opnsense_haproxy_healthcheck.tcp.id
