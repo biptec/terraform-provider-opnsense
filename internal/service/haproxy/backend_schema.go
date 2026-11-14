@@ -24,6 +24,7 @@ type backendModel struct {
 	HAPolicy                 types.String `tfsdk:"ha_policy"`
 	Mode                     types.String `tfsdk:"mode"`
 	Algorithm                types.String `tfsdk:"algorithm"`
+	StickinessPattern        types.String `tfsdk:"stickiness_pattern"`
 	ProxyProtocol            types.String `tfsdk:"proxy_protocol"`
 	LinkedServers            types.Set    `tfsdk:"linked_servers"`
 	HealthCheckEnabled       types.Bool   `tfsdk:"health_check_enabled"`
@@ -45,6 +46,7 @@ func backendResourceSchema() schema.Schema {
 		"ha_policy":                   schema.StringAttribute{Optional: true, MarkdownDescription: "Optional HA policy ID used by the policy-managed HAProxy synchronizer."},
 		"mode":                        schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("http"), Validators: []validator.String{stringvalidator.OneOf("http", "tcp")}, MarkdownDescription: "Backend mode: `http` or `tcp`. Use `tcp` for TLS passthrough. Defaults to `http`."},
 		"algorithm":                   schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("source"), Validators: []validator.String{stringvalidator.OneOf("source", "roundrobin", "static-rr", "leastconn", "uri", "random")}, MarkdownDescription: "Load-balancing algorithm. Defaults to `source`."},
+		"stickiness_pattern":          schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("sourceipv4"), Validators: []validator.String{stringvalidator.OneOf("none", "sourceipv4", "sourceipv6")}, MarkdownDescription: "Backend stick-table persistence key. Set `none` to disable persistence. Defaults to OPNsense-compatible `sourceipv4`."},
 		"proxy_protocol":              schema.StringAttribute{Optional: true, Validators: []validator.String{stringvalidator.OneOf("v1", "v2")}, MarkdownDescription: "PROXY protocol version sent to backend servers. Omit to disable PROXY protocol."},
 		"linked_servers":              schema.SetAttribute{Optional: true, Computed: true, Default: setdefault.StaticValue(tools.EmptySetValue(types.StringType)), ElementType: types.StringType, MarkdownDescription: "HAProxy server UUIDs in this backend."},
 		"health_check_enabled":        schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(true), MarkdownDescription: "Whether to enable backend health checks. Defaults to `true`."},
@@ -61,13 +63,27 @@ func backendResourceSchema() schema.Schema {
 func backendDataSourceSchema() dschema.Schema {
 	return dschema.Schema{MarkdownDescription: "Reads an OPNsense HAProxy backend.", Attributes: map[string]dschema.Attribute{
 		"id": dschema.StringAttribute{Required: true}, "enabled": dschema.BoolAttribute{Computed: true}, "name": dschema.StringAttribute{Computed: true}, "description": dschema.StringAttribute{Computed: true}, "ha_policy": dschema.StringAttribute{Computed: true},
-		"mode": dschema.StringAttribute{Computed: true}, "algorithm": dschema.StringAttribute{Computed: true}, "proxy_protocol": dschema.StringAttribute{Computed: true}, "linked_servers": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
+		"mode": dschema.StringAttribute{Computed: true}, "algorithm": dschema.StringAttribute{Computed: true}, "stickiness_pattern": dschema.StringAttribute{Computed: true}, "proxy_protocol": dschema.StringAttribute{Computed: true}, "linked_servers": dschema.SetAttribute{Computed: true, ElementType: types.StringType},
 		"health_check_enabled": dschema.BoolAttribute{Computed: true}, "health_check": dschema.StringAttribute{Computed: true}, "health_check_proxy_protocol": dschema.StringAttribute{Computed: true}, "check_interval": dschema.StringAttribute{Computed: true}, "check_down_interval": dschema.StringAttribute{Computed: true}, "health_check_fall": dschema.Int64Attribute{Computed: true}, "health_check_rise": dschema.Int64Attribute{Computed: true}, "custom_options": dschema.StringAttribute{Computed: true},
 	}}
 }
+func backendStickinessPatternToAPI(value string) api.SelectedMap {
+	if value == "none" {
+		return api.SelectedMap("")
+	}
+	return api.SelectedMap(value)
+}
+
+func backendStickinessPatternFromAPI(value api.SelectedMap) types.String {
+	if value.String() == "" {
+		return types.StringValue("none")
+	}
+	return types.StringValue(value.String())
+}
+
 func backendModelToAPI(d *backendModel) (*apihaproxy.Backend, error) {
-	return &apihaproxy.Backend{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Name: d.Name.ValueString(), Description: d.Description.ValueString(), HAPolicy: api.SelectedMap(d.HAPolicy.ValueString()), Mode: api.SelectedMap(d.Mode.ValueString()), Algorithm: api.SelectedMap(d.Algorithm.ValueString()), ProxyProtocol: api.SelectedMap(d.ProxyProtocol.ValueString()), LinkedServers: api.SelectedMapList(tools.SetToStringSlice(d.LinkedServers)), HealthCheckEnabled: tools.BoolToString(d.HealthCheckEnabled.ValueBool()), HealthCheck: api.SelectedMap(d.HealthCheck.ValueString()), HealthCheckProxyProto: api.SelectedMap(d.HealthCheckProxyProtocol.ValueString()), CheckInterval: d.CheckInterval.ValueString(), CheckDownInterval: d.CheckDownInterval.ValueString(), HealthCheckFall: optionalIntString(d.HealthCheckFall), HealthCheckRise: optionalIntString(d.HealthCheckRise), CustomOptions: d.CustomOptions.ValueString()}, nil
+	return &apihaproxy.Backend{Enabled: tools.BoolToString(d.Enabled.ValueBool()), Name: d.Name.ValueString(), Description: d.Description.ValueString(), HAPolicy: api.SelectedMap(d.HAPolicy.ValueString()), Mode: api.SelectedMap(d.Mode.ValueString()), Algorithm: api.SelectedMap(d.Algorithm.ValueString()), StickinessPattern: backendStickinessPatternToAPI(d.StickinessPattern.ValueString()), ProxyProtocol: api.SelectedMap(d.ProxyProtocol.ValueString()), LinkedServers: api.SelectedMapList(tools.SetToStringSlice(d.LinkedServers)), HealthCheckEnabled: tools.BoolToString(d.HealthCheckEnabled.ValueBool()), HealthCheck: api.SelectedMap(d.HealthCheck.ValueString()), HealthCheckProxyProto: api.SelectedMap(d.HealthCheckProxyProtocol.ValueString()), CheckInterval: d.CheckInterval.ValueString(), CheckDownInterval: d.CheckDownInterval.ValueString(), HealthCheckFall: optionalIntString(d.HealthCheckFall), HealthCheckRise: optionalIntString(d.HealthCheckRise), CustomOptions: d.CustomOptions.ValueString()}, nil
 }
 func backendAPIToModel(d *apihaproxy.Backend) (*backendModel, error) {
-	return &backendModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Name: types.StringValue(d.Name), Description: tools.StringOrNull(d.Description), HAPolicy: tools.StringOrNull(d.HAPolicy.String()), Mode: types.StringValue(d.Mode.String()), Algorithm: types.StringValue(d.Algorithm.String()), ProxyProtocol: tools.StringOrNull(d.ProxyProtocol.String()), LinkedServers: tools.StringSliceToSet([]string(d.LinkedServers)), HealthCheckEnabled: types.BoolValue(tools.StringToBool(d.HealthCheckEnabled)), HealthCheck: tools.StringOrNull(d.HealthCheck.String()), HealthCheckProxyProtocol: tools.StringOrNull(d.HealthCheckProxyProto.String()), CheckInterval: tools.StringOrNull(d.CheckInterval), CheckDownInterval: tools.StringOrNull(d.CheckDownInterval), HealthCheckFall: tools.StringToInt64Null(d.HealthCheckFall), HealthCheckRise: tools.StringToInt64Null(d.HealthCheckRise), CustomOptions: tools.StringOrNull(d.CustomOptions)}, nil
+	return &backendModel{Enabled: types.BoolValue(tools.StringToBool(d.Enabled)), Name: types.StringValue(d.Name), Description: tools.StringOrNull(d.Description), HAPolicy: tools.StringOrNull(d.HAPolicy.String()), Mode: types.StringValue(d.Mode.String()), Algorithm: types.StringValue(d.Algorithm.String()), StickinessPattern: backendStickinessPatternFromAPI(d.StickinessPattern), ProxyProtocol: tools.StringOrNull(d.ProxyProtocol.String()), LinkedServers: tools.StringSliceToSet([]string(d.LinkedServers)), HealthCheckEnabled: types.BoolValue(tools.StringToBool(d.HealthCheckEnabled)), HealthCheck: tools.StringOrNull(d.HealthCheck.String()), HealthCheckProxyProtocol: tools.StringOrNull(d.HealthCheckProxyProto.String()), CheckInterval: tools.StringOrNull(d.CheckInterval), CheckDownInterval: tools.StringOrNull(d.CheckDownInterval), HealthCheckFall: tools.StringToInt64Null(d.HealthCheckFall), HealthCheckRise: tools.StringToInt64Null(d.HealthCheckRise), CustomOptions: tools.StringOrNull(d.CustomOptions)}, nil
 }

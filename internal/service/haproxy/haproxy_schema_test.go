@@ -180,6 +180,28 @@ func TestSNIACLAndUseBackendConversion(t *testing.T) {
 	}
 }
 
+func TestBackendStickinessPatternRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		apiValue string
+		want     string
+	}{
+		{apiValue: "", want: "none"},
+		{apiValue: "sourceipv4", want: "sourceipv4"},
+		{apiValue: "sourceipv6", want: "sourceipv6"},
+	} {
+		got := backendStickinessPatternFromAPI(api.SelectedMap(tc.apiValue))
+		if got.ValueString() != tc.want {
+			t.Fatalf("API stickiness %q -> %q, want %q", tc.apiValue, got.ValueString(), tc.want)
+		}
+	}
+	none := backendStickinessPatternToAPI("none")
+	if got := none.String(); got != "" {
+		t.Fatalf("none -> API stickiness %q, want empty", got)
+	}
+}
+
 func TestBackendServerHealthcheckConversion(t *testing.T) {
 	t.Parallel()
 	server, err := serverModelToAPI(&serverModel{
@@ -199,13 +221,13 @@ func TestBackendServerHealthcheckConversion(t *testing.T) {
 
 	backend, err := backendModelToAPI(&backendModel{
 		Enabled: types.BoolValue(true), Name: types.StringValue("endpoint_backend"), HAPolicy: types.StringValue("endpoint"), Mode: types.StringValue("tcp"),
-		Algorithm: types.StringValue("roundrobin"), ProxyProtocol: types.StringValue("v2"), LinkedServers: stringSet("server-id"), HealthCheckEnabled: types.BoolValue(true),
+		Algorithm: types.StringValue("roundrobin"), StickinessPattern: types.StringValue("none"), ProxyProtocol: types.StringValue("v2"), LinkedServers: stringSet("server-id"), HealthCheckEnabled: types.BoolValue(true),
 		HealthCheck: types.StringValue("check-id"), HealthCheckProxyProtocol: types.StringValue("backend"), HealthCheckFall: types.Int64Value(3), HealthCheckRise: types.Int64Value(2),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if backend.Mode.String() != "tcp" || backend.HAPolicy.String() != "endpoint" || backend.ProxyProtocol.String() != "v2" || backend.LinkedServers.String() != "server-id" || backend.HealthCheck.String() != "check-id" || backend.HealthCheckProxyProto.String() != "backend" || backend.HealthCheckFall != "3" || backend.HealthCheckRise != "2" {
+	if backend.Mode.String() != "tcp" || backend.HAPolicy.String() != "endpoint" || backend.StickinessPattern.String() != "" || backend.ProxyProtocol.String() != "v2" || backend.LinkedServers.String() != "server-id" || backend.HealthCheck.String() != "check-id" || backend.HealthCheckProxyProto.String() != "backend" || backend.HealthCheckFall != "3" || backend.HealthCheckRise != "2" {
 		t.Fatalf("unexpected backend: %+v", backend)
 	}
 
