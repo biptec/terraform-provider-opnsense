@@ -210,6 +210,8 @@ func TestBackendStickinessPatternRoundTrip(t *testing.T) {
 		{apiValue: "", want: "none"},
 		{apiValue: "sourceipv4", want: "sourceipv4"},
 		{apiValue: "sourceipv6", want: "sourceipv6"},
+		{apiValue: "cookievalue", want: "cookievalue"},
+		{apiValue: "rdpcookie", want: "rdpcookie"},
 	} {
 		got := backendStickinessPatternFromAPI(api.SelectedMap(tc.apiValue))
 		if got.ValueString() != tc.want {
