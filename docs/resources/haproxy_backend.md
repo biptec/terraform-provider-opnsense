@@ -36,6 +36,7 @@ Manages an OPNsense HAProxy backend.
 - `linked_servers` (Set of String) HAProxy server UUIDs in this backend.
 - `mode` (String) Backend mode: `http` or `tcp`. Use `tcp` for TLS passthrough. Defaults to `http`.
 - `proxy_protocol` (String) PROXY protocol version sent to backend servers. Omit to disable PROXY protocol.
+- `stickiness_pattern` (String) Backend stick-table persistence key. Set `none` to disable persistence. Defaults to OPNsense-compatible `sourceipv4`.
 
 ### Read-Only
 
