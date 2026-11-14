@@ -34,3 +34,4 @@ Reads an OPNsense HAProxy backend.
 - `mode` (String)
 - `name` (String)
 - `proxy_protocol` (String)
+- `stickiness_pattern` (String)
