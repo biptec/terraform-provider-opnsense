@@ -38,7 +38,8 @@ func TestExactHAProxyTLSIdentityReplacement(t *testing.T) {
 		{"ambiguous", []map[string]string{match, match}, state, "found 2", false},
 		{"wrong frontend", []map[string]string{{"uuid": "foreign", "frontend_name": "other", "dns_name": "router.example.invalid"}}, state, "", true},
 		{"wrong DNS", []map[string]string{{"uuid": "foreign", "frontend_name": "arcturus-shared-https", "dns_name": "id.example.invalid"}}, state, "", true},
-		{"missing UUID", []map[string]string{{"frontend_name": "arcturus-shared-https", "dns_name": "router.example.invalid"}}, state, "no UUID", false},
+		{"wrong policy", []map[string]string{{"uuid": "foreign", "frontend_name": "arcturus-shared-https", "dns_name": "router.example.invalid", "policy_id": "local"}}, state, "different owner policy", false},
+		{"missing UUID", []map[string]string{{"frontend_name": "arcturus-shared-https", "dns_name": "router.example.invalid", "policy_id": "endpoint"}}, state, "no UUID", false},
 		{"unknown DNS", []map[string]string{match}, &haproxyTLSIdentityResourceModel{FrontendName: types.StringValue("arcturus-shared-https"), DNSName: types.StringUnknown()}, "lacks stable", false},
 	}
 	for _, tc := range table {
@@ -53,6 +54,57 @@ func TestExactHAProxyTLSIdentityReplacement(t *testing.T) {
 			}
 			if e == nil || !strings.Contains(e.Error(), tc.want) {
 				t.Fatalf("wanted error containing %q, got %v", tc.want, e)
+			}
+		})
+	}
+}
+
+func TestExactHAProxyTLSIdentityCreateMatch(t *testing.T) {
+	wanted := &haproxyTLSIdentityResourceModel{
+		FrontendName: types.StringValue("arcturus-shared-https"),
+		DNSName:      types.StringValue("s3.central.sandbox.biptec.net."),
+		PolicyID:     types.StringValue("endpoint"),
+	}
+	match := map[string]string{
+		"uuid":          "persisted-local-uuid",
+		"frontend_name": "arcturus-shared-https",
+		"dns_name":      "s3.central.sandbox.biptec.net",
+		"policy_id":     "endpoint",
+	}
+	got, err := exactHAProxyTLSIdentityCreateMatch(wanted, []map[string]string{match})
+	if got != "persisted-local-uuid" || err != nil {
+		t.Fatalf("expected exact create reattach, got %q %v", got, err)
+	}
+
+	tests := []struct {
+		name     string
+		rows     []map[string]string
+		want     string
+		notFound bool
+	}{
+		{name: "not found", rows: nil, notFound: true},
+		{name: "ambiguous", rows: []map[string]string{match, match}, want: "found 2"},
+		{name: "wrong policy", rows: []map[string]string{{
+			"uuid": "foreign", "frontend_name": "arcturus-shared-https",
+			"dns_name": "s3.central.sandbox.biptec.net", "policy_id": "local",
+		}}, want: "different owner policy"},
+		{name: "missing UUID", rows: []map[string]string{{
+			"frontend_name": "arcturus-shared-https", "dns_name": "s3.central.sandbox.biptec.net",
+			"policy_id": "endpoint",
+		}}, want: "no UUID"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := exactHAProxyTLSIdentityCreateMatch(wanted, test.rows)
+			if test.notFound {
+				var notFound *errs.NotFoundError
+				if !errors.As(err, &notFound) {
+					t.Fatalf("expected remote-not-found, got %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("wanted error containing %q, got %v", test.want, err)
 			}
 		})
 	}
