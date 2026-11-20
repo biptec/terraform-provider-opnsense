@@ -22,6 +22,27 @@ var _ resource.ResourceWithImportState = &haproxyTLSIdentityResource{}
 
 type haproxyTLSIdentityResource struct{ client opnsense.Client }
 
+type haproxyTLSIdentitySearchResponse struct {
+	Total    int                 `json:"total"`
+	RowCount int                 `json:"rowCount"`
+	Current  int                 `json:"current"`
+	Rows     []map[string]string `json:"rows"`
+	Message  string              `json:"message"`
+}
+
+func validateHAProxyTLSIdentitySearchResponse(result *haproxyTLSIdentitySearchResponse) error {
+	if result == nil {
+		return fmt.Errorf("empty search response; cannot safely reattach")
+	}
+	if message := strings.TrimSpace(result.Message); message != "" {
+		return fmt.Errorf("search endpoint returned an error: %s", message)
+	}
+	if result.Total > len(result.Rows) || result.RowCount > len(result.Rows) {
+		return fmt.Errorf("incomplete search response (total=%d rowCount=%d rows=%d); cannot safely reattach", result.Total, result.RowCount, len(result.Rows))
+	}
+	return nil
+}
+
 // HAProxy TLS identity reconciliation is global to the Router, not scoped to
 // one Terraform resource instance. Serialize identity lifecycle operations so
 // concurrent Create calls cannot run overlapping global materializations.
@@ -275,32 +296,34 @@ func exactHAProxyTLSIdentityCreateMatch(
 	return matches[0], nil
 }
 
-func (r *haproxyTLSIdentityResource) reattachAfterCreate(ctx context.Context, wanted *haproxyTLSIdentityResourceModel) (string, error) {
-	result, err := api.Search[map[string]string](
+func (r *haproxyTLSIdentityResource) searchIdentities(ctx context.Context) (*haproxyTLSIdentitySearchResponse, error) {
+	result, err := api.Call(
 		r.client.ApiExtensions().Client(),
 		ctx,
-		apiextensions.HAProxyTLSIdentityOpts.Search,
+		api.RPCOpts{Endpoint: apiextensions.HAProxyTLSIdentityOpts.Search},
+		&haproxyTLSIdentitySearchResponse{},
 	)
 	if err != nil {
-		return "", fmt.Errorf("search HAProxy TLS identities after create failure: %w", err)
+		return nil, fmt.Errorf("search HAProxy TLS identities: %w", err)
 	}
-	if result == nil || result.Total > len(result.Rows) {
-		return "", fmt.Errorf("incomplete HAProxy TLS identity search response; cannot safely reattach")
+	if err := validateHAProxyTLSIdentitySearchResponse(result); err != nil {
+		return nil, fmt.Errorf("search HAProxy TLS identities: %w", err)
+	}
+	return result, nil
+}
+
+func (r *haproxyTLSIdentityResource) reattachAfterCreate(ctx context.Context, wanted *haproxyTLSIdentityResourceModel) (string, error) {
+	result, err := r.searchIdentities(ctx)
+	if err != nil {
+		return "", fmt.Errorf("search HAProxy TLS identities after create failure: %w", err)
 	}
 	return exactHAProxyTLSIdentityCreateMatch(wanted, result.Rows)
 }
 
 func (r *haproxyTLSIdentityResource) reattach(ctx context.Context, prior *haproxyTLSIdentityResourceModel) (string, error) {
-	result, err := api.Search[map[string]string](
-		r.client.ApiExtensions().Client(),
-		ctx,
-		apiextensions.HAProxyTLSIdentityOpts.Search,
-	)
+	result, err := r.searchIdentities(ctx)
 	if err != nil {
-		return "", fmt.Errorf("search HAProxy TLS identities: %w", err)
-	}
-	if result == nil || result.Total > len(result.Rows) {
-		return "", fmt.Errorf("incomplete HAProxy TLS identity search response; cannot reattach")
+		return "", err
 	}
 	return exactHAProxyTLSIdentityReplacement(prior, result.Rows)
 }

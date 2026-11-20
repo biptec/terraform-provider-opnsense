@@ -109,3 +109,32 @@ func TestExactHAProxyTLSIdentityCreateMatch(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateHAProxyTLSIdentitySearchResponse(t *testing.T) {
+	tests := []struct {
+		name    string
+		result  *haproxyTLSIdentitySearchResponse
+		wantErr string
+	}{
+		{name: "nil response", result: nil, wantErr: "empty search response"},
+		{name: "search error message is not not-found", result: &haproxyTLSIdentitySearchResponse{Message: "unable to read HAProxy TLS identity configuration"}, wantErr: "unable to read HAProxy TLS identity configuration"},
+		{name: "truncated total is rejected", result: &haproxyTLSIdentitySearchResponse{Total: 2, RowCount: 1, Rows: []map[string]string{{"uuid": "one"}}}, wantErr: "incomplete search response"},
+		{name: "truncated row count is rejected", result: &haproxyTLSIdentitySearchResponse{Total: 1, RowCount: 2, Rows: []map[string]string{{"uuid": "one"}}}, wantErr: "incomplete search response"},
+		{name: "empty successful search is not an error", result: &haproxyTLSIdentitySearchResponse{Total: 0, RowCount: 0, Rows: []map[string]string{}}, wantErr: ""},
+		{name: "complete search is accepted", result: &haproxyTLSIdentitySearchResponse{Total: 1, RowCount: 1, Rows: []map[string]string{{"uuid": "one"}}}, wantErr: ""},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateHAProxyTLSIdentitySearchResponse(test.result)
+			if test.wantErr == "" {
+				if err != nil {
+					t.Fatalf("expected valid search response, got %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), test.wantErr) {
+				t.Fatalf("wanted error containing %q, got %v", test.wantErr, err)
+			}
+		})
+	}
+}
