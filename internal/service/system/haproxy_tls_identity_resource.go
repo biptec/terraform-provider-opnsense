@@ -23,11 +23,9 @@ var _ resource.ResourceWithImportState = &haproxyTLSIdentityResource{}
 type haproxyTLSIdentityResource struct{ client opnsense.Client }
 
 type haproxyTLSIdentitySearchResponse struct {
-	Total    int                 `json:"total"`
-	RowCount int                 `json:"rowCount"`
-	Current  int                 `json:"current"`
-	Rows     []map[string]string `json:"rows"`
-	Message  string              `json:"message"`
+	Total   *int                 `json:"total"`
+	Rows    *[]map[string]string `json:"rows"`
+	Message string               `json:"message"`
 }
 
 func validateHAProxyTLSIdentitySearchResponse(result *haproxyTLSIdentitySearchResponse) error {
@@ -37,8 +35,11 @@ func validateHAProxyTLSIdentitySearchResponse(result *haproxyTLSIdentitySearchRe
 	if message := strings.TrimSpace(result.Message); message != "" {
 		return fmt.Errorf("search endpoint returned an error: %s", message)
 	}
-	if result.Total > len(result.Rows) || result.RowCount > len(result.Rows) {
-		return fmt.Errorf("incomplete search response (total=%d rowCount=%d rows=%d); cannot safely reattach", result.Total, result.RowCount, len(result.Rows))
+	if result.Total == nil || result.Rows == nil {
+		return fmt.Errorf("search response is missing total or rows; cannot safely reattach")
+	}
+	if *result.Total != len(*result.Rows) {
+		return fmt.Errorf("incomplete search response (total=%d rows=%d); cannot safely reattach", *result.Total, len(*result.Rows))
 	}
 	return nil
 }
@@ -317,7 +318,7 @@ func (r *haproxyTLSIdentityResource) reattachAfterCreate(ctx context.Context, wa
 	if err != nil {
 		return "", fmt.Errorf("search HAProxy TLS identities after create failure: %w", err)
 	}
-	return exactHAProxyTLSIdentityCreateMatch(wanted, result.Rows)
+	return exactHAProxyTLSIdentityCreateMatch(wanted, *result.Rows)
 }
 
 func (r *haproxyTLSIdentityResource) reattach(ctx context.Context, prior *haproxyTLSIdentityResourceModel) (string, error) {
@@ -325,7 +326,7 @@ func (r *haproxyTLSIdentityResource) reattach(ctx context.Context, prior *haprox
 	if err != nil {
 		return "", err
 	}
-	return exactHAProxyTLSIdentityReplacement(prior, result.Rows)
+	return exactHAProxyTLSIdentityReplacement(prior, *result.Rows)
 }
 
 func (r *haproxyTLSIdentityResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {

@@ -111,6 +111,9 @@ func TestExactHAProxyTLSIdentityCreateMatch(t *testing.T) {
 }
 
 func TestValidateHAProxyTLSIdentitySearchResponse(t *testing.T) {
+	totalZero := 0
+	totalOne := 1
+	totalTwo := 2
 	tests := []struct {
 		name    string
 		result  *haproxyTLSIdentitySearchResponse
@@ -118,10 +121,11 @@ func TestValidateHAProxyTLSIdentitySearchResponse(t *testing.T) {
 	}{
 		{name: "nil response", result: nil, wantErr: "empty search response"},
 		{name: "search error message is not not-found", result: &haproxyTLSIdentitySearchResponse{Message: "unable to read HAProxy TLS identity configuration"}, wantErr: "unable to read HAProxy TLS identity configuration"},
-		{name: "truncated total is rejected", result: &haproxyTLSIdentitySearchResponse{Total: 2, RowCount: 1, Rows: []map[string]string{{"uuid": "one"}}}, wantErr: "incomplete search response"},
-		{name: "truncated row count is rejected", result: &haproxyTLSIdentitySearchResponse{Total: 1, RowCount: 2, Rows: []map[string]string{{"uuid": "one"}}}, wantErr: "incomplete search response"},
-		{name: "empty successful search is not an error", result: &haproxyTLSIdentitySearchResponse{Total: 0, RowCount: 0, Rows: []map[string]string{}}, wantErr: ""},
-		{name: "complete search is accepted", result: &haproxyTLSIdentitySearchResponse{Total: 1, RowCount: 1, Rows: []map[string]string{{"uuid": "one"}}}, wantErr: ""},
+		{name: "missing total is rejected", result: &haproxyTLSIdentitySearchResponse{Rows: &[]map[string]string{}}, wantErr: "missing total or rows"},
+		{name: "missing rows is rejected", result: &haproxyTLSIdentitySearchResponse{Total: &totalZero}, wantErr: "missing total or rows"},
+		{name: "truncated search is rejected", result: &haproxyTLSIdentitySearchResponse{Total: &totalTwo, Rows: &[]map[string]string{{"uuid": "one"}}}, wantErr: "incomplete search response"},
+		{name: "empty successful search is not an error", result: &haproxyTLSIdentitySearchResponse{Total: &totalZero, Rows: &[]map[string]string{}}, wantErr: ""},
+		{name: "complete search is accepted", result: &haproxyTLSIdentitySearchResponse{Total: &totalOne, Rows: &[]map[string]string{{"uuid": "one"}}}, wantErr: ""},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
